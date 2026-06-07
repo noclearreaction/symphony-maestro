@@ -8,6 +8,9 @@ permission:
   bash:
     "*": deny
     "openspec *": ask
+    "openspec new change *": allow
+    "openspec status *": allow
+    "openspec instructions *": allow
     "openspec list *": allow
     "openspec show *": allow
     "openspec validate *": allow
