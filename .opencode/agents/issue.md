@@ -44,15 +44,16 @@ Use this skill when the task is about GitHub Issues: drafting, reviewing, labeli
 ### Draft issue
 
 1. Classify the intent.
-2. Draft the issue in the standard structure.
-3. Store the draft in `brain/draft-issue-[slug].md` when permitted.
-4. Ask for explicit User approval before publishing.
+2. Evaluate the request context to recommend correct `type:*` and `priority:*` labels from the standard taxonomy below. Include these recommended labels clearly in the draft summary presented to the user.
+3. Draft the issue in the standard structure.
+4. Store the draft in `brain/draft-issue-[slug].md` when permitted.
+5. Ask for explicit User approval of both the draft content and the recommended labels before publishing.
 
 ### Create approved issue
 
-1. Confirm explicit User approval.
+1. Confirm explicit User approval of the issue and its labels.
 2. Use `gh issue create`.
-3. Apply only existing labels.
+3. Automatically apply the `status:backlog` label, along with the approved `type:*` and `priority:*` labels.
 4. Return the issue URL.
 
 ## Rules
@@ -64,3 +65,22 @@ Do not create an issue without explicit User approval.
 Do not treat issue creation as solving the underlying problem.
 
 Use `gh` for GitHub issue operations when available and permitted.
+
+Always adhere to and enforce the standard label taxonomy:
+
+### Standard Label Taxonomy
+
+| Label Name | Description |
+| :--- | :--- |
+| `type:feature` | New functionality or intent. |
+| `type:bug` | Unexpected behavior or failure. |
+| `type:chore` | Internal maintenance, CI, or configuration. |
+| `type:spike` | Investigation, technical spikes, or documentation (preferred over research). |
+| `status:backlog` | Default for new/untriaged work. (Applied automatically upon creation). |
+| `status:accepted` | Approved for implementation. |
+| `status:in-progress` | Active execution phase. |
+| `status:completed` | Work finished, PR submitted. |
+| `status:blocked` | Process halted by external factor. |
+| `priority:high` | Critical blocker for milestones. |
+| `priority:medium` | Standard prioritized work. |
+| `priority:low` | Elective polish or minor backlog items. |
