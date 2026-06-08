@@ -1,23 +1,4 @@
-# Capability: director-workflow
-
-## Purpose
-Structured Git, GitHub PR, and custom builder agent local workflow for Director development.
-
-## Requirements
-
-### Requirement: Builder Agent Soft Boundaries
-The custom `builder` agent system prompt SHALL enforce strict soft boundaries that prevent any direct modifications to strategy documents or other agent prompts.
-
-#### Scenario: Refusing strategy modification
-- **WHEN** the builder agent is requested to edit files under `strategy/`
-- **THEN** the builder agent SHALL refuse the change and prompt the user to consult the Advisor or Designer agent instead.
-
-### Requirement: Structured Local Workspace Isolation
-The repository SHALL ignore a designated `.symphony/` directory structure to allow agents to write scratch records, plans, and evidence without polluting git history.
-
-#### Scenario: Isolating temporary logs
-- **WHEN** an agent writes files under `.symphony/scratchpad/`
-- **THEN** the file SHALL not appear as an untracked file in git status.
+## ADDED Requirements
 
 ### Requirement: Native OpenSpec Change Initialization
 The system SHALL support native OpenSpec change initialization. Starting a new change MUST be performed by checking out a dedicated local `change/<name>` branch via Git and running the standard `openspec new change "<name>"` command directly.
@@ -32,3 +13,13 @@ The system SHALL support standard OpenSpec verification and synchronization. Cha
 #### Scenario: Synchronizing specifications
 - **WHEN** a change implementation is verified and complete
 - **THEN** the specifications SHALL be synchronized to the main spec directory and the change archived to the planning archive directory.
+
+## REMOVED Requirements
+
+### Requirement: Branch Initiation Automation
+**Reason**: Custom script `bin/director-start` is deprecated and removed to align with OpenSpec community standards and Constitutional Principle 5 (Tooling Discipline).
+**Migration**: Perform branch checkout with standard Git commands and run standard `openspec new change "<name>"` directly.
+
+### Requirement: GitHub PR and Sync Automation
+**Reason**: Custom script `bin/director-submit` is deprecated and removed to align with OpenSpec community standards and Constitutional Principle 5 (Tooling Discipline).
+**Migration**: Run standard `openspec validate` and manually/agent-edit main specifications to sync, then push and create a PR via GitHub CLI `gh pr create`.
