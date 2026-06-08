@@ -19,16 +19,16 @@ The repository SHALL ignore a designated `.symphony/` directory structure to all
 - **WHEN** an agent writes files under `.symphony/scratchpad/`
 - **THEN** the file SHALL not appear as an untracked file in git status.
 
-### Requirement: Branch Initiation Automation
-The system SHALL provide a script `bin/director-start` to automate checking out a standardized feature branch and instantiating an OpenSpec change.
+### Requirement: Native OpenSpec Change Initialization
+The system SHALL support native OpenSpec change initialization. Starting a new change MUST be performed by checking out a dedicated local `change/<name>` branch via Git and running the standard `openspec new change "<name>"` command directly.
 
-#### Scenario: Running start script with valid name
-- **WHEN** the user runs `bin/director-start "improve-auth"`
-- **THEN** the script SHALL check out branch `change/improve-auth` and run `openspec new change "improve-auth"`.
+#### Scenario: Creating a change with native commands
+- **WHEN** the user checks out a topic branch and runs `openspec new change "my-feature"`
+- **THEN** the standard OpenSpec change directory SHALL be instantiated successfully.
 
-### Requirement: GitHub PR and Sync Automation
-The system SHALL provide a script `bin/director-submit` to synchronize specifications, commit changes, push to the remote, and open a GitHub Pull Request.
+### Requirement: Standard OpenSpec Verification and Sync
+The system SHALL support standard OpenSpec verification and synchronization. Changes SHALL be validated using `openspec validate` and synchronized to main specifications using standard OpenSpec change-based workflow practices.
 
-#### Scenario: Submitting active change with GitHub CLI
-- **WHEN** the user runs `bin/director-submit` on a feature branch
-- **THEN** the script SHALL execute `openspec sync`, validate that all commit messages conform to conventional commits, commit the synchronized specification updates, push the branch, and run `gh pr create` to open a pull request.
+#### Scenario: Synchronizing specifications
+- **WHEN** a change implementation is verified and complete
+- **THEN** the specifications SHALL be synchronized to the main spec directory and the change archived to the planning archive directory.
