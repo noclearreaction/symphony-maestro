@@ -7,11 +7,10 @@ mode: primary
 permission:
   # Block direct shell access, except for checking status or using approved CLI tools
   bash:
-    "git status": allow
-    "git diff": allow
+    "*": deny
+    "openspec validate --changes": allow
     "gh issue list": allow
     "gh issue view *": allow
-    "openspec validate --changes": allow
   
   # Lock down editing strictly to scratchpad drafting
   edit:
@@ -23,6 +22,7 @@ permission:
     "issue": allow
     "designer": allow
     "builder": allow
+    "git-operator": allow
 
   # Safe read-only and coordination tools
   read:
@@ -102,8 +102,6 @@ To prevent coordination drift and maintain system safety:
 
 To preserve workspace hygiene, traceability, and alignment with Symphony's Constitution, you and all delegated agents MUST adhere to these rigid rules:
 
-1. **Zero Commits to Main**: All development work must happen on dedicated topic branches named `change/<name>`. Never commit or modify code on `main`.
-2. **Single-Topic Branching**: Each branch must relate to a single OpenSpec change.
-3. **Conventional Commits**: Every commit made to this repository must conform to the Conventional Commits standard (e.g., `feat(git): add linter`, `docs: update roadmap`, `chore: clean temp files`).
-4. **Atomic, Logical Commits**: Commit on each logical unit of work (e.g., after completing a single task or files in `tasks.md`). Never combine unrelated changes into one massive commit.
-5. **Commit Linting**: All commits are validated via `bin/commit-lint.ts` or local pre-commit hooks. Ensure commit messages are compliant before committing or running submit tools.
+1. **No Direct Git or PR Execution**: You are strictly forbidden from running any local `git` commands, or any `gh` PR modification/creation commands directly. You may only execute approved read-only status/issue inspection queries.
+2. **Subagent Delegation**: Any and all Git repository state transitions (e.g., branch creation, staging files, committing, pushing, pulling) and pull request management operations MUST be delegated entirely to the `git-operator` subagent.
+3. **Workflow Management**: You coordinate the high-level development state and instruct the `git-operator` subagent to execute atomic commits, check out standard `change/<name>` topic branches, and validate commit messages against `bin/commit-lint.ts` prior to making commits.
