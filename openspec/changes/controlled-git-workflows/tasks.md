@@ -9,8 +9,8 @@
 
 ## 3. Git Hook Configuration
 
-- [ ] 3.1 Create a `.git/hooks/commit-msg` git hook file that automatically invokes `bin/commit-lint.ts` when a commit is made.
-- [ ] 3.2 Make the git hook executable.
+- [x] 3.1 Create a `.git/hooks/commit-msg` git hook file that automatically invokes `bin/commit-lint.ts` when a commit is made.
+- [x] 3.2 Make the git hook executable.
 
 ## 4. AI Agent Guidelines Integration
 
