@@ -16,7 +16,7 @@ Direct commits to the `main` branch SHALL be prohibited. All modifications, whet
 Every active branch SHALL correspond to exactly one OpenSpec change. The branch name MUST match the kebab-case change identifier and be prefixed with `change/` (e.g. `change/controlled-git-workflows`).
 
 #### Scenario: Switching branches
-- **WHEN** starting a new change with `bin/director-start`
+- **WHEN** starting a new change with Git checkout
 - **THEN** the active branch SHALL be checked out as `change/<name>`.
 
 ### Requirement: Conventional Commit Standard
