@@ -1,0 +1,5 @@
+- [x] 1.1 Create GitHub Issue "Symphony v1 bootstrapping with AI autonomy" (type:spike, status:backlog, priority:medium).
+- [x] 1.2 Create GitHub Issue "Symphony v2 transition to constrained artifact-driven orchestration" (type:spike, status:backlog, priority:medium).
+- [x] 1.3 Edit `AGENTS.md` to remove lines 49-52 (speculative targets about Symphony v1 autonomy and Symphony v2 constraints).
+- [x] 1.4 Verify the edit on `AGENTS.md` to ensure syntax, readability, and formatting are intact.
+- [x] 1.5 Close GitHub Issue #10.

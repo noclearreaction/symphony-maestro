@@ -46,10 +46,6 @@ Symphony owns orchestration mechanics:
 * test and evidence handling
 * project workflow automation
 
-Symphony v1 may be bootstrapped with more AI autonomy to discover the shape of the problem.
-
-Symphony v2 should be more constrained, specified, test-driven, and artifact-driven.
-
 ### Project Repositories
 
 Project repositories own project truth.
