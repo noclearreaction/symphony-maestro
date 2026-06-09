@@ -1,6 +1,6 @@
 # Issue Lifecycle and Governance
 
-This document establishes the official development lifecycle, state machine, and labeling guidelines for the Director and Symphony repositories. Adherence to these guidelines ensures system state transparency and supports Constitutional Principle 3 (Intent Traceability).
+This document establishes the official development lifecycle, state machine, and labeling guidelines for the Symphony Director and Symphony repositories. Adherence to these guidelines ensures system state transparency and supports Constitutional Principle 3 (Intent Traceability).
 
 ---
 

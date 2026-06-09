@@ -1,6 +1,6 @@
 # Strategic Goals & Vision
 
-This document tracks the overarching goals, boundaries, and vision for the Director and Symphony. It is the north star for both the Advisor and Designer agents.
+This document tracks the overarching goals, boundaries, and vision for Symphony Director and Symphony. It is the north star for both the Advisor and Designer agents.
 
 ## 1. Vision & Core Philosophy
 * **Human Ownership**: The human remains the sole owner of intent, tradeoffs, approval, and final decisions. AI agents propose and execute; they do not govern.
@@ -15,5 +15,5 @@ This document tracks the overarching goals, boundaries, and vision for the Direc
   * *Success Criteria*: An OpenSpec proposal for Symphony v1's core execution loop.
 
 ## 3. Explicit Non-Goals
-* **No Runtime in Director**: We will not write application code, databases, or runtime systems in the Director repository.
+* **No Runtime in Symphony Director**: We will not write application code, databases, or runtime systems in the Symphony Director repository.
 * **No Premature Automation**: We will not build complex Symphony orchestration agents until we have manually run the workflow via OpenCode and proven its value.
