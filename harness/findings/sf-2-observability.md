@@ -1,209 +1,104 @@
 # SF-2 Observability Findings
 
-Discovery session for issue #46 (`explore-opencode-debug-log-structure`).  
-opencode version: **1.16.2** | Model used: **opencode/deepseek-v4-flash-free** (no credentials required)  
-Harness image: **opencode-cache-harness:latest** (from SF-1 / #45)
+opencode 1.16.2 | free model: `opencode/deepseek-v4-flash-free` | harness: SF-1
 
 ---
 
-## CLI Subcommands
-
-Full output of `opencode --help`. Key subcommands for measurement:
-
-| Subcommand | Description |
-|---|---|
-| `opencode run [message]` | Run opencode with a message (non-interactive). Response goes to TUI/stderr only — **stdout is empty**. |
-| `opencode db [query]` | Execute a SQL query against the SQLite database or open interactive shell. `--format json\|tsv`. |
-| `opencode db path` | Print the database file path. |
-| `opencode stats` | Show human-readable token usage and cost statistics (all-time or `--days N`). |
-| `opencode export [sessionID]` | Export a session as structured JSON including messages, parts, and token counts. |
-| `opencode session` | Manage sessions (list, etc.). |
-| `opencode models` | List available models. |
-
-Other subcommands present: `completion`, `acp`, `mcp`, `attach`, `debug`, `providers`, `agent`, `upgrade`, `uninstall`, `serve`, `web`, `github`, `pr`, `plugin`.
-
----
-
-## Debug Log
-
-Captured with `opencode run --print-logs --log-level DEBUG "..." 2>debug.log`.
-
-### Structure
-
-The debug log is **line-oriented**, one JSON-like entry per line with format:
-```
-LEVEL  TIMESTAMP +ELAPSEDms service=<name> [key=value ...] <message>
-```
-
-### Phases observed (in order)
-
-1. **Startup** — `service=default`: version, args, process_role, run_id
-2. **Instance creation** — `service=default`: directory
-3. **Project init** — `service=project`: directory
-4. **Config loading** — `service=config`: loads from `~/.config/opencode/config.json`, `opencode.json`, `opencode.jsonc`, then project-local `opencode.json`
-5. **Plugin loading** — `service=plugin`: loads ~9 internal plugins by short name (obfuscated: `sW`, `JM`, `V7`, etc.)
-6. **LSP / formatter init** — disabled in this fixture
-7. **Session created** — `service=session`: full session state as structured log fields (see below)
-8. **Server event** — `service=server`: `event=connected`
-9. **Provider init** — `service=provider`: `providerID=opencode`, `status=started/completed`, duration
-10. **Session prompt loop** — `service=session.prompt`: `step=0`, `step=1`, then `exiting loop`
-11. **Tool resolution** — `service=session.tools` + `service=tool.registry`: registers bash, read, glob, grep, edit, write, task, webfetch, todowrite, websearch, skill
-12. **LLM call** — `service=llm`: `providerID=opencode`, `modelID=deepseek-v4-flash-free`, `session.id`, `agent=build`, `mode=primary`, `stream`
-13. **Instance dispose** — `service=default`
-
-### Session creation log entry (key fields)
-
-```
-service=session
-  id=ses_...          # session ID
-  slug=crisp-cabin    # human-readable slug
-  version=1.16.2
-  projectID=global
-  directory=/app/fixture
-  path=app/fixture
-  title="New session - <ISO timestamp>"
-  permission=[...]    # JSON array
-  cost=0
-  tokens={"input":0,"output":0,"reasoning":0,"cache":{"read":0,"write":0}}
-  time={"created":<unix_ms>,"updated":<unix_ms>}
-```
-
-### Token/cache fields in the debug log
-
-Token counts in the debug log are **session-level running totals** logged at session creation only (all zeros at that point). They are **not** logged per-turn or after the LLM call completes. **The debug log does not contain post-turn token counts.**
-
----
-
-## Database Schema
-
-Database path: `/root/.local/share/opencode/opencode.db`  
-Accessible via: `opencode db "<SQL>"` or direct `sqlite3` query.
-
-### All tables
-
-`migration`, `project`, `message`, `part`, `session`, `todo`, `session_share`, `control_account`, `account`, `account_state`, `event_sequence`, `event`, `workspace`, `session_message`, `data_migration`, `permission`, `project_directory`, `sqlite_sequence`, `session_input`, `session_context_epoch`
-
-### `session` table — key columns
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | TEXT (PK) | e.g. `ses_1519e289cffe...` |
-| `project_id` | TEXT | |
-| `slug` | TEXT | human-readable, e.g. `crisp-squid` |
-| `directory` | TEXT | working directory |
-| `title` | TEXT | auto-generated |
-| `agent` | TEXT | e.g. `build` |
-| `model` | TEXT | JSON: `{"id":"deepseek-v4-flash-free","providerID":"opencode","variant":"default"}` |
-| `cost` | REAL | session-level cost total (0.0 for free models) |
-| `tokens_input` | INTEGER | cumulative input tokens for the session |
-| `tokens_output` | INTEGER | cumulative output tokens |
-| `tokens_reasoning` | INTEGER | reasoning tokens (e.g. 20 observed) |
-| `tokens_cache_read` | INTEGER | cumulative cache read tokens |
-| `tokens_cache_write` | INTEGER | cumulative cache write tokens |
-| `time_created` | INTEGER | Unix ms |
-| `time_updated` | INTEGER | Unix ms |
-
-### `message` table
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | TEXT (PK) | |
-| `session_id` | TEXT | FK → session |
-| `time_created` | INTEGER | |
-| `time_updated` | INTEGER | |
-| `data` | TEXT | JSON blob containing role, agent, model, summary |
-
-### `part` table
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | TEXT (PK) | |
-| `message_id` | TEXT | FK → message |
-| `session_id` | TEXT | |
-| `time_created` | INTEGER | |
-| `time_updated` | INTEGER | |
-| `data` | TEXT | JSON blob: `{"type":"text","text":"..."}` or tool call parts |
-
-### Example session row (real values)
-
-```json
-{
-  "id": "ses_1519cca48ffeEgwW1NL1CkbX26",
-  "model": "{\"id\":\"deepseek-v4-flash-free\",\"providerID\":\"opencode\",\"variant\":\"default\"}",
-  "cost": 0,
-  "tokens_input": 8221,
-  "tokens_output": 2,
-  "tokens_reasoning": 20,
-  "tokens_cache_read": 0,
-  "tokens_cache_write": 0
-}
-```
-
-Note: 8221 input tokens for a minimal "What is 2+2?" prompt — this reflects the large built-in system prompt from the `build` agent, not the user message alone.
-
----
-
-## `opencode export` JSON structure
-
-`opencode export <sessionID>` returns a JSON object with:
-
-```json
-{
-  "info": {
-    "id": "ses_...",
-    "slug": "...",
-    "agent": "build",
-    "model": { "id": "deepseek-v4-flash-free", "providerID": "opencode", "variant": "default" },
-    "cost": 0,
-    "tokens": {
-      "input": 8221, "output": 2, "reasoning": 20,
-      "cache": { "read": 0, "write": 0 }
-    },
-    "time": { "created": 1781042211654, "updated": 1781042211900 }
-  },
-  "messages": [
-    {
-      "info": { "role": "user", "id": "msg_...", "sessionID": "ses_..." },
-      "parts": [ { "type": "text", "text": "...", "id": "prt_..." } ]
-    }
-  ]
-}
-```
-
----
-
-## Recommended Measurement Approach
-
-For SF-3–SF-8, use **`opencode db` SQL queries** against the `session` table:
+## How to measure
 
 ```bash
-# Get token counts and cost for the most recent session
+# Run a turn
+opencode run "<message>"
+
+# Read metrics (use inside container, or via docker exec)
 opencode db "SELECT tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write, cost FROM session ORDER BY time_created DESC LIMIT 1" --format json
+
+# DB path
+/root/.local/share/opencode/opencode.db
+
+# Full session export (messages + tokens)
+opencode export <sessionID>
 ```
 
-For per-session tracking across multiple runs, query by session ID or use `time_created` ordering.
-
-For a human-readable summary, `opencode stats` works but is not machine-parseable.
-
-For full message/response content, use `opencode export <sessionID>`.
-
-**Note on token granularity**: The database stores session-level **cumulative** totals, not per-turn deltas. For multi-turn sessions, calculate deltas between successive queries or use per-turn `opencode export` data.
+Token counts are session-level cumulative totals. **They are not in the debug log** — DB only.
 
 ---
 
-## Gaps vs #43 Assumptions
+## Debug log
 
-| #43 Assumption | Reality | Verdict |
-|---|---|---|
-| `tokens_input` field exists in db | ✅ Exact column name in `session` table | **Correct** |
-| `tokens_cache_read` field exists | ✅ Exact column name in `session` table | **Correct** |
-| `cost` field exists | ✅ `cost` REAL column in `session` table | **Correct** |
-| `opencode db` command exists | ✅ Exists, accepts SQL, `--format json\|tsv` | **Correct** |
-| `run-turn.sh` to trigger a turn | ⚠️ `opencode run "<message>"` works, but stdout is empty — response is TUI/stderr only. A wrapper script can redirect stderr but the text response is not in stdout. | **Partial — approach needs refinement** |
-| `extract-metrics.sh` with `opencode db` | ✅ `opencode db "<SQL>" --format json` works exactly as intended | **Correct** |
-| Token counts in debug log | ❌ Post-turn token counts are **not** in the debug log. They are only in the database. | **Incorrect — use DB, not log** |
-| Cache read tokens observable | ✅ In DB as `tokens_cache_read`, but **0 for free models** — Anthropic cache behavior may require Anthropic models | **DB column exists; free model shows 0** |
+The debug log captures what is sent to the model and how the session is structured. Useful for verifying what content is in context and for diagnosing why cache hits do or don't occur.
 
-### Key finding on cache tokens
+```bash
+# Capture debug log from a run
+opencode run --print-logs --log-level DEBUG "<message>" 2>debug.log
 
-`tokens_cache_read` and `tokens_cache_write` are **0** for `opencode/deepseek-v4-flash-free`. Cache behavior (prompt caching) is a provider-specific feature. To observe non-zero cache values, experiments likely need an Anthropic model with prompt caching enabled. This should be confirmed in SF-3.
+# Log format: one entry per line
+# LEVEL  TIMESTAMP +ELAPSEDms service=<name> [key=value ...] <message>
+```
+
+Key log entries for cache/context experiments:
+
+| service | What it shows |
+|---|---|
+| `session` | Session created with initial token snapshot (all zeros — pre-turn) |
+| `llm` | LLM call dispatched: `providerID`, `modelID`, `agent`, `mode=primary` |
+| `session.prompt` | Loop steps: `step=0` (start), `step=1` (after response), `exiting loop` |
+| `session.tools` + `tool.registry` | Which tools were registered (and thus whose schemas were included) |
+
+**What the debug log does NOT contain**: post-turn token counts, cache hit/miss signals, or response content. Those come from the DB and `opencode export` respectively.
+
+To confirm what is in context for a given turn (system prompt, tool schemas, prior messages), check the `service=llm` entry and cross-reference the session's token count from the DB.
+
+---
+
+## session table columns (relevant to experiments)
+
+`id`, `slug`, `agent`, `model` (JSON), `cost` (REAL), `tokens_input`, `tokens_output`, `tokens_reasoning`, `tokens_cache_read`, `tokens_cache_write`, `time_created` (Unix ms)
+
+---
+
+## Fixture configuration
+
+`instructions: ["AGENTS.md"]` **appends** to the built-in agent prompt — it does not replace it.  
+`agent.build.prompt: "{file:./AGENTS.md}"` **replaces** the system prompt.  
+Enabled tools add ~1650 tokens per turn from their schema definitions.
+
+Token baseline with corrected fixture (prompt override + all tools denied): **515 input tokens**.
+
+---
+
+## Cache behavior confirmed (free model)
+
+Prompt caching works with `opencode/deepseek-v4-flash-free` within a session. Tested by running two turns on the same session using `opencode run --session <id>`:
+
+| Turn | `tokens_input` | `tokens_cache_read` | `tokens_cache_write` |
+|---|---|---|---|
+| 1 | 515 | 0 | 0 |
+| 2 | 536 | 512 | 0 |
+
+Turn 2: 512 of 536 input tokens served from cache (99%). The system prompt is cached after the first turn and reused on subsequent turns in the same session.
+
+**Implication for experiments**: No paid model or API key is required to observe cache hits. The free model caches within a session.
+
+**Implication for harness design**: `docker run --rm` destroys the DB after every run. To test cache behavior across turns, the DB must persist — either via a named volume, a long-running container, or `docker exec` into a running container.
+
+```bash
+# Multi-turn pattern (DB persists across turns)
+docker run -d --name cache-exp opencode-cache-harness sleep infinity
+docker exec cache-exp opencode run "<message 1>"
+SESSION=$(docker exec cache-exp opencode db "SELECT id FROM session ORDER BY time_created DESC LIMIT 1" --format json | grep -o 'ses_[^"]*')
+docker exec cache-exp opencode run --session "$SESSION" "<message 2>"
+docker exec cache-exp opencode db "SELECT tokens_input, tokens_cache_read FROM session WHERE id=\"$SESSION\"" --format json
+docker stop cache-exp && docker rm cache-exp
+```
+
+---
+
+## Gaps vs #43 assumptions
+
+- `tokens_input`, `tokens_cache_read`, `cost` — all correct, exact column names in `session` table
+- `opencode db "<SQL>" --format json` — works exactly as assumed
+- **Token counts not in debug log** — DB only (assumption incorrect)
+- **`opencode run` stdout is empty** — response appears in TUI/stderr only
+- **`tokens_cache_read` is 0 for free models** — prompt caching requires Anthropic (or cache-capable) model
+

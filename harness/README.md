@@ -75,8 +75,37 @@ docker run --rm -it \
 
 This volume-mounts your local fixture over the baked-in one, so edits are reflected immediately without a rebuild. Use this for prompt iteration; the baked-in fixture is the reproducible baseline.
 
+## Multi-turn experiments (cache testing)
+
+`docker run --rm` destroys the DB after each run. To observe cache hits across turns, keep the container alive and reuse the session:
+
+```bash
+# Start a persistent container
+docker run -d --name cache-exp opencode-cache-harness sleep infinity
+
+# Turn 1 — establishes the session and primes the cache
+docker exec cache-exp opencode run "What is 2+2? Reply with only the number."
+
+# Capture the session ID
+SESSION=$(docker exec cache-exp opencode db "SELECT id FROM session ORDER BY time_created DESC LIMIT 1" --format json | grep -o 'ses_[^"]*')
+
+# Turn 2 — continues the session; system prompt served from cache
+docker exec cache-exp opencode run --session "$SESSION" "What is 3+3? Reply with only the number."
+
+# Read cache metrics
+docker exec cache-exp opencode db \
+  "SELECT tokens_input, tokens_cache_read, tokens_cache_write FROM session WHERE id=\"$SESSION\"" \
+  --format json
+
+# Clean up
+docker stop cache-exp && docker rm cache-exp
+```
+
+Expected result: `tokens_cache_read` is ~0 after turn 1, then ~512 after turn 2.
+
 ## Notes
 
 - The opencode version is pinned in the Dockerfile. Do not change it mid-spike without documenting the change as a variable.
+- Cache behavior confirmed on `opencode/deepseek-v4-flash-free` (free model, no API key required). See `findings/sf-2-observability.md`.
 - The `experiment` agent system prompt is approximately 160 tokens. This is an approximation — actual token count depends on the model's tokenizer.
 - How to trigger turns, where token usage is recorded, and how to read cache metrics are open questions this spike is designed to answer.
