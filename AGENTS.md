@@ -1,10 +1,10 @@
-# Director Project Context
+# Symphony Director Project Context
 
-This repository represents the Director project.
+This repository represents the Symphony Director project.
 
-The Director is an out-of-tree strategic contact point for the User. It is used to keep track of goals, priorities, decisions, project direction, open questions, and cross-project concerns.
+The Symphony Director is an out-of-tree strategic contact point for the User. It is used to keep track of goals, priorities, decisions, project direction, open questions, and cross-project concerns.
 
-The Director is not the runtime orchestration system. It should not be required for Symphony or any project repository to function.
+The Symphony Director is not the runtime orchestration system. It should not be required for Symphony or any project repository to function.
 
 ## Vision
 
@@ -13,9 +13,9 @@ Use it as an evaluative benchmark for governance and agent-instruction work, not
 
 ## Conceptual Layers
 
-### Director
+### Symphony Director
 
-The Director owns the User's strategic continuity.
+The Symphony Director owns the User's strategic continuity.
 
 It tracks:
 
@@ -27,9 +27,9 @@ It tracks:
 * lessons learned while building Symphony
 * risks of drift between intent and implementation
 
-The Director may help decide what work matters and why.
+The Symphony Director may help decide what work matters and why.
 
-The Director should not contain product/runtime code.
+The Symphony Director should not contain product/runtime code.
 
 ### Symphony
 
@@ -67,7 +67,7 @@ They contain:
 * review evidence
 * CI results
 
-A project repository should remain meaningful without the Director.
+A project repository should remain meaningful without the Symphony Director.
 
 ## Core Principles
 
@@ -103,7 +103,7 @@ Implementation agents need task-local context.
 
 Review agents need artifacts, specs, diffs, and evidence.
 
-Director-level agents need project status, decisions, goals, risks, and trajectory.
+Symphony Director-level agents need project status, decisions, goals, risks, and trajectory.
 
 Context should not be mixed merely because the same model is capable of playing multiple roles.
 
@@ -137,4 +137,4 @@ The early workflow uses OpenCode as an interactive shell. OpenCode is a bootstra
 
 Durable project truth lives in versioned artifacts, specifications, tests, reviews, and decisions.
 
-The Advisory and Specification workflow (using the Advisor and Designer roles) is designed to preserve clarity and prevent premature implementation while the User explores the shape of Director, Symphony, and future project workflows.
+The Advisory and Specification workflow (using the Advisor and Designer roles) is designed to preserve clarity and prevent premature implementation while the User explores the shape of Symphony Director, Symphony, and future project workflows.

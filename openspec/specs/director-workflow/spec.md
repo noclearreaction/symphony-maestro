@@ -1,7 +1,7 @@
 # Capability: director-workflow
 
 ## Purpose
-Structured Git, GitHub PR, and custom builder agent local workflow for Director development.
+Structured Git, GitHub PR, and custom builder agent local workflow for Symphony Director development.
 
 ## Requirements
 

@@ -18,6 +18,6 @@ This roadmap tracks high-level strategic milestones and immediate priorities.
   * *Objective*: Initialize the actual Symphony codebase and configure its project truth (OpenSpec, initial Gherkin tests).
 
 ## Next 2-3 Reasonable Moves
-1. Commit the `strategy/` directory to the Director repository.
+1. Commit the `strategy/` directory to the Symphony Director repository.
 2. Add a rule to the Advisor and Designer system prompts to read the files under `strategy/` to ensure tight context alignment.
 3. Start an `openspec-explore` session with the Designer to model the "work item lifecycle" for Symphony v1.
