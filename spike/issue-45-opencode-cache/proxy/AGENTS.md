@@ -19,7 +19,17 @@ docker run -d --name openrouter-proxy --network spike-net \
   openrouter-proxy
 ```
 
-Each forwarded request produces one JSON file in the log directory containing the full request body and response body. Inspect with `cat /tmp/proxy-logs/*.json | python3 -m json.tool`.
+Each forwarded request is appended as one JSON line to a session-keyed NDJSON file in the log directory. The session key is derived from the SHA-256 hash of the first 512 bytes of `messages[0].content` — requests sharing the same stable system prompt land in the same file. A 3-turn opencode session produces 2 files: one for the agent turns (e.g. `d46d701d.ndjson`) and one for the title-generation request (`12effdd3.ndjson`).
+
+Each line in the NDJSON file is a self-contained JSON object:
+```json
+{"timestamp":"...","turn":1,"request":{...},"response":{...}}
+```
+
+Inspect with:
+```bash
+cat /tmp/proxy-logs/<session-key>.ndjson | while read line; do echo "$line" | python3 -m json.tool; done
+```
 
 The container listens on port 8080. It must share a Docker network with the fixture container so opencode can reach it at `http://openrouter-proxy:8080`.
 

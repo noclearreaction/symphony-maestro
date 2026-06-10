@@ -2,18 +2,23 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 )
 
 const upstream = "https://openrouter.ai/api/v1/chat/completions"
 
-var logDir string
+var (
+	logDir   string
+	fileLocks sync.Map // keyed by session key, value *sync.Mutex
+)
 
 func main() {
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
@@ -28,7 +33,7 @@ func main() {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		log.Fatalf("failed to create log dir %s: %v", logDir, err)
 	}
-	log.Printf("writing request/response logs to %s", logDir)
+	log.Printf("writing session logs to %s", logDir)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -50,24 +55,56 @@ func main() {
 	}
 }
 
-// logEntry is the structure written to each JSON log file.
-type logEntry struct {
-	Timestamp string          `json:"timestamp"`
-	Request   json.RawMessage `json:"request"`
-	Response  json.RawMessage `json:"response,omitempty"`
-	Error     string          `json:"error,omitempty"`
+// sessionKey returns the first 8 hex chars of SHA-256(first 512 bytes of messages[0].content).
+func sessionKey(messages []map[string]any) string {
+	if len(messages) == 0 {
+		return "unknown"
+	}
+	content, _ := messages[0]["content"].(string)
+	if len(content) > 512 {
+		content = content[:512]
+	}
+	sum := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("%x", sum[:4]) // 8 hex chars
 }
 
-func writeLog(ts time.Time, entry logEntry) {
-	filename := fmt.Sprintf("%s/%s.json", logDir, ts.UTC().Format("20060102T150405.000000000Z"))
-	data, err := json.MarshalIndent(entry, "", "  ")
+// turnNumber returns the human turn index from the messages array length.
+// Turn 1: 2 messages (system+user), turn 2: 4, etc.
+func turnNumber(messages []map[string]any) int {
+	n := len(messages)
+	if n < 2 {
+		return 1
+	}
+	return (n) / 2
+}
+
+// fileMutex returns the per-file mutex for a given session key.
+func fileMutex(key string) *sync.Mutex {
+	mu, _ := fileLocks.LoadOrStore(key, &sync.Mutex{})
+	return mu.(*sync.Mutex)
+}
+
+// appendLog appends one JSON line to <logDir>/<sessionKey>.ndjson.
+func appendLog(key string, entry map[string]any) {
+	mu := fileMutex(key)
+	mu.Lock()
+	defer mu.Unlock()
+
+	line, err := json.Marshal(entry)
 	if err != nil {
 		log.Printf("log marshal error: %v", err)
 		return
 	}
-	if err := os.WriteFile(filename, data, 0644); err != nil {
-		log.Printf("log write error: %v", err)
+
+	filename := fmt.Sprintf("%s/%s.ndjson", logDir, key)
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("log open error: %v", err)
+		return
 	}
+	defer f.Close()
+	f.Write(line)
+	f.Write([]byte("\n"))
 }
 
 func handleChatCompletion(w http.ResponseWriter, r *http.Request, apiKey string) {
@@ -80,6 +117,21 @@ func handleChatCompletion(w http.ResponseWriter, r *http.Request, apiKey string)
 		return
 	}
 
+	// Parse messages for session key and turn number
+	var reqJSON map[string]any
+	var messages []map[string]any
+	if json.Unmarshal(reqBody, &reqJSON) == nil {
+		if raw, ok := reqJSON["messages"].([]any); ok {
+			for _, m := range raw {
+				if msg, ok := m.(map[string]any); ok {
+					messages = append(messages, msg)
+				}
+			}
+		}
+	}
+	key := sessionKey(messages)
+	turn := turnNumber(messages)
+
 	// Build upstream request
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, upstream, bytes.NewReader(reqBody))
 	if err != nil {
@@ -87,14 +139,12 @@ func handleChatCompletion(w http.ResponseWriter, r *http.Request, apiKey string)
 		return
 	}
 
-	// Forward relevant request headers; replace Authorization only if key is set
-	for key, vals := range r.Header {
-		switch http.CanonicalHeaderKey(key) {
+	for k, vals := range r.Header {
+		switch http.CanonicalHeaderKey(k) {
 		case "Authorization", "Content-Length":
-			// Skip: Authorization replaced below (if key set); Content-Length let Go recalculate
 		default:
 			for _, v := range vals {
-				req.Header.Add(key, v)
+				req.Header.Add(k, v)
 			}
 		}
 	}
@@ -105,43 +155,45 @@ func handleChatCompletion(w http.ResponseWriter, r *http.Request, apiKey string)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		writeLog(ts, logEntry{
-			Timestamp: ts.UTC().Format(time.RFC3339Nano),
-			Request:   json.RawMessage(reqBody),
-			Error:     err.Error(),
+		appendLog(key, map[string]any{
+			"timestamp": ts.UTC().Format(time.RFC3339Nano),
+			"turn":      turn,
+			"request":   reqJSON,
+			"error":     err.Error(),
 		})
 		http.Error(w, "upstream request failed: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
-	// Buffer response body so we can log it and forward it
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("upstream read error: %v", err)
 	}
 
-	// Represent response as JSON: inline if valid JSON, string otherwise
-	var respJSON json.RawMessage
+	// Represent response as JSON inline if valid, string otherwise (SSE)
+	var respVal any
 	if json.Valid(respBody) {
-		respJSON = json.RawMessage(respBody)
+		var respJSON any
+		json.Unmarshal(respBody, &respJSON)
+		respVal = respJSON
 	} else {
-		quoted, _ := json.Marshal(string(respBody))
-		respJSON = json.RawMessage(quoted)
+		respVal = string(respBody)
 	}
-	writeLog(ts, logEntry{
-		Timestamp: ts.UTC().Format(time.RFC3339Nano),
-		Request:   json.RawMessage(reqBody),
-		Response:  respJSON,
+
+	appendLog(key, map[string]any{
+		"timestamp": ts.UTC().Format(time.RFC3339Nano),
+		"turn":      turn,
+		"request":   reqJSON,
+		"response":  respVal,
 	})
 
-	// Forward all response headers verbatim, except Content-Length
-	for key, vals := range resp.Header {
-		if http.CanonicalHeaderKey(key) == "Content-Length" {
+	for k, vals := range resp.Header {
+		if http.CanonicalHeaderKey(k) == "Content-Length" {
 			continue
 		}
 		for _, v := range vals {
-			w.Header().Add(key, v)
+			w.Header().Add(k, v)
 		}
 	}
 	w.WriteHeader(resp.StatusCode)
