@@ -10,6 +10,8 @@ The SF-4b implementation writes one log file per request. A 3-turn session produ
 - File named `<session-key>.ndjson` rather than `<timestamp>.json`
 - Each appended line is a self-contained JSON object: `{timestamp, turn, request, response}`
 
+> **Superseded by `issue-56c-proxy-logging`**: Empirical testing revealed that multiple agent roles produce multiple NDJSON files, and session boundaries are not distinguishable within a file (two sessions with the same system prompt share a file). A single log file per proxy startup with structured log levels is a simpler and more operationally sound approach. The per-session-key grouping logic is replaced by a single append-only log with session key and turn number as record fields.
+
 ## Capabilities
 
 ### Modified Capabilities

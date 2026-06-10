@@ -9,7 +9,7 @@
 
 ## 2. Rebuild and Verify
 
-- [ ] 2.1 Rebuild proxy image: `docker build -t openrouter-proxy spike/issue-45-opencode-cache/proxy/`
+- [x] 2.1 Rebuild proxy image: `docker build -t openrouter-proxy spike/issue-45-opencode-cache/proxy/`
 - [x] 2.2 Run 3-turn session; confirm `/tmp/proxy-logs/` contains exactly 2 files: one for agent turns, one for title-gen
 - [x] 2.3 Confirm agent session file has 3 lines (one per turn), each parseable as JSON
 - [x] 2.4 Confirm turn numbers increment correctly across lines
