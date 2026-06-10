@@ -103,6 +103,44 @@ docker stop cache-exp && docker rm cache-exp
 
 Expected result: `tokens_cache_read` is ~0 after turn 1, then ~512 after turn 2.
 
+## Proxy-routed experiments (SF-4+)
+
+For experiments that require intercepting or mutating the request (SF-4 and later), run the `openrouter-proxy` container alongside the fixture container on a shared Docker network.
+
+```bash
+# Create shared network (once)
+docker network create spike-net
+
+# Start proxy (OPENROUTER_API_KEY optional — OpenRouter accepts keyless requests for free models)
+docker run -d --name openrouter-proxy \
+  --network spike-net \
+  ${OPENROUTER_API_KEY:+-e OPENROUTER_API_KEY="$OPENROUTER_API_KEY"} \
+  openrouter-proxy
+
+# Start fixture container on same network
+docker run -d --name sf-experiments \
+  --network spike-net \
+  opencode-cache-harness sleep infinity
+
+# Run a turn (opencode will route through the proxy)
+docker exec sf-experiments opencode run "Say: acknowledged"
+
+# Read cache metrics as usual
+SESSION=$(docker exec sf-experiments opencode db "SELECT id FROM session ORDER BY time_created DESC LIMIT 1" --format json | grep -o 'ses_[^"]*')
+docker exec sf-experiments opencode db \
+  "SELECT tokens_input, tokens_cache_read FROM session WHERE id=\"$SESSION\"" \
+  --format json
+
+# Clean up
+docker stop sf-experiments openrouter-proxy && docker rm sf-experiments openrouter-proxy
+```
+
+To build the proxy image:
+
+```bash
+docker build -t openrouter-proxy spike/issue-45-opencode-cache/proxy/
+```
+
 ## Notes
 
 - The opencode version is pinned in the Dockerfile. Do not change it mid-spike without documenting the change as a variable.

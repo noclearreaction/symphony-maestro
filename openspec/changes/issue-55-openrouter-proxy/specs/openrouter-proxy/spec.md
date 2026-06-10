@@ -26,16 +26,20 @@ The proxy SHALL forward Server-Sent Events streaming responses from OpenRouter t
 
 ---
 
-### Requirement: Proxy replaces Authorization header with OpenRouter API key
-The proxy SHALL strip the `Authorization` header from incoming requests and replace it with `Bearer ${OPENROUTER_API_KEY}` before forwarding to OpenRouter. The real API key SHALL only be present in the proxy's environment, never in opencode's configuration.
+### Requirement: Proxy optionally sets Authorization header with OpenRouter API key
+If `OPENROUTER_API_KEY` is set in the proxy's environment, the proxy SHALL set `Authorization: Bearer ${OPENROUTER_API_KEY}` on all forwarded requests. If the key is not set, the proxy SHALL forward requests without an `Authorization` header. The key SHALL only be present in the proxy's environment, never in opencode's configuration.
 
-#### Scenario: Downstream key replaced with upstream key
-- **WHEN** opencode sends a request with any `Authorization` header value
-- **THEN** the proxy forwards the request to OpenRouter with `Authorization: Bearer ${OPENROUTER_API_KEY}`
+#### Scenario: Key present — forwarded with Authorization header
+- **WHEN** `OPENROUTER_API_KEY` is set and opencode sends a request
+- **THEN** the proxy forwards the request with `Authorization: Bearer ${OPENROUTER_API_KEY}`
 
-#### Scenario: Missing OPENROUTER_API_KEY prevents startup
-- **WHEN** the proxy starts and `OPENROUTER_API_KEY` is not set in the environment
-- **THEN** the proxy exits with a non-zero exit code and a descriptive error message
+#### Scenario: Key absent — forwarded without Authorization header
+- **WHEN** `OPENROUTER_API_KEY` is not set and opencode sends a request
+- **THEN** the proxy forwards the request without an `Authorization` header and logs a warning at startup
+
+#### Scenario: Missing key does not prevent startup
+- **WHEN** the proxy starts and `OPENROUTER_API_KEY` is not set
+- **THEN** the proxy starts normally, logs a warning, and continues to serve requests
 
 ---
 
