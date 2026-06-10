@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openrouter-proxy/qwen/qwen3.6-flash",
+  "model": "openrouter-proxy/google/gemini-2.5-flash",
   "provider": {
     "openrouter-proxy": {
       "npm": "@ai-sdk/openai-compatible",
@@ -9,14 +9,14 @@
         "baseURL": "http://openrouter-proxy:8080/v1"
       },
       "models": {
-        "qwen/qwen3.6-flash": {
-          "name": "Qwen3.6 Flash"
+        "google/gemini-2.5-flash": {
+          "name": "Gemini 2.5 Flash"
         }
       }
     }
   },
   "instructions": [
-    "AGENTS.md"
+    "INSTRUCTIONS.md"
   ],
   "agent": {
     "build": {

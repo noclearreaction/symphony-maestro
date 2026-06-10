@@ -23,19 +23,25 @@ The minimal project fixture is baked into the image at `/app/fixture/`:
 
 ```
 /app/fixture/
-├── opencode.json   # opencode config: loads AGENTS.md, sets default agent
-└── AGENTS.md       # ~160-token system prompt for the experiment agent
+├── Dockerfile        # image definition for opencode-cache-harness
+├── opencode.json     # opencode config: model, provider, instructions
+├── INSTRUCTIONS.md   # stable system instructions (~1024+ tokens, cache target)
+└── prompt.md         # agent identity prompt
 ```
 
-The fixture defines a single agent (`experiment`) with a short, low-variability system prompt. It has no application code and no tools configured.
+The fixture defines a single agent (`build`) with a stable, low-variability system prompt sized to exceed the Gemini 2.5 Flash implicit cache threshold (1024 tokens). It has no application code and all tools are denied.
 
-## Build the image
+## Build the images
 
 ```bash
-docker build -t opencode-cache-harness harness/
+# Fixture image
+docker build -t opencode-cache-harness spike/issue-45-opencode-cache/fixture/
+
+# Proxy image
+docker build -t openrouter-proxy spike/issue-45-opencode-cache/proxy/
 ```
 
-Run from the repository root. The build installs opencode globally inside the image.
+Run from the repository root.
 
 ## Start an experiment session
 
@@ -69,7 +75,7 @@ To iterate on the system prompt without rebuilding:
 
 ```bash
 docker run --rm -it \
-  -v "$(pwd)/harness/fixture:/app/fixture" \
+  -v "$(pwd)/spike/issue-45-opencode-cache/fixture:/app/fixture" \
   opencode-cache-harness
 ```
 
@@ -111,10 +117,10 @@ For experiments that require intercepting or mutating the request (SF-4 and late
 # Create shared network (once)
 docker network create spike-net
 
-# Start proxy (OPENROUTER_API_KEY optional — OpenRouter accepts keyless requests for free models)
+# Start proxy (OPENROUTER_API_KEY required — store in .env at repo root)
 docker run -d --name openrouter-proxy \
   --network spike-net \
-  ${OPENROUTER_API_KEY:+-e OPENROUTER_API_KEY="$OPENROUTER_API_KEY"} \
+  --env-file .env \
   openrouter-proxy
 
 # Start fixture container on same network
@@ -135,15 +141,10 @@ docker exec sf-experiments opencode db \
 docker stop sf-experiments openrouter-proxy && docker rm sf-experiments openrouter-proxy
 ```
 
-To build the proxy image:
-
-```bash
-docker build -t openrouter-proxy spike/issue-45-opencode-cache/proxy/
-```
-
 ## Notes
 
-- The opencode version is pinned in the Dockerfile. Do not change it mid-spike without documenting the change as a variable.
-- Cache behavior confirmed on `opencode/deepseek-v4-flash-free` (free model, no API key required). See `findings/sf-2-observability.md`.
-- The `experiment` agent system prompt is approximately 160 tokens. This is an approximation — actual token count depends on the model's tokenizer.
-- How to trigger turns, where token usage is recorded, and how to read cache metrics are open questions this spike is designed to answer.
+- The opencode version is pinned in `fixture/Dockerfile`. Do not change it mid-spike without documenting the change as a variable.
+- The current model is `google/gemini-2.5-flash` routed via `openrouter-proxy`. It uses implicit caching — no `cache_control` markers required. Cache activates at 1024+ input tokens.
+- `INSTRUCTIONS.md` is the stable cache target (~800 words, ~1040 tokens). `prompt.md` adds ~160 more. Combined they comfortably exceed the 1024 token threshold.
+- Cache metrics live in `prompt_tokens_details.cached_tokens` on the raw OpenRouter response, and in `cache.read` within the `data` JSON column of the opencode `message` table.
+- SF-3 baseline was established on `opencode/deepseek-v4-flash-free` (opencode's own infrastructure). See `findings/sf-2-observability.md`.
