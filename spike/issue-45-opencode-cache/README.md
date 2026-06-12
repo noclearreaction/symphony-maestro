@@ -1,8 +1,8 @@
 # opencode cache harness
 
-A minimal, reproducible Docker environment for exploring opencode cache behavior as part of spike [#43](https://github.com/noclearreaction/symphony-director/issues/43).
+A minimal, reproducible Docker environment for exploring opencode cache behavior as part of spike [#43](https://github.com/noclearreaction/symphony-maestro/issues/43).
 
-This harness is the baseline for SF-1 ([#45](https://github.com/noclearreaction/symphony-director/issues/45)). It provides a clean, isolated container with opencode installed and a minimal project fixture ready to use.
+This harness is the baseline for SF-1 ([#45](https://github.com/noclearreaction/symphony-maestro/issues/45)). It provides a clean, isolated container with opencode installed and a minimal project fixture ready to use.
 
 ## Prerequisites
 
