@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Multi-stage Dockerfile assembles all runtimes
-The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no external host tooling prerequisites beyond `docker build`. Stages SHALL be: `download-base`, `go-runtime`, `deno-runtime`, `task-binary`, `node-runtime`, `base`, `ci`, `final`.
+The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no external host tooling prerequisites beyond `docker build`.
 
 #### Scenario: Container builds from clean Docker cache
 - **WHEN** a developer runs `docker build --target final .devcontainer/`
@@ -13,8 +13,8 @@ The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no e
 
 ---
 
-### Requirement: Go installed under versioned FHS path with update-alternatives
-Go SHALL be installed at `/opt/go<VERSION>/` where `<VERSION>` matches the `GO_VERSION` ARG. `update-alternatives` SHALL register `/usr/local/bin/go` pointing at `/opt/go<VERSION>/bin/go`, with `gofmt` registered as a slave alternative. `GOROOT` ENV SHALL be set to the versioned path (e.g. `/opt/go1.26.4`), not to a symlink.
+### Requirement: Go and gofmt available on PATH with atomic version switching
+Go SHALL be available on `PATH` at the pinned version. `go` and `gofmt` SHALL be managed as an atomic pair — switching the active Go version SHALL automatically switch `gofmt` to the corresponding version. `GOROOT` SHALL point at the concrete versioned installation directory, not a symlink.
 
 #### Scenario: Go binary reachable on PATH
 - **WHEN** a shell session starts in the container
@@ -26,8 +26,8 @@ Go SHALL be installed at `/opt/go<VERSION>/` where `<VERSION>` matches the `GO_V
 
 ---
 
-### Requirement: Deno installed under versioned FHS path with update-alternatives
-Deno SHALL be installed at `/opt/deno-<VERSION>/bin/deno`. `update-alternatives` SHALL register `/usr/local/bin/deno` pointing at that path.
+### Requirement: Deno available on PATH at pinned version
+Deno SHALL be available on `PATH` at the pinned version. The installation SHALL be at a versioned path to enable future side-by-side version management.
 
 #### Scenario: Deno binary reachable on PATH
 - **WHEN** a shell session starts in the container
@@ -77,13 +77,30 @@ All scripts in `bin/` that invoke Deno SHALL use `#!/usr/bin/env deno` (or `#!/u
 ### Requirement: devcontainer.json wires VS Code to the Dockerfile build
 A `devcontainer.json` SHALL reference the Dockerfile via `build.dockerfile` targeting the `final` stage. It SHALL include the `docker-outside-of-docker` devcontainer feature. It SHALL mount named volumes for VS Code server extensions and user data, consistent with the existing sibling-repo pattern.
 
-#### Scenario: VS Code opens in container
-- **WHEN** a developer opens the repository in VS Code with the Dev Containers extension
-- **THEN** VS Code detects the devcontainer configuration and offers to reopen in container
+#### Scenario: All expected tools present after container opens
+- **WHEN** a developer reopens the repository in the devcontainer
+- **THEN** `go version`, `deno --version`, `task --version`, `openspec --version`, `opencode --version`, and `gh --version` all succeed in the integrated terminal
 
 #### Scenario: Docker available inside container
 - **WHEN** a developer runs `docker ps` inside the container
 - **THEN** the command succeeds, communicating with the host Docker daemon via DooD
+
+---
+
+### Requirement: A `doctor` task verifies tool wiring on demand and at container start
+A Taskfile task `doctor` (namespaced as `devcontainer:doctor` from the root Taskfile) SHALL verify that all critical tools are reachable and correctly wired. It SHALL run automatically as part of `postStartCommand`. It SHALL exit non-zero if any tool check fails.
+
+#### Scenario: doctor passes in a healthy container
+- **WHEN** `task devcontainer:doctor` is run inside the devcontainer
+- **THEN** it exits 0 and reports the version of each tool: Go, gofmt, Deno, Task, openspec, opencode, gh, and Docker
+
+#### Scenario: doctor fails when a tool is missing
+- **WHEN** a tool is absent or misconfigured (e.g. a broken update-alternatives link)
+- **THEN** `task devcontainer:doctor` exits non-zero and the container start output surfaces the failure
+
+#### Scenario: doctor runs automatically on container start
+- **WHEN** VS Code starts the devcontainer
+- **THEN** `postStartCommand` invokes `task devcontainer:doctor` and its output is visible in the terminal
 
 ---
 

@@ -32,9 +32,9 @@
 - [ ] 5.2 Add devcontainer features: `common-utils` (zsh as default shell), `github-cli`, `sshd`, `docker-outside-of-docker` (moby: false, installDockerBuildx: false)
 - [ ] 5.3 Add `mounts`: named volume for `vscode-server/extensions`, named volume for `vscode-server/data/User`
 - [ ] 5.4 Add `postCreateCommand` to fix ownership of vscode user dirs
-- [ ] 5.5 Add `postStartCommand` referencing `.devcontainer/post-start` script; create that script (git hooks wiring, `env-lgc` tag)
+- [ ] 5.5 Add `postStartCommand` referencing `.devcontainer/post-start` script; create that script with: `git tag -f env-lgc origin/main` and `task devcontainer:doctor`; add commented stubs for future hooks and MCP sidecar sections
 - [ ] 5.6 Set `remoteUser: vscode`, `shutdownAction: stopContainer`
-- [ ] 5.7 Add `customizations.vscode.extensions` with relevant extensions (to be determined based on repo needs)
+- [ ] 5.7 Add `customizations.vscode.extensions` — deferred: resolve in a follow-on change once container is in use and extension needs are observed; add an empty array for now
 
 ## 6. Fix bin/ script shebangs
 
@@ -45,7 +45,15 @@
 ## 7. Verification
 
 - [ ] 7.1 Build `--target ci` image; confirm Go, Deno, Task, openspec, opencode, gh present; confirm pnpm/npm/npx absent from PATH
-- [ ] 7.2 Build `--target final` image; open in VS Code Dev Containers; confirm all tools work
+- [ ] 7.2 Build `--target final` image; open in VS Code Dev Containers; confirm `task devcontainer:doctor` passes
 - [ ] 7.3 Confirm `docker ps` succeeds inside the container (DooD working)
-- [ ] 7.4 Confirm `update-alternatives --display go` and `--display deno` show correct versioned paths
+- [ ] 7.4 Confirm `update-alternatives --display go` shows correct versioned path and lists `gofmt` as a slave; confirm `update-alternatives --display deno` shows correct versioned path
 - [ ] 7.5 Confirm `gofmt --help` works after switching go alternative
+- [ ] 7.6 Confirm `post-start` script runs without error and `git tag -l env-lgc` shows the tag set to `origin/main`
+
+## 8. Taskfile
+
+- [ ] 8.1 Create `.devcontainer/Taskfile.yaml` with a `doctor` task that checks: `go version`, `gofmt -h`, `deno --version`, `task --version`, `openspec --version`, `opencode --version`, `gh --version`, `docker info` (socket access); exit non-zero on any failure
+- [ ] 8.2 Create root `Taskfile.yaml` including `.devcontainer/Taskfile.yaml` under the `devcontainer:` namespace; add a top-level `health` alias that calls `devcontainer:doctor`
+- [ ] 8.3 Verify `task devcontainer:doctor` runs cleanly inside the built container
+- [ ] 8.4 Verify `task devcontainer:doctor` exits non-zero when a tool is removed (manual destructive test, restore after)

@@ -94,7 +94,7 @@ The repo uses Deno/TypeScript for pipeline tooling (`bin/`), Go for core code, a
 
 ## Open Questions
 
-- Does `postStartCommand` need to wire git hooks (`.devcontainer/setup-mcp.sh` equivalent), and if so, what does that script contain for this repo specifically?
+<!-- None outstanding -->
 
 ---
 
@@ -107,3 +107,25 @@ A mechanism to flag available updates (e.g. Renovate, a Deno script that checks 
 **Rationale**: Unpinned versions make builds non-reproducible and introduce silent breakage. The update-flagging system is a separate concern that requires its own design (what triggers it, where it reports, how it integrates with the change workflow). Blocking this change on that design would be premature.
 
 **Non-goal marker**: A future change should own `devcontainer-version-updates` as a capability — scanning ARG values against upstream releases and surfacing a diff or PR.
+
+---
+
+### D9: postStartCommand is minimal for this repo
+
+**Decision**: The `.devcontainer/post-start` script for symphony-maestro has minimal scope: set the `env-lgc` git tag (`git tag -f env-lgc origin/main`). Git hooks wiring is deferred — this repo has no `tools/hooks/` directory yet. The script SHALL be structured to make future additions obvious (commented sections for hooks, MCP sidecars, etc.).
+
+**Rationale**: Closing scope prevents task 5.5 from becoming an unbounded implementation decision. The `env-lgc` tag is the only postStart concern present in sibling repos that applies here.
+
+---
+
+### D10: Tool health check as a Taskfile `doctor` task, run on container start
+
+**Decision**: A `.devcontainer/Taskfile.yaml` SHALL define a `doctor` task that verifies all critical tools are correctly wired at runtime: Go (via `go version`), gofmt (via `gofmt -h`), Deno, Task, openspec, opencode, gh, and Docker socket access. The `postStartCommand` SHALL invoke `task doctor` after the `env-lgc` tag step.
+
+The `doctor` task pattern is adopted from the sibling repo convention (`wip-devops-copilot-lab2`). The task SHALL fail fast — if any tool is missing or misconfigured the exit code is non-zero, making the problem immediately visible on container start rather than at first use.
+
+`update-alternatives` wiring is not checked explicitly at runtime (it is a build-time invariant) but both `go` and `gofmt` being present serves as an implicit verification.
+
+**Rationale**: External wiring (`update-alternatives`, PATH assembly across multi-stage COPY operations, DooD socket mount) can silently break without a runtime check. A `doctor` task on container start surfaces breakage immediately with no friction. It also serves as the canonical verification step that replaces the manual group 7 checks during development.
+
+**Root Taskfile inclusion**: The project root `Taskfile.yaml` (created as part of this change) SHALL include the `.devcontainer/Taskfile.yaml` under the `devcontainer:` namespace.
