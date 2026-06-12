@@ -67,7 +67,7 @@ The repo uses Deno/TypeScript for pipeline tooling (`bin/`), Go for core code, a
 
 `ci` inherits `base` and adds only what a non-interactive automated runner needs (clean ENV, no user state).
 
-`final` inherits `ci` and adds: SSH agent profile scripts, `~/.bashrc`/`~/.zshrc` setup, vscode user directory prep, git hook wiring, `env-lgc` tag, XDG env vars.
+`final` inherits `ci` and adds: SSH agent profile scripts, `~/.bashrc`/`~/.zshrc` setup, vscode user directory prep, git hook wiring, XDG env vars.
 
 **Rationale**: CI should be a strict subset of the dev environment. Making `ci` an explicit stage that `final` extends ensures they can never diverge silently.
 
@@ -121,15 +121,15 @@ A mechanism to flag available updates (e.g. Renovate, a Deno script that checks 
 
 ### D9: postStartCommand is minimal for this repo
 
-**Decision**: The `.devcontainer/post-start` script for symphony-maestro has minimal scope: set the `env-lgc` git tag (`git tag -f env-lgc origin/main`). Git hooks wiring is deferred — this repo has no `tools/hooks/` directory yet. The script SHALL be structured to make future additions obvious (commented sections for hooks, MCP sidecars, etc.).
+**Decision**: The `.devcontainer/post-start` script for symphony-maestro has minimal scope: invoke `task devcontainer:doctor`. Git hooks wiring is deferred — this repo has no `tools/hooks/` directory yet. The script SHALL be structured to make future additions obvious (commented sections for hooks, MCP sidecars, etc.).
 
-**Rationale**: Closing scope prevents task 5.5 from becoming an unbounded implementation decision. The `env-lgc` tag is the only postStart concern present in sibling repos that applies here.
+**Rationale**: Closing scope prevents task 5.5 from becoming an unbounded implementation decision. The `env-lgc` git tag pattern from sibling repos was considered and rejected — it has no concrete use case in this workflow and caused first-start failures when `origin/main` was not yet a resolved remote tracking ref.
 
 ---
 
 ### D10: Tool health check as a Taskfile `doctor` task, run on container start
 
-**Decision**: A `.devcontainer/Taskfile.yaml` SHALL define a `doctor` task that verifies all critical tools are correctly wired at runtime: Go (via `go version`), gofmt (via `gofmt -h`), Deno, Task, openspec, opencode, gh, and Docker socket access. The `postStartCommand` SHALL invoke `task doctor` after the `env-lgc` tag step.
+**Decision**: A `.devcontainer/Taskfile.yaml` SHALL define a `doctor` task that verifies all critical tools are correctly wired at runtime: Go (via `go version`), gofmt (via `gofmt -h`), Deno, Task, openspec, opencode, gh, and Docker socket access. The `postStartCommand` SHALL invoke `task devcontainer:doctor`.
 
 The `doctor` task pattern is adopted from the sibling repo convention (`wip-devops-copilot-lab2`). The task SHALL fail fast — if any tool is missing or misconfigured the exit code is non-zero, making the problem immediately visible on container start rather than at first use.
 

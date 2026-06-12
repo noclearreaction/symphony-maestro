@@ -14,7 +14,7 @@ All significant findings from the initial review have been resolved:
 
 | Finding | Resolution |
 |---|---|
-| Open question about `postStartCommand` / git hooks scope | Closed via D9: minimal scope — `git tag -f env-lgc origin/main` + `task devcontainer:doctor`; future hooks left as commented stubs |
+| Open question about `postStartCommand` / git hooks scope | Closed via D9: minimal scope — `task devcontainer:doctor` only; future hooks left as commented stubs; `env-lgc` tag pattern rejected (no use case, caused first-start failures) |
 | Task 5.5 unbounded scope | Constrained: exact script content specified in the task |
 | Task 5.7 "to be determined" | Explicitly deferred: empty array now, follow-on change when extension needs are observed |
 | Spec requirement paragraphs restating build layout (paths, stage names) | Go and Deno requirements rewritten to behavioral; stage names removed from Dockerfile requirement |

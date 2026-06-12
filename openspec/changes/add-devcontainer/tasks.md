@@ -32,7 +32,7 @@
 - [x] 5.2 Add devcontainer features: `common-utils` (zsh as default shell), `github-cli`, `sshd`, `docker-outside-of-docker` (moby: false, installDockerBuildx: false)
 - [x] 5.3 Add `mounts`: named volume for `vscode-server/extensions`, named volume for `vscode-server/data/User`
 - [x] 5.4 Add `postCreateCommand` to fix ownership of vscode user dirs
-- [x] 5.5 Add `postStartCommand` referencing `.devcontainer/post-start` script; create that script with: `git tag -f env-lgc origin/main` and `task devcontainer:doctor`; add commented stubs for future hooks and MCP sidecar sections
+- [x] 5.5 Add `postStartCommand` referencing `.devcontainer/post-start` script; create that script with: `task devcontainer:doctor`; add commented stubs for future hooks and MCP sidecar sections
 - [x] 5.6 Set `remoteUser: vscode`, `shutdownAction: stopContainer`
 - [x] 5.7 Add `customizations.vscode.extensions` — deferred: resolve in a follow-on change once container is in use and extension needs are observed; add an empty array for now
 
@@ -49,7 +49,7 @@
 - [ ] 7.3 Confirm `docker ps` succeeds inside the container (DooD working)
 - [x] 7.4 Confirm `update-alternatives --display go` shows correct versioned path and lists `gofmt` as a slave; confirm `update-alternatives --display deno` shows correct versioned path
 - [x] 7.5 Confirm `gofmt --help` works after switching go alternative
-- [ ] 7.6 Confirm `post-start` script runs without error and `git tag -l env-lgc` shows the tag set to `origin/main`
+- [ ] 7.6 Confirm `post-start` script runs without error and `task devcontainer:doctor` exits 0
 
 ## 8. Taskfile
 
