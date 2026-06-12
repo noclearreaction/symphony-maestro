@@ -77,6 +77,10 @@ The repo uses Deno/TypeScript for pipeline tooling (`bin/`), Go for core code, a
 
 **Rationale**: Consistent with the principle of keeping Node/pnpm constrained. The standalone binary is the upstream-preferred distribution method for non-Node environments.
 
+**Alternatives considered**:
+- *npm install -g @go-task/cli* (used in `wip-devops-copilot-lab2`): rejected — adding a Node-installed tool contradicts the goal of keeping pnpm constrained to openspec/opencode only. Installing Task via npm also means it disappears if Node is ever removed.
+- *Spec constraint dropped ("SHALL NOT be installed via npm" removed from spec)*: reviewed and declined — the constraint is behavioral, not structural. It directly affects the runtime Node surface area and belongs in the spec alongside the PATH isolation requirement.
+
 ---
 
 ### D7: DooD for sidecars
@@ -107,6 +111,9 @@ A mechanism to flag available updates (e.g. Renovate, a Deno script that checks 
 **Rationale**: Unpinned versions make builds non-reproducible and introduce silent breakage. The update-flagging system is a separate concern that requires its own design (what triggers it, where it reports, how it integrates with the change workflow). Blocking this change on that design would be premature.
 
 **Non-goal marker**: A future change should own `devcontainer-version-updates` as a capability — scanning ARG values against upstream releases and surfacing a diff or PR.
+
+**Alternatives considered**:
+- *Treat version pinning scenarios as linting/review gates rather than Gherkin scenarios*: a reviewer noted that "Dockerfile ARGs enumerate all tool versions" is a static analysis check, not a runtime behavior, and suggested framing it as a review gate. Declined — the distinction doesn't help implementers, and the scenario format keeps the requirement co-located with all other requirements. A future linting step can be added without changing the spec.
 
 ---
 
