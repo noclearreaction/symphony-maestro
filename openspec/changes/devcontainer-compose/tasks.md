@@ -1,17 +1,21 @@
 ## 1. docker-compose.yml
 
-- [ ] 1.1 Create `.devcontainer/docker-compose.yml` with a `devcontainer` service (`build.target: final`, `image: symphony-maestro`) and a `node-builder` service (`build.target: node-builder`, `image: symphony-maestro-node-builder`); both services share the same `build.context` and `build.dockerfile`
-- [ ] 1.2 Pass `NODE_VERSION` and `PNPM_VERSION` as build args in both services (values matching Dockerfile ARG defaults)
+- [ ] 1.1 Define an `x-versions` YAML anchor at the top of `.devcontainer/docker-compose.yml` with current tool version strings (`GO_VERSION`, `DENO_VERSION`, `TASK_VERSION`) matching current Dockerfile ARG defaults; add Renovate annotations
+- [ ] 1.2 Define an `x-build` YAML anchor with the shared build block (`context: ..`, `dockerfile: .devcontainer/Dockerfile`, `args` merged from `x-versions`)
+- [ ] 1.3 Add `devcontainer` service merging `x-build` with `build.target: final` and `image: symphony-maestro`; no profile
 
-## 2. devcontainer.json
+## 2. Dockerfile
 
-- [ ] 2.1 Replace the `build` block with `dockerComposeFile: "docker-compose.yml"` and `service: "devcontainer"`
-- [ ] 2.2 Add explicit `workspaceMount` to bind-mount the workspace (required by devcontainer spec for compose configurations)
-- [ ] 2.3 Change `shutdownAction` from `stopContainer` to `stopCompose`
+- [ ] 2.1 Remove default values from all tool version `ARG` declarations in `.devcontainer/Dockerfile` (values are now supplied exclusively by compose); preserve Renovate annotation comments
 
-## 3. Verification
+## 3. devcontainer.json
 
-- [ ] 3.1 Rebuild the devcontainer and confirm it opens successfully
-- [ ] 3.2 Confirm `task devcontainer:doctor` passes inside the container
-- [ ] 3.3 Confirm `docker image ls symphony-maestro-node-builder` shows the image from inside the devcontainer via DooD
-- [ ] 3.4 Confirm all existing named volumes are still mounted (`vscode-extensions`, `vscode-user-data`)
+- [ ] 3.1 Replace the `build` block with `dockerComposeFile: "docker-compose.yml"` and `service: "devcontainer"`
+- [ ] 3.2 Add explicit `workspaceMount` to bind-mount the workspace (required by devcontainer spec for compose configurations)
+- [ ] 3.3 Change `shutdownAction` from `stopContainer` to `stopCompose`
+
+## 4. Verification
+
+- [ ] 4.1 Rebuild the devcontainer and confirm it opens successfully
+- [ ] 4.2 Confirm `task devcontainer:doctor` passes inside the container
+- [ ] 4.3 Confirm all existing named volumes are still mounted (`vscode-extensions`, `vscode-user-data`)

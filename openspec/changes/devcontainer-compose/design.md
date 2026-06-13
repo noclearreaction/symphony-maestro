@@ -1,56 +1,65 @@
 ## Context
 
 The devcontainer currently uses `devcontainer.json` with a `build.dockerfile` entry
-targeting the `final` stage. Multi-stage Docker builds in this configuration only tag
-the final image — intermediate stages are cached but not named. The `reinstall-node-tools`
-change requires `symphony-maestro-node-builder` to be available by name on the host Docker
-daemon so that `task node:build` and `task node:package:*` can run it via DooD.
+targeting the `final` stage. The `reinstall-node-tools` change will need to add a
+`node-builder` service to the compose file so that image is available by name on the
+host Docker daemon. That requires compose to already be the build driver.
 
-Docker Compose is the supported devcontainer mechanism for building multiple named images
-from a single Dockerfile.
+This change migrates the devcontainer build from `build.dockerfile` to `dockerComposeFile`,
+establishing the compose foundation that `reinstall-node-tools` extends. It also moves
+tool version ARG defaults into compose so they are maintained in one place.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- `symphony-maestro-node-builder` available by name on the host Docker daemon after devcontainer build
+- Migrate devcontainer build from `build.dockerfile` to `dockerComposeFile`
 - All existing devcontainer behaviour preserved (mounts, features, postStartCommand, remoteUser)
-- ARG versions for node-builder stage passed through compose build args
+- Compose is the single source of truth for all tool version defaults
+- Compose file structured with YAML anchors so adding services later is clean
 
 **Non-Goals:**
-- Running any services at container start (both services are build-only; no `depends_on` or runtime orchestration)
-- Adding any new stages or modifying the Dockerfile
+- Adding the `node-builder` service (that is in `reinstall-node-tools`)
+- Adding any new Dockerfile stages
 - Changing any task or post-start behaviour
 
 ## Decisions
 
-### D1: docker-compose.yml with two build-only services
+### D1: docker-compose.yml with devcontainer service only
 
-**Decision**: `.devcontainer/docker-compose.yml` defines two services — `devcontainer`
-(`--target final`) and `node-builder` (`--target node-builder`, `image: symphony-maestro-node-builder`).
-`devcontainer.json` switches from `build.dockerfile` to `dockerComposeFile` + `service: devcontainer`.
-The `node-builder` service has no `command` — it is never started, only built.
+**Decision**: `.devcontainer/docker-compose.yml` defines a single `devcontainer` service
+(`--target final`). `devcontainer.json` switches from `build.dockerfile` to
+`dockerComposeFile` + `service: devcontainer`. The file is structured with `x-versions`
+and `x-build` anchors so that `reinstall-node-tools` can add `node-builder` cleanly.
 
-**Rationale**: Docker Compose `build` with a named `image` field causes compose to tag the
-built image with that name, making it available on the host Docker daemon. VS Code builds
-all services in the compose file when opening the devcontainer, so `node-builder` is built
-and tagged automatically alongside `final`.
+**Rationale**: Separating the compose migration from the node-builder addition keeps each
+change minimal and independently verifiable.
 
-**Alternative considered**: `postCreateCommand` running `docker build --target node-builder`.
-Rejected: runs after the container is already up, introduces a network dependency at runtime,
-and is not the intended devcontainer lifecycle hook for this purpose.
+### D2: Version ARG defaults move from Dockerfile to compose
 
-### D2: Build args for NODE_VERSION and PNPM_VERSION in compose
+**Decision**: All `ARG` defaults are removed from the Dockerfile. The compose file becomes
+the single source of truth for tool version defaults, declared via a YAML anchor
+(`x-versions`) and passed as `build.args` to every service. Renovate manages version
+bumps directly in `docker-compose.yml` via the same Renovate regex manager that
+currently targets the Dockerfile.
 
-**Decision**: The `node-builder` service in `docker-compose.yml` passes `NODE_VERSION` and
-`PNPM_VERSION` as build args with hardcoded defaults matching the Dockerfile ARGs. The
-`devcontainer` service passes the same args for consistency (the base stage does not use
-them but they are declared at the top of the Dockerfile).
+**Rationale**: With compose as the build driver, the Dockerfile ARG defaults are never
+used — compose always supplies them explicitly. Keeping defaults in two places creates
+drift. Making compose the single source of truth eliminates the duplication.
 
-**Rationale**: Compose build args must be explicitly listed to be passed through. Hardcoding
-them in compose (mirroring the Dockerfile defaults) ensures they are always in sync — Renovate
-updates the Dockerfile ARG defaults, and those are the single source of truth.
+**Note**: `GO_VERSION`, `DENO_VERSION`, and `TASK_VERSION` are already in the Dockerfile
+with Renovate annotations. These move to compose. `NODE_VERSION` and `PNPM_VERSION`
+will be added to the `x-versions` anchor by `reinstall-node-tools`.
 
-### D3: workspaceFolder and shutdownAction in devcontainer.json
+### D3: YAML anchors for shared build configuration
+
+**Decision**: `docker-compose.yml` uses a top-level `x-versions` YAML anchor for version
+strings and an `x-build` anchor for the shared `build` block (`context`, `dockerfile`,
+`args`). Services merge `x-build`.
+
+**Rationale**: Consistent with the project's existing compose sample style. When
+`reinstall-node-tools` adds `node-builder`, it merges the same anchors with no duplication.
+
+### D4: workspaceFolder and shutdownAction in devcontainer.json
 
 **Decision**: When switching to `dockerComposeFile`, `workspaceMount` must be explicitly
 specified in `devcontainer.json` because compose does not automatically bind-mount the

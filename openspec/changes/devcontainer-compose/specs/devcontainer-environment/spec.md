@@ -1,26 +1,24 @@
 ## MODIFIED Requirements
 
-### Requirement: Devcontainer built via docker-compose with named service images
+### Requirement: Devcontainer built via docker-compose
 The devcontainer SHALL be defined using `dockerComposeFile` in `devcontainer.json` pointing
-to `.devcontainer/docker-compose.yml`. The compose file SHALL define at minimum two services
-built from the same Dockerfile:
-- `devcontainer`: `--target final`, used as the developer environment
-- `node-builder`: `--target node-builder`, tagged as `symphony-maestro-node-builder`
+to `.devcontainer/docker-compose.yml`. The compose file SHALL define a `devcontainer`
+service built from the Dockerfile with `--target final`.
 
-Both services SHALL be built when the devcontainer is built. The `node-builder` image SHALL
-be available by name on the host Docker daemon after a successful build.
+All tool version ARG defaults SHALL be defined in `docker-compose.yml` only. The
+Dockerfile ARGs SHALL have no default values. The compose file is the single source of
+truth for all version strings.
 
-#### Scenario: node-builder image available after devcontainer build
-- **WHEN** VS Code builds the devcontainer
-- **THEN** the `symphony-maestro-node-builder` image is present on the host Docker daemon
-- **AND** `docker run --rm symphony-maestro-node-builder pnpm --version` succeeds from inside the devcontainer via DooD
+The compose file SHALL use YAML anchors (`x-versions`, `x-build`) so that additional
+services can be added cleanly in future changes.
 
-#### Scenario: Devcontainer environment unchanged
-- **WHEN** the devcontainer starts after the compose migration
+#### Scenario: Devcontainer environment unchanged after compose migration
+- **WHEN** the devcontainer is rebuilt using `dockerComposeFile`
 - **THEN** all existing tools (Go, Deno, Task, gh, Docker) remain available
 - **AND** `task devcontainer:doctor` passes
 - **AND** all existing named volumes (`vscode-extensions`, `vscode-user-data`) remain mounted
 
-#### Scenario: ARG versions passed through compose to Dockerfile
-- **WHEN** the compose file specifies `NODE_VERSION` and `PNPM_VERSION` build args
-- **THEN** the `node-builder` stage uses exactly those versions
+#### Scenario: All tool versions supplied by compose
+- **WHEN** the devcontainer is built via compose
+- **THEN** all tool version ARGs (`GO_VERSION`, `DENO_VERSION`, `TASK_VERSION`) are supplied by the compose file
+- **AND** the Dockerfile contains no ARG default values for tool versions
