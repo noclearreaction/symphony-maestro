@@ -38,15 +38,15 @@ The correct tools exist in pnpm to solve all of these properly.
 
 ### D2: Named Docker volume for node_modules instead of baked image layer
 
-**Decision**: node_modules is NOT installed at Docker build time. Instead, two named Docker volumes are declared in `devcontainer.json`:
-- `${localWorkspaceFolderBasename}-node-modules` mounted at `/opt/node/node_modules` — the deployed package tree, populated by the builder
-- `${localWorkspaceFolderBasename}-pnpm-store` mounted at `/root/.local/share/pnpm/store` inside the builder — the pnpm content store
+**Decision**: node_modules is NOT installed at Docker build time. Instead, two named Docker volumes are declared in `docker-compose.yml`:
+- `node-modules` mounted at `/opt/node/node_modules` on the `symphony-studio` service — the deployed package tree, populated by the builder
+- `pnpm-store` declared in `docker-compose.yml` for use by builder containers spawned via DooD; not mounted on the devcontainer itself
 
-A `node-builder` stage in the Dockerfile (see D6) produces the builder image. `task node:build` runs this image via DooD: wipes the volume's `node_modules`, runs `pnpm install --frozen-lockfile` (hitting the store for cached tarballs), `pnpm deploy /dest` (where `/dest/node_modules` is the volume), then `pnpm store prune`. The Dockerfile bakes `mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH` into the devcontainer image — the symlink is stable because the volume mount path is fixed.
+A `node-builder` service in `docker-compose.yml` (see D6) is built as part of `docker-compose build` so the image is always available. `task node:build` runs this image via DooD: wipes the volume's `node_modules`, runs `pnpm install --frozen-lockfile` (hitting the store for cached tarballs), `pnpm deploy /dest` (where `/dest/node_modules` is the volume), then `pnpm store prune`. The Dockerfile bakes `mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH` into the devcontainer image — the symlink is stable because the volume mount path is fixed.
 
 **Rationale**: Eliminates the multi-stage COPY problem entirely — no hoisting, no symlink breakage, no native artifact placement. The builder runs in the correct environment and writes directly to the volume. Refreshing packages after a `node:package:add` requires no image rebuild: re-run the builder container. The Dockerfile node-runtime stage is no longer needed.
 
-**Key assumption**: With DooD, named volumes live on the host Docker daemon. Both the builder containers (spawned via `task node:*`) and the devcontainer (mounted via `devcontainer.json`) share the same host daemon, so they see the same volume. This must be verified at MVP.
+**Key assumption**: With DooD, named volumes live on the host Docker daemon. Both the builder containers (spawned via `task node:*`) and the devcontainer (mounted via `docker-compose.yml`) share the same host daemon, so they see the same volume.
 
 **What stays in the image**: `mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH` baked at build time. The symlink target is stable because the volume is always mounted at `/opt/node/node_modules`. The builder only ever writes to `node_modules/` — nothing else in `/opt/node/` is touched.
 
@@ -70,11 +70,11 @@ A `node-builder` stage in the Dockerfile (see D6) produces the builder image. `t
 
 **Rationale**: Keeps pnpm out of the devcontainer. The task interface exposes intent rather than mechanism — the user never needs to know about lockfiles or pnpm commands. Trust is managed independently of package installation because transitive deps (e.g. re2) need build script approval without being direct deps.
 
-### D6: node-builder stage in the Dockerfile
+### D6: node-builder as a docker-compose service
 
-**Decision**: The Dockerfile contains a `node-builder` stage using `node:${NODE_VERSION}-bookworm-slim` with pnpm installed via `corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate`. This stage is the sole source of the builder image. `task node:build` and all `node:package:*` tasks reference the locally tagged image (e.g. `symphony-maestro-node-builder`) rather than pulling `node:bookworm-slim` from Docker Hub at task runtime.
+**Decision**: The Dockerfile contains a `node-builder` stage using `node:${NODE_VERSION}-bookworm-slim` with pnpm installed via `corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate`. This stage is exposed as a `node-builder` service in `docker-compose.yml`, assigned to a `node-tools` profile so it is built by `docker-compose build` (and therefore by the devcontainer rebuild) but never started automatically when the devcontainer starts. The image is tagged `symphony-studio-node-builder`. `task node:build` and all `node:package:*` tasks reference this image via DooD.
 
-**Rationale**: Node and pnpm versions are pinned in the same place as all other tool versions — the Dockerfile ARG block, managed by Renovate. The builder image is built once during `docker build` and reused by all node tasks. No runtime Docker Hub pulls needed for node tasks.
+**Rationale**: Defining the builder as a docker-compose service ensures the image is always built in sync with the devcontainer image — same Dockerfile, same version ARGs, same Renovate management. Using a profile prevents the builder container from being started as a sidecar alongside the devcontainer. Node and pnpm versions remain pinned in the Dockerfile ARG block alongside all other tool versions.
 
 **Alternative considered**: Pull `node:bookworm-slim` on demand in each task. Rejected: node version floats, pnpm version must be separately managed, and each task invocation may pull from the network.
 
@@ -96,14 +96,14 @@ sequenceDiagram
     participant Files as .devcontainer/node/
 
     Dev->>Task: task node:package:add -- foo 1.2.3
-    Task->>Sandbox: docker run --rm -v .devcontainer/node:/work symphony-maestro-node-builder
+    Task->>Sandbox: docker run --rm -v .devcontainer/node:/work symphony-studio-node-builder
     Sandbox->>Sandbox: corepack enable && pnpm add foo@1.2.3
     Sandbox->>Files: writes updated package.json
     Sandbox->>Files: writes updated pnpm-lock.yaml
     Sandbox-->>Task: exit 0
     Task-->>Dev: done
     Dev->>Task: task node:build
-    Task->>Sandbox: docker run --rm -v .devcontainer/node:/src -v symphony-maestro-node-modules:/dest node:bookworm-slim
+    Task->>Sandbox: docker run --rm -v .devcontainer/node:/src -v symphony-studio-node-modules:/dest node:bookworm-slim
     Sandbox->>Sandbox: pnpm install --frozen-lockfile && pnpm deploy /dest
     Sandbox-->>Task: exit 0
     Task-->>Dev: foo now available in devcontainer (no rebuild needed)

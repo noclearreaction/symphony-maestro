@@ -3,11 +3,12 @@
 - [x] 1.1 Create `.devcontainer/node/package.json` with empty `dependencies` — no `packageManager` field; pnpm version is owned by `PNPM_VERSION` in the Dockerfile
 - [x] 1.2 Create `.devcontainer/node/pnpm-workspace.yaml` with supply chain hardening settings (`minimumReleaseAge: 10080`, `blockExoticSubdeps: true`, `trustPolicy: no-downgrade`) — trust entries are managed by `task node:trust:add/rm`
 
-## 2. Named Docker volumes and devcontainer.json
+## 2. Named Docker volumes and docker-compose.yml
 
-- [ ] 2.1 Add named volume `${localWorkspaceFolderBasename}-node-modules` to `devcontainer.json` mounted at `/opt/node/node_modules`
-- [ ] 2.2 Add named volume `${localWorkspaceFolderBasename}-pnpm-store` to `devcontainer.json` (mounted only inside builder containers via DooD, not in the devcontainer itself)
-- [ ] 2.3 Verify the node-modules volume is shared between the devcontainer and containers spawned via DooD (key MVP assumption)
+- [ ] 2.1 Add named volume `node-modules` to `docker-compose.yml` and mount it at `/opt/node/node_modules` on the `symphony-studio` service
+- [ ] 2.2 Add named volume `pnpm-store` to `docker-compose.yml` (used only by builder containers via DooD, not mounted on the devcontainer)
+- [ ] 2.3 Add `node-builder` service to `docker-compose.yml` with `profiles: [node-tools]` so it builds with `docker-compose build` but is never started automatically; tag the image `symphony-studio-node-builder`
+- [ ] 2.4 Verify the node-modules volume is shared between the devcontainer and containers spawned via DooD (key MVP assumption)
 
 ## 3. Dockerfile: add node-builder stage, remove node-runtime stage
 
@@ -19,7 +20,7 @@
 
 ## 4. node:build task
 
-- [ ] 4.1 Add `task node:build` that runs the `symphony-maestro-node-builder` image via DooD with `.devcontainer/node/` bind-mounted as source, `${localWorkspaceFolderBasename}-node-modules` mounted at `/dest/node_modules`, and `${localWorkspaceFolderBasename}-pnpm-store` mounted at `/root/.local/share/pnpm/store`; the task wipes `/dest/node_modules`, runs `pnpm install --frozen-lockfile`, `pnpm deploy /dest`, then `pnpm store prune`
+- [ ] 4.1 Add `task node:build` that runs the `symphony-studio-node-builder` image via DooD with `.devcontainer/node/` bind-mounted as source, `node-modules` volume mounted at `/dest/node_modules`, and `pnpm-store` volume mounted at `/root/.local/share/pnpm/store`; the task wipes `/dest/node_modules`, runs `pnpm install --frozen-lockfile`, `pnpm deploy /dest`, then `pnpm store prune`
 - [ ] 4.2 Add `task node:build` call to `.devcontainer/post-start`
 
 ## 5. MVP verification — stop here and confirm before continuing
@@ -43,7 +44,7 @@
 
 ## 8. Sandboxed node package management tasks
 
-- [ ] 8.1 Add `task node:package:add` that runs `pnpm add <package>@<version>` in a throwaway `symphony-maestro-node-builder` container, bind-mounting only `.devcontainer/node/`
+- [ ] 8.1 Add `task node:package:add` that runs `pnpm add <package>@<version>` in a throwaway `symphony-studio-node-builder` container, bind-mounting only `.devcontainer/node/`
 - [ ] 8.2 Add `task node:package:update` that runs `pnpm update <package>@<version>` in the same sandboxed container
 - [ ] 8.3 Add `task node:package:rm` that runs `pnpm remove <package>` in the same sandboxed container and removes the package's `allowBuilds` entry from `pnpm-workspace.yaml` if present
 - [ ] 8.4 Add `task node:package:list` that prints direct deps from `package.json` without starting a container
