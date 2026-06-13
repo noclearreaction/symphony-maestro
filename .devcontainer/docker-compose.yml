@@ -10,6 +10,10 @@ x-versions: &versions
     DENO_VERSION: "2.8.2"
     # renovate: datasource=github-releases depName=go-task/task
     TASK_VERSION: "3.51.1"
+    # renovate: datasource=node depName=node
+    NODE_VERSION: "22.16.0"
+    # renovate: datasource=npm depName=pnpm
+    PNPM_VERSION: "10.12.1"
 
 x-runtime: &runtime
   context: .
@@ -24,3 +28,17 @@ services:
     command: sleep infinity
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
+      - node-modules:/opt/node/node_modules
+
+  node-builder:
+    build:
+      <<: [*runtime, *versions]
+      target: node-builder
+    image: symphony-studio-node-builder
+    profiles:
+      - node-tools
+    command: echo "node-builder image ready"
+
+volumes:
+  node-modules:
+  pnpm-store:

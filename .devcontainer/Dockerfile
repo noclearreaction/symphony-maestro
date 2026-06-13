@@ -8,6 +8,10 @@ ARG GO_VERSION
 ARG DENO_VERSION
 # renovate: datasource=github-releases depName=go-task/task
 ARG TASK_VERSION
+# renovate: datasource=node depName=node
+ARG NODE_VERSION
+# renovate: datasource=npm depName=pnpm
+ARG PNPM_VERSION
 
 # =============================================================================
 # Stage: download-base
@@ -92,6 +96,19 @@ RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERS
 
 # --- Task ---
 COPY --from=task-binary /srv/files/task /usr/local/bin/task
+
+# --- Node tools mount point and PATH ---
+RUN mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin
+ENV PATH=/opt/node/bin:$PATH
+
+# =============================================================================
+# Stage: node-builder
+# Purpose: pnpm build environment for node package management tasks
+# Built as part of docker-compose build; never started automatically (profile: node-tools)
+# =============================================================================
+FROM node:${NODE_VERSION}-bookworm-slim AS node-builder
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # =============================================================================
 # Stage: ci
