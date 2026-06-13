@@ -11,8 +11,8 @@ x-versions: &versions
   TASK_VERSION: "3.51.1"
 
 x-build: &build
-  context: ..
-  dockerfile: .devcontainer/Dockerfile
+  context: .
+  dockerfile: Dockerfile
   args:
     <<: *versions
 

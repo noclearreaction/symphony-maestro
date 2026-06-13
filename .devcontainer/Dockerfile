@@ -108,7 +108,7 @@ ENV CI=true \
 FROM ci AS final
 
 # SSH agent profile script
-COPY .devcontainer/ssh-agent.sh /etc/profile.d/ssh-agent.sh
+COPY ssh-agent.sh /etc/profile.d/ssh-agent.sh
 RUN echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.bashrc \
  && echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.zshrc
 
