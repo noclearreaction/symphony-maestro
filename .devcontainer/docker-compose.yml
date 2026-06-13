@@ -35,9 +35,7 @@ services:
       <<: [*runtime, *versions]
       target: node-builder
     image: symphony-studio-node-builder
-    profiles:
-      - node-tools
-    command: echo "node-builder image ready"
+    command: "true"
 
 volumes:
   node-modules:

@@ -7,7 +7,7 @@
 
 - [x] 2.1 Add named volume `node-modules` to `docker-compose.yml` and mount it at `/opt/node/node_modules` on the `symphony-studio` service
 - [x] 2.2 Add named volume `pnpm-store` to `docker-compose.yml` (used only by builder containers via DooD, not mounted on the devcontainer)
-- [x] 2.3 Add `node-builder` service to `docker-compose.yml` with `profiles: [node-tools]` so it builds with `docker-compose build` but is never started automatically; tag the image `symphony-studio-node-builder`
+- [x] 2.3 Add `node-builder` service to `docker-compose.yml` without a profile (VS Code only starts `symphony-studio` explicitly, so no profile is needed to prevent auto-start); set `command: "true"` so it exits cleanly if run; tag the image `symphony-studio-node-builder`
 - [ ] 2.4 Verify the node-modules volume is shared between the devcontainer and containers spawned via DooD (key MVP assumption)
 
 ## 3. Dockerfile: add node-builder stage, remove node-runtime stage
