@@ -40,20 +40,20 @@
 
 - [x] 6.1 Update `bin/commit-lint.ts` shebang from hardcoded host path to `#!/usr/bin/env -S deno run --allow-read --allow-env`
 - [x] 6.2 Update `bin/provision-labels.ts` shebang from hardcoded host path to `#!/usr/bin/env -S deno run --allow-run=gh`
-- [ ] 6.3 Verify both scripts run correctly inside the container
+- [x] 6.3 Verify both scripts run correctly inside the container
 
 ## 7. Verification
 
 - [x] 7.1 Build `--target ci` image; confirm Go, Deno, Task, openspec, opencode, gh present; confirm pnpm/npm/npx absent from PATH
-- [ ] 7.2 Build `--target final` image; open in VS Code Dev Containers; confirm `task devcontainer:doctor` passes
-- [ ] 7.3 Confirm `docker ps` succeeds inside the container (DooD working)
+- [x] 7.2 Build `--target final` image; open in VS Code Dev Containers; confirm `task devcontainer:doctor` passes
+- [x] 7.3 Confirm `docker ps` succeeds inside the container (DooD working)
 - [x] 7.4 Confirm `update-alternatives --display go` shows correct versioned path and lists `gofmt` as a slave; confirm `update-alternatives --display deno` shows correct versioned path
 - [x] 7.5 Confirm `gofmt --help` works after switching go alternative
-- [ ] 7.6 Confirm `post-start` script runs without error and `task devcontainer:doctor` exits 0
+- [x] 7.6 Confirm `post-start` script runs without error and `task devcontainer:doctor` exits 0
 
 ## 8. Taskfile
 
 - [x] 8.1 Create `.devcontainer/Taskfile.yaml` with a `doctor` task that checks: `go version`, `gofmt -h`, `deno --version`, `task --version`, `openspec --version`, `opencode --version`, `gh --version`, `docker info` (socket access); exit non-zero on any failure
 - [x] 8.2 Create root `Taskfile.yaml` including `.devcontainer/Taskfile.yaml` under the `devcontainer:` namespace; add a top-level `health` alias that calls `devcontainer:doctor`
-- [ ] 8.3 Verify `task devcontainer:doctor` runs cleanly inside the built container
-- [ ] 8.4 Verify `task devcontainer:doctor` exits non-zero when a tool is removed (manual destructive test, restore after)
+- [x] 8.3 Verify `task devcontainer:doctor` runs cleanly inside the built container
+- [x] 8.4 Verify `task devcontainer:doctor` exits non-zero when a tool is removed (manual destructive test, restore after)

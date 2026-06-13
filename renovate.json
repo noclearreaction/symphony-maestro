@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "automerge": false,
+  "ignoreUnstable": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update ARG version pins in .devcontainer/Dockerfile",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>.+?)\\nARG \\S+=(?<currentValue>\\S+)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchFileNames": [".devcontainer/Dockerfile"],
+      "groupName": "devcontainer tools",
+      "automerge": false
+    }
+  ]
+}
