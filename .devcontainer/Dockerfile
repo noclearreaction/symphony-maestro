@@ -8,21 +8,6 @@ ARG GO_VERSION=1.26.4
 ARG DENO_VERSION=2.8.2
 # renovate: datasource=github-releases depName=go-task/task
 ARG TASK_VERSION=3.51.1
-# renovate: datasource=node depName=node
-ARG NODE_VERSION=24.16.0
-# renovate: datasource=npm depName=pnpm
-ARG PNPM_VERSION=11.5.2
-
-# =============================================================================
-# Stage: node-builder
-# Purpose: Node.js + pnpm for building/deploying node_modules into the volume
-# Used by: task node:build and task node:package:* via DooD
-# Output: image tagged symphony-maestro-node-builder
-# =============================================================================
-FROM node:${NODE_VERSION}-bookworm-slim AS node-builder
-ARG PNPM_VERSION
-RUN corepack enable \
- && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # =============================================================================
 # Stage: download-base
@@ -107,14 +92,6 @@ RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERS
 
 # --- Task ---
 COPY --from=task-binary /srv/files/task /usr/local/bin/task
-
-# --- Node tools (volume-based) ---
-# node_modules are populated at container start via task node:build (DooD).
-# /opt/node/node_modules is a named Docker volume mounted by devcontainer.json.
-# /opt/node/bin is a symlink into the volume so tools are on PATH immediately.
-RUN mkdir -p /opt/node \
- && ln -s /opt/node/node_modules/.bin /opt/node/bin
-ENV PATH="/opt/node/bin:${PATH}"
 
 # =============================================================================
 # Stage: ci
