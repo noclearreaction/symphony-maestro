@@ -6,6 +6,9 @@ set -e
 # Run the full tool health check; failures are visible in the terminal on start.
 task devcontainer:doctor
 
+# Populate node-modules volume from the committed lockfile.
+task node:build
+
 # ---------------------------------------------------------------------------
 # Future hooks (add here when needed):
 # ---------------------------------------------------------------------------

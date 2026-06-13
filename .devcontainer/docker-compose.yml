@@ -41,4 +41,6 @@ services:
 
 volumes:
   node-modules:
+    name: symphony-studio-node-modules
   pnpm-store:
+    name: symphony-studio-pnpm-store

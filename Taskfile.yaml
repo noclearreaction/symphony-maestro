@@ -5,6 +5,9 @@ includes:
   devcontainer:
     taskfile: .devcontainer/Taskfile.yaml
     dir: "."
+  node:
+    taskfile: .devcontainer/node/Taskfile.yaml
+    dir: "."
 
 tasks:
   health:

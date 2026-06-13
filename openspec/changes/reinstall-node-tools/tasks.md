@@ -20,8 +20,8 @@
 
 ## 4. node:build task
 
-- [ ] 4.1 Add `task node:build` that runs the `symphony-studio-node-builder` image via DooD with `.devcontainer/node/` bind-mounted as source, `node-modules` volume mounted at `/dest/node_modules`, and `pnpm-store` volume mounted at `/root/.local/share/pnpm/store`; the task wipes `/dest/node_modules`, runs `pnpm install --frozen-lockfile`, `pnpm deploy /dest`, then `pnpm store prune`
-- [ ] 4.2 Add `task node:build` call to `.devcontainer/post-start`
+- [x] 4.1 Add `task node:build` that runs the `symphony-studio-node-builder` image via DooD with `.devcontainer/node/` bind-mounted as source, `node-modules` volume mounted at `/dest/node_modules`, and `pnpm-store` volume mounted at `/root/.local/share/pnpm/store`; the task wipes `/dest/node_modules`, runs `pnpm install --frozen-lockfile`, `pnpm deploy /dest`, then `pnpm store prune`
+- [x] 4.2 Add `task node:build` call to `.devcontainer/post-start`
 
 ## 5. MVP verification — stop here and confirm before continuing
 

@@ -1,0 +1,117 @@
+# .devcontainer/node/Taskfile.yaml
+# Node package management tasks — all mutation runs inside symphony-studio-node-builder via DooD.
+# See .devcontainer/node/package.json for the managed package list.
+# Use task node:package:* and task node:trust:* — do not run pnpm directly.
+version: "3"
+
+vars:
+  NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
+  NODE_BUILDER_IMAGE: symphony-studio-node-builder
+  NODE_MODULES_VOLUME: symphony-studio-node-modules
+  PNPM_STORE_VOLUME: symphony-studio-pnpm-store
+
+tasks:
+  build:
+    desc: "Populate the node-modules volume from the committed lockfile using pnpm deploy"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/src:ro" \
+          -v "{{.NODE_MODULES_VOLUME}}:/dest/node_modules" \
+          -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
+          -w /src \
+          {{.NODE_BUILDER_IMAGE}} \
+          sh -c "rm -rf /dest/node_modules/* && pnpm install --frozen-lockfile && pnpm deploy /dest && pnpm store prune"
+
+  package:add:
+    desc: "Add a package: task node:package:add -- <name> <version>"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm add {{.CLI_ARGS}}
+
+  package:update:
+    desc: "Update a package: task node:package:update -- <name> <version>"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm update {{.CLI_ARGS}}
+
+  package:rm:
+    desc: "Remove a package: task node:package:rm -- <name>"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm remove {{.CLI_ARGS}}
+
+  package:list:
+    desc: "List direct dependencies from package.json (no container)"
+    cmds:
+      - cat "{{.NODE_DIR}}/package.json"
+
+  package:audit:
+    desc: "Audit dependencies for vulnerabilities"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work:ro" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm audit
+
+  package:prune:
+    desc: "Prune unreferenced entries from the pnpm store volume"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work:ro" \
+          -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm store prune
+
+  trust:add:
+    desc: "Allow build scripts for a package: task node:trust:add -- <name>"
+    cmds:
+      - |
+        pkg={{.CLI_ARGS}}
+        file="{{.NODE_DIR}}/pnpm-workspace.yaml"
+        if grep -q "^  ${pkg}:" "$file"; then
+          echo "already trusted: $pkg"
+        else
+          sed -i "s/^allowBuilds:/allowBuilds:\n  ${pkg}: true/" "$file"
+          echo "trusted: $pkg"
+        fi
+
+  trust:rm:
+    desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
+    cmds:
+      - |
+        pkg={{.CLI_ARGS}}
+        sed -i "/^  ${pkg}: true/d" "{{.NODE_DIR}}/pnpm-workspace.yaml"
+        echo "removed trust: $pkg"
+
+  trust:list:
+    desc: "List trusted packages from pnpm-workspace.yaml (no container)"
+    cmds:
+      - |
+        grep -A 100 "^allowBuilds:" "{{.NODE_DIR}}/pnpm-workspace.yaml" | tail -n +2 | grep "^  " || echo "(none)"
+
+  trust:verify:
+    desc: "Check for transitive deps with build scripts not in allowBuilds"
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.NODE_DIR}}:/work:ro" \
+          -w /work \
+          {{.NODE_BUILDER_IMAGE}} \
+          pnpm install --frozen-lockfile --dry-run
