@@ -1,11 +1,9 @@
 {
   "name": "symphony-maestro",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".",
-    "target": "final"
-  },
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind,consistency=cached",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:1": {
       "configureZshAsDefaultShell": true
@@ -24,7 +22,7 @@
   "postCreateCommand": "for dir in /home/vscode/.vscode-server/extensions /home/vscode/.vscode-server/data/User; do [ -d \"$dir\" ] && sudo chown -R vscode:vscode \"$dir\"; done || true",
   "postStartCommand": ".devcontainer/post-start",
   "remoteUser": "vscode",
-  "shutdownAction": "stopContainer",
+  "shutdownAction": "stopCompose",
   "customizations": {
     "vscode": {
       "extensions": []

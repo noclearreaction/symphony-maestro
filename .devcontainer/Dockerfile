@@ -1,13 +1,13 @@
 # =============================================================================
-# VERSION CONFIGURATION — UPDATE THESE TO UPGRADE TOOLS
-# Renovate manages this file via the dockerfile datasource.
+# VERSION CONFIGURATION — managed via .devcontainer/docker-compose.yml
+# Renovate manages docker-compose.yml via the dockerfile datasource.
 # =============================================================================
 # renovate: datasource=golang-version depName=go
-ARG GO_VERSION=1.26.4
+ARG GO_VERSION
 # renovate: datasource=github-releases depName=denoland/deno
-ARG DENO_VERSION=2.8.2
+ARG DENO_VERSION
 # renovate: datasource=github-releases depName=go-task/task
-ARG TASK_VERSION=3.51.1
+ARG TASK_VERSION
 
 # =============================================================================
 # Stage: download-base

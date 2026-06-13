@@ -1,0 +1,24 @@
+# =============================================================================
+# VERSION CONFIGURATION — UPDATE THESE TO UPGRADE TOOLS
+# Renovate manages this file via the dockerfile datasource.
+# =============================================================================
+x-versions: &versions
+  # renovate: datasource=golang-version depName=go
+  GO_VERSION: "1.26.4"
+  # renovate: datasource=github-releases depName=denoland/deno
+  DENO_VERSION: "2.8.2"
+  # renovate: datasource=github-releases depName=go-task/task
+  TASK_VERSION: "3.51.1"
+
+x-build: &build
+  context: ..
+  dockerfile: .devcontainer/Dockerfile
+  args:
+    <<: *versions
+
+services:
+  devcontainer:
+    build:
+      <<: *build
+      target: final
+    image: symphony-maestro
