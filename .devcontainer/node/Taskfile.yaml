@@ -6,6 +6,7 @@ version: "3"
 
 vars:
   NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
+  NODE_DIR_HOST: "$LOCAL_WORKSPACE_FOLDER/.devcontainer/node"
   NODE_BUILDER_IMAGE: symphony-studio-node-builder
   NODE_MODULES_VOLUME: symphony-studio-node-modules
   PNPM_STORE_VOLUME: symphony-studio-pnpm-store
@@ -16,7 +17,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/src:ro" \
+          -v "{{.NODE_DIR_HOST}}:/src:ro" \
           -v "{{.NODE_MODULES_VOLUME}}:/dest/node_modules" \
           -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
           -w /src \
@@ -28,7 +29,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work" \
+          -v "{{.NODE_DIR_HOST}}:/work" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
           pnpm add {{.CLI_ARGS}}
@@ -38,7 +39,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work" \
+          -v "{{.NODE_DIR_HOST}}:/work" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
           pnpm update {{.CLI_ARGS}}
@@ -48,7 +49,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work" \
+          -v "{{.NODE_DIR_HOST}}:/work" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
           pnpm remove {{.CLI_ARGS}}
@@ -63,7 +64,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work:ro" \
+          -v "{{.NODE_DIR_HOST}}:/work:ro" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
           pnpm audit
@@ -73,7 +74,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work:ro" \
+          -v "{{.NODE_DIR_HOST}}:/work:ro" \
           -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
@@ -111,7 +112,7 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR}}:/work:ro" \
+          -v "{{.NODE_DIR_HOST}}:/work:ro" \
           -w /work \
           {{.NODE_BUILDER_IMAGE}} \
           pnpm install --frozen-lockfile --dry-run

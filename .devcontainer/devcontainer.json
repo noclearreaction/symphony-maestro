@@ -11,7 +11,7 @@
     "ghcr.io/devcontainers/features/sshd:1": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "moby": false,
-      "installDockerBuildx": false
+      "installDockerBuildx": true
     }
   },
   "mounts": [
@@ -24,6 +24,9 @@
   "postStartCommand": ".devcontainer/post-start",
   "remoteUser": "vscode",
   "overrideCommand": false,
+  "containerEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
   "shutdownAction": "stopCompose",
   "customizations": {
     "vscode": {
