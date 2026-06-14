@@ -1,11 +1,9 @@
 ## ADDED Requirements
 
-### Requirement: npm packages installed into named Docker volumes at container start
-Node packages SHALL NOT be installed at Docker image build time. Two named Docker volumes SHALL be declared in `devcontainer.json`:
-- `${localWorkspaceFolderBasename}-node-modules` mounted at `/opt/node/node_modules` — the deployed package tree, populated by the builder
-- `${localWorkspaceFolderBasename}-pnpm-store` mounted at `/root/.local/share/pnpm/store` inside builder containers — the persistent pnpm content store
+### Requirement: npm packages installed into named Docker volume at container start via modulesDir
+Node packages SHALL NOT be installed at Docker image build time. A named Docker volume `node-modules` SHALL be declared in `docker-compose.yml` and mounted at `/opt/node_modules` on the `symphony-studio` service. `pnpm-workspace.yaml` SHALL set `modulesDir: "/opt/node_modules"` so pnpm installs packages directly into the volume without a separate deploy step.
 
-A `task node:build` task SHALL run the `symphony-maestro-node-builder` image via DooD: wipe the volume's `node_modules`, run `pnpm install --frozen-lockfile`, run `pnpm deploy /dest` (where `/dest/node_modules` is the volume), then run `pnpm store prune`. `task node:build` SHALL be called in `post-start` on every container start.
+`task node:build` SHALL run the `symphony-studio-node-builder` image via DooD with `.devcontainer/node/` bind-mounted RW and the `node-modules` volume mounted at `/opt/node_modules`. It SHALL run `pnpm install --frozen-lockfile`, which reads `allowBuilds` from the committed `pnpm-workspace.yaml` and installs packages directly into the volume. `task node:build` SHALL be called in `post-start` on every container start.
 
 #### Scenario: Volume populated on container start
 - **WHEN** the devcontainer starts
@@ -35,16 +33,16 @@ The builder container SHALL use a committed `pnpm-lock.yaml` and run `pnpm insta
 
 ---
 
-### Requirement: pnpm deploy produces portable node_modules in the volume
-The builder container SHALL run `pnpm deploy` to produce a real-files-only node_modules directory written to the `node-modules` volume. The deploy output SHALL contain no symlinks to the pnpm content store.
+### Requirement: pnpm install writes packages directly into the named volume
+The builder container SHALL run `pnpm install --frozen-lockfile` with `modulesDir` set to `/opt/node_modules` in `pnpm-workspace.yaml`. The install output SHALL be real files in the volume, not symlinks to a pnpm content store.
 
 #### Scenario: Deployed packages load without store symlinks
-- **WHEN** the final image is run without the pnpm content store present
-- **THEN** `require()` on deployed packages succeeds
+- **WHEN** the devcontainer reads packages from `/opt/node_modules`
+- **THEN** `require()` on installed packages succeeds without the pnpm store present
 
-#### Scenario: Native module artifacts present in deployed output
-- **WHEN** a package with an install script (e.g. opencode-ai) is included
-- **THEN** the build artifacts produced by the install script are present in the deploy output
+#### Scenario: Native module artifacts present in installed output
+- **WHEN** a package with an install script (e.g. opencode-ai) is included in `allowBuilds`
+- **THEN** the build artifacts produced by the install script are present in `/opt/node_modules`
 
 ---
 
@@ -103,9 +101,7 @@ Npm packages SHALL be managed exclusively via `task node:package:add`, `task nod
 
 #### Scenario: Pruning the pnpm store
 - **WHEN** a developer runs `task node:package:prune`
-- **THEN** `pnpm store prune` is run in a builder container with the pnpm store volume mounted
-- **AND** store entries not referenced by the current lockfile are removed
-- **AND** no changes are made to `package.json` or `pnpm-lock.yaml`
+- **THEN** the task confirms that the pnpm store is ephemeral (per-build in `/tmp`) and no persistent store exists to prune
 
 #### Scenario: pnpm not available in devcontainer
 - **WHEN** a developer runs `pnpm` inside the devcontainer

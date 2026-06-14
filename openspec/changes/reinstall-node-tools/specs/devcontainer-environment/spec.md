@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Multi-stage Dockerfile assembles all runtimes
-The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no external host tooling prerequisites beyond `docker build`. The Dockerfile SHALL contain a `node-builder` stage with Node and pnpm versions pinned via ARGs alongside all other tool versions. The node-runtime stage SHALL be removed; node packages are provided at container start via a named Docker volume populated by `task node:build`. opencode SHALL be installed as a pre-built binary download, not via npm.
+The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no external host tooling prerequisites beyond `docker build`. The Dockerfile SHALL contain a `node-builder` stage with `NODE_VERSION` pinned via ARG. The pnpm version SHALL NOT be in the Dockerfile — it is owned by the `packageManager` field in `.devcontainer/node/package.json`, read by corepack at task runtime. The node-runtime stage SHALL be removed; node packages are provided at container start via a named Docker volume populated by `task node:build`.
 
 #### Scenario: Container builds from clean Docker cache
 - **WHEN** a developer runs `docker build --target final .devcontainer/`
@@ -13,8 +13,8 @@ The devcontainer SHALL be built from a single multi-stage `Dockerfile` with no e
 
 ---
 
-### Requirement: Node tools available via /opt/node/bin on PATH
-`/opt/node/bin` SHALL be on `PATH` in the devcontainer image (`ENV PATH=/opt/node/bin:$PATH` baked at build time). The Dockerfile SHALL create `/opt/node/bin` as a symlink to `/opt/node/node_modules/.bin` at image build time (`RUN mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin`). The symlink is stable because the volume is always mounted at `/opt/node/node_modules`. `pnpm`, `npm`, `npx`, and `corepack` SHALL NOT appear on `PATH`.
+### Requirement: Node tools available via /opt/node_modules/.bin on PATH
+`/opt/node_modules/.bin` SHALL be on `PATH` in the devcontainer image (`ENV PATH=/opt/node_modules/.bin:$PATH` baked at build time). No symlink is needed — `modulesDir: "/opt/node_modules"` in `pnpm-workspace.yaml` causes pnpm to write binaries directly to `/opt/node_modules/.bin` in the named volume. `pnpm`, `npm`, `npx`, and `corepack` SHALL NOT appear on `PATH`.
 
 #### Scenario: pnpm not reachable by default
 - **WHEN** a developer runs `pnpm` in a container shell

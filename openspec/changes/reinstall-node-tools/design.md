@@ -36,27 +36,25 @@ The correct tools exist in pnpm to solve all of these properly.
 
 **Alternative considered**: Keep inline generation, accept no lockfile. Rejected: no reproducibility guarantee, no content hash verification.
 
-### D2: Named Docker volume for node_modules instead of baked image layer
+### D2: Named Docker volume for node_modules, installed via pnpm modulesDir
 
-**Decision**: node_modules is NOT installed at Docker build time. Instead, two named Docker volumes are declared in `docker-compose.yml`:
-- `node-modules` mounted at `/opt/node/node_modules` on the `symphony-studio` service — the deployed package tree, populated by the builder
-- `pnpm-store` declared in `docker-compose.yml` for use by builder containers spawned via DooD; not mounted on the devcontainer itself
+**Decision**: node_modules is NOT installed at Docker build time. A named Docker volume `node-modules` is declared in `docker-compose.yml` and mounted at `/opt/node_modules` on the `symphony-studio` service. `pnpm-workspace.yaml` sets `modulesDir: "/opt/node_modules"` so pnpm installs packages directly into the volume — no `pnpm deploy`, no wipe step.
 
-A `node-builder` service in `docker-compose.yml` (see D6) is built as part of `docker-compose build` so the image is always available. `task node:build` runs this image via DooD: wipes the volume's `node_modules`, runs `pnpm install --frozen-lockfile` (hitting the store for cached tarballs), `pnpm deploy /dest` (where `/dest/node_modules` is the volume), then `pnpm store prune`. The Dockerfile bakes `mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH` into the devcontainer image — the symlink is stable because the volume mount path is fixed.
+`task node:build` runs the `symphony-studio-node-builder` image via DooD with `.devcontainer/node/` bind-mounted RW (so pnpm can write the workspace state file) and the volume mounted at `/opt/node_modules`. It runs `pnpm install --frozen-lockfile`, which reads `allowBuilds` from the committed `pnpm-workspace.yaml` and installs packages directly into the volume.
 
-**Rationale**: Eliminates the multi-stage COPY problem entirely — no hoisting, no symlink breakage, no native artifact placement. The builder runs in the correct environment and writes directly to the volume. Refreshing packages after a `node:package:add` requires no image rebuild: re-run the builder container. The Dockerfile node-runtime stage is no longer needed.
+The Dockerfile bakes `ENV PATH=/opt/node_modules/.bin:$PATH` into the devcontainer image. The path is stable because the volume is always mounted at `/opt/node_modules`.
 
-**Key assumption**: With DooD, named volumes live on the host Docker daemon. Both the builder containers (spawned via `task node:*`) and the devcontainer (mounted via `docker-compose.yml`) share the same host daemon, so they see the same volume.
+**Rationale**: `modulesDir` redirects pnpm's install target without needing `pnpm deploy` or `injectWorkspacePackages`. This avoids all the side effects of the deploy approach (workspace state written back to source dir, pnpm-store leakage). The only artifact written to `.devcontainer/node/` is `node_modules/.pnpm-workspace-state.json` — the pnpm workspace state cache, which is gitignored and useful for incremental installs.
 
-**What stays in the image**: `mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH` baked at build time. The symlink target is stable because the volume is always mounted at `/opt/node/node_modules`. The builder only ever writes to `node_modules/` — nothing else in `/opt/node/` is touched.
+**Key assumption**: Named volumes live on the host Docker daemon. Both the builder containers (spawned via `task node:*`) and the devcontainer (mounted via `docker-compose.yml`) share the same host daemon, so they see the same volume.
 
-**Alternative considered**: `pnpm deploy` output COPYed into the final image. Rejected: requires image rebuild for any package change; the volume approach makes `node:package:add` + `node:build` a sub-minute iteration cycle.
+**Alternative considered**: `pnpm deploy` to volume. Rejected: `injectWorkspacePackages: true` required by pnpm v10 deploy causes pnpm-store and workspace state to leak back into the source bind-mount. `modulesDir` achieves the same result cleanly.
 
 ### D3: All three tools installed via pnpm
 
-**Decision**: openspec, opencode-ai, and renovate (with re2 as a direct dep) are all installed via `pnpm install --frozen-lockfile` and deployed via `pnpm deploy`.
+**Decision**: openspec, opencode-ai, and renovate (with re2 as a direct dep if needed) are all installed via `pnpm install --frozen-lockfile` into the named volume via `modulesDir`.
 
-**Rationale**: The primary goal of this change is to prove that `pnpm deploy` produces a working portable output including native modules. Installing all three tools via pnpm validates the complete pattern. Whether to replace opencode or renovate with non-pnpm distributions is a separate decision to be made after this is confirmed working.
+**Rationale**: `pnpm install` with `modulesDir` pointing at the named volume is sufficient — no deploy step needed. Build script trust is controlled via `allowBuilds` in the committed `pnpm-workspace.yaml`.
 
 ### D4: pnpm-workspace.yaml as supply chain control file
 
@@ -70,13 +68,11 @@ A `node-builder` service in `docker-compose.yml` (see D6) is built as part of `d
 
 **Rationale**: Keeps pnpm out of the devcontainer. The task interface exposes intent rather than mechanism — the user never needs to know about lockfiles or pnpm commands. Trust is managed independently of package installation because transitive deps (e.g. re2) need build script approval without being direct deps.
 
-### D6: node-builder as a docker-compose service
+### D6: node-builder as a docker-compose service; pnpm version owned by package.json
 
-**Decision**: The Dockerfile contains a `node-builder` stage using `node:${NODE_VERSION}-bookworm-slim` with pnpm installed via `corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate`. This stage is exposed as a `node-builder` service in `docker-compose.yml` with no profile, so it is built by `docker-compose build` (and therefore by the devcontainer rebuild). VS Code only starts the service named in `devcontainer.json` (`symphony-studio`) — it does not start all services — so `node-builder` is never started automatically. The service has `command: "true"` so it exits cleanly if run directly by mistake. The image is tagged `symphony-studio-node-builder`. `task node:build` and all `node:package:*` tasks reference this image via DooD.
+**Decision**: The Dockerfile contains a `node-builder` stage using `node:${NODE_VERSION}-bookworm-slim` with `corepack enable`. No `PNPM_VERSION` ARG — corepack reads the `packageManager` field from `.devcontainer/node/package.json` at task runtime to select the correct pnpm version. This stage is exposed as a `node-builder` service in `docker-compose.yml` with no profile. The service has `command: "true"` so it exits cleanly if run directly by mistake. The image is tagged `symphony-studio-node-builder`.
 
-**Rationale**: Defining the builder as a docker-compose service ensures the image is always built in sync with the devcontainer image — same Dockerfile, same version ARGs, same Renovate management. Using a profile prevents the builder container from being started as a sidecar alongside the devcontainer. Node and pnpm versions remain pinned in the Dockerfile ARG block alongside all other tool versions.
-
-**Alternative considered**: Pull `node:bookworm-slim` on demand in each task. Rejected: node version floats, pnpm version must be separately managed, and each task invocation may pull from the network.
+**Rationale**: Removing `PNPM_VERSION` from the Dockerfile ARG block eliminates dual ownership. The pnpm version is declared once in `package.json`'s `packageManager` field alongside the packages that depend on it. Corepack enforces the pinned version at runtime without needing it baked into the image.
 
 ## Risks / Trade-offs
 

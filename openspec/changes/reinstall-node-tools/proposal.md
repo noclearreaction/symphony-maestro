@@ -8,12 +8,14 @@ patterns that work reliably in Docker and in CI.
 
 ## What Changes
 
-- Add a `node-builder` stage to the Dockerfile with `NODE_VERSION` and `PNPM_VERSION` ARGs (managed by Renovate) — node tasks use this locally built image via DooD, no runtime Docker Hub pulls needed
-- Add committed `.devcontainer/node/package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` — versions and approvals are now reviewed artifacts
-- Add a named Docker volume (`${localWorkspaceFolderBasename}-node-modules`) declared in `devcontainer.json`, mounted at `/opt/node/node_modules`
-- At container start, a `node:bookworm-slim` builder container runs `pnpm install --frozen-lockfile && pnpm deploy /dest` (with the volume mounted at `/dest/node_modules`) writing to the volume via DooD
-- The Dockerfile bakes `ln -s /opt/node/node_modules/.bin /opt/node/bin` and `ENV PATH=/opt/node/bin:$PATH`; no wrapper scripts needed
+- Add a `node-builder` stage to the Dockerfile with a `NODE_VERSION` ARG (managed by Renovate) — pnpm version is owned by the `packageManager` field in `package.json`, read by corepack at task runtime; no runtime Docker Hub pulls needed
+- Add committed `.devcontainer/node/package.json` (with `packageManager` pinned), `pnpm-lock.yaml`, and `pnpm-workspace.yaml` — versions and approvals are now reviewed artifacts
+- Add a named Docker volume (`node-modules`) declared in `docker-compose.yml`, mounted at `/opt/node_modules` in the devcontainer
+- `pnpm-workspace.yaml` sets `modulesDir: "/opt/node_modules"` so `pnpm install` writes packages directly into the volume — no `pnpm deploy` needed
+- At container start, the `symphony-studio-node-builder` container runs `pnpm install --frozen-lockfile` via DooD with `.devcontainer/node/` bind-mounted RW and the volume mounted at `/opt/node_modules`
+- The Dockerfile bakes `ENV PATH=/opt/node_modules/.bin:$PATH` into the devcontainer image; no symlink or wrapper scripts needed
 - Add `task node:build` — runs the builder container to populate or update the volume; called at container start and after any package change; no image rebuild needed
+- Add `task node:package:prune` — no-op; pnpm store is ephemeral per-build
 - Add `minimumReleaseAge: 10080` (7 days), `blockExoticSubdeps: true`, `trustPolicy: no-downgrade` to `pnpm-workspace.yaml`
 - Add `minimumReleaseAge: "7 days"` to `renovate.json` for all version updates
 - Add `task node:package:add`, `task node:package:rm`, `task node:package:update`, `task node:package:list`, `task node:package:audit`, `task node:package:prune` — sandboxed npm package management; pnpm never required in the devcontainer
@@ -25,7 +27,7 @@ patterns that work reliably in Docker and in CI.
 
 ### New Capabilities
 
-- `devcontainer-node-install`: Reproducible, supply-chain-hardened npm package installation in Docker using committed pnpm project files, frozen lockfile, and `pnpm deploy`
+- `devcontainer-node-install`: Reproducible, supply-chain-hardened npm package installation in Docker using committed pnpm project files, frozen lockfile, and `modulesDir` volume targeting
 
 ### Modified Capabilities
 
@@ -33,7 +35,7 @@ patterns that work reliably in Docker and in CI.
 
 ## Impact
 
-- `.devcontainer/Dockerfile`: node-runtime stage removed; `ENV PATH=/opt/node/bin:$PATH` added to base stage
+- `.devcontainer/Dockerfile`: node-runtime stage removed; `ENV PATH=/opt/node_modules/.bin:$PATH` added to base stage; `node-builder` stage has only `corepack enable` (no `corepack prepare`; pnpm version owned by `packageManager` in `package.json`)
 - `devcontainer.json`: named volumes `${localWorkspaceFolderBasename}-node-modules` (mounted at `/opt/node/node_modules`) and `${localWorkspaceFolderBasename}-pnpm-store` (builder-only) added
 - `.devcontainer/node/package.json`: new committed file
 - `.devcontainer/node/pnpm-lock.yaml`: new committed file
