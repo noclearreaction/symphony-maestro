@@ -2,6 +2,7 @@
 
 - [x] 1.1 Create `.devcontainer/node/package.json` with empty `dependencies` — no `packageManager` field; pnpm version is owned by `PNPM_VERSION` in the Dockerfile
 - [x] 1.2 Create `.devcontainer/node/pnpm-workspace.yaml` with supply chain hardening settings (`minimumReleaseAge: 10080`, `blockExoticSubdeps: true`, `trustPolicy: no-downgrade`) — trust entries are managed by `task node:trust:add/rm`
+<!-- NOTE: files created below — were incorrectly marked done in a prior session -->
 
 ## 2. Named Docker volumes and docker-compose.yml
 

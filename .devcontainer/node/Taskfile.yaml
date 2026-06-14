@@ -6,10 +6,10 @@ version: "3"
 
 vars:
   NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
-  NODE_DIR_HOST: "$LOCAL_WORKSPACE_FOLDER/.devcontainer/node"
+  NODE_DIR_HOST:
+    sh: echo "${LOCAL_WORKSPACE_FOLDER}/.devcontainer/node"
   NODE_BUILDER_IMAGE: symphony-studio-node-builder
   NODE_MODULES_VOLUME: symphony-studio-node-modules
-  PNPM_STORE_VOLUME: symphony-studio-pnpm-store
 
 tasks:
   build:
@@ -17,15 +17,15 @@ tasks:
     cmds:
       - |
         docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/src:ro" \
-          -v "{{.NODE_MODULES_VOLUME}}:/dest/node_modules" \
-          -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
+          -v "{{.NODE_DIR_HOST}}:/src" \
+          -v "{{.NODE_MODULES_VOLUME}}:/opt/node" \
+          -e TMPDIR=/tmp \
           -w /src \
           {{.NODE_BUILDER_IMAGE}} \
-          sh -c "rm -rf /dest/node_modules/* && pnpm install --frozen-lockfile && pnpm deploy /dest && pnpm store prune"
+          sh -c 'rm -rf /opt/node/node_modules && pnpm --store-dir /tmp/pnpm-store --virtual-store-dir /tmp/pnpm-virtual --modules-dir /tmp/node_modules install --frozen-lockfile && pnpm --store-dir /tmp/pnpm-store --filter . deploy --prod /opt/node/node_modules'
 
   package:add:
-    desc: "Add a package: task node:package:add -- <name> <version>"
+    desc: "Add a package: task node:package:add -- <name>@<version>"
     cmds:
       - |
         docker run --rm \
@@ -70,15 +70,9 @@ tasks:
           pnpm audit
 
   package:prune:
-    desc: "Prune unreferenced entries from the pnpm store volume"
+    desc: "No-op: pnpm store is ephemeral per build (no store volume)"
     cmds:
-      - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work:ro" \
-          -v "{{.PNPM_STORE_VOLUME}}:/root/.local/share/pnpm/store" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm store prune
+      - echo 'pnpm store is ephemeral; nothing to prune'
 
   trust:add:
     desc: "Allow build scripts for a package: task node:trust:add -- <name>"

@@ -1,6 +1,8 @@
 packages:
   - "."
 
+injectWorkspacePackages: true
+
 pnpm:
   minimumReleaseAge: "10080 minutes"
   allowedDeprecatedVersions: {}

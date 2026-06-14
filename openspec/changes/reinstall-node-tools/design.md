@@ -168,3 +168,17 @@ sequenceDiagram
 
 - Does `pnpm deploy` include native module build artifacts (`.node` files from install scripts)? This determines whether re2 works without being an explicit direct dep.
 - Does `pnpm deploy` include the opencode-ai ELF binary produced by its postinstall script?
+
+## Implementation Notes
+
+### First attempt — abandoned at MVP verification
+
+The first implementation attempt worked through a long chain of pnpm/corepack issues before being abandoned:
+
+- `pnpm deploy` in v10 requires `injectWorkspacePackages: true` in `pnpm-workspace.yaml` (without it, `ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE`). This in turn causes pnpm to write a `node_modules/` directory to the source bind-mount (`/src`) as a workspace state marker — even with `--modules-dir` redirected to `/tmp`. The directory only contains `.pnpm-workspace-state.json`; it is harmless but unavoidable.
+- `pnpm install` also restores the `.pnpm-store` into the source directory. With `TMPDIR` redirected and `--store-dir /tmp/pnpm-store`, the store still re-appeared in `/src` on a successful build with `opencode-ai` added as a dependency. Root cause was not fully diagnosed before deciding to refactor.
+- `corepack` (invoked via the `packageManager` field in `package.json`) writes a cache into the source directory during container startup, not just during `corepack prepare`.
+- The `pnpm-store` named volume was removed from `docker-compose.yml` during iteration (the store is ephemeral per-build in `/tmp`); this turned out to be correct.
+- The `node-modules` volume is mounted at `/opt/node` (not `/opt/node/node_modules`) — deploy target is `/opt/node/node_modules` (a subdirectory pnpm creates).
+
+**Conclusion**: The `injectWorkspacePackages` + `pnpm deploy` path has too many side effects on the source directory for a DooD bind-mount setup. The refactor will use a different approach.

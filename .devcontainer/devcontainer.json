@@ -24,7 +24,7 @@
   "postStartCommand": ".devcontainer/post-start",
   "remoteUser": "vscode",
   "overrideCommand": false,
-  "containerEnv": {
+  "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
   "shutdownAction": "stopCompose",

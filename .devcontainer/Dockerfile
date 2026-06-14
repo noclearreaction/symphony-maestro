@@ -108,7 +108,10 @@ ENV PATH=/opt/node/bin:$PATH
 # =============================================================================
 FROM node:${NODE_VERSION}-bookworm-slim AS node-builder
 ARG PNPM_VERSION
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+ENV PNPM_VERSION=${PNPM_VERSION}
+RUN corepack enable && install -d -o 1000 -g 1000 /src /opt/node
+USER 1000:1000
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # =============================================================================
 # Stage: ci
