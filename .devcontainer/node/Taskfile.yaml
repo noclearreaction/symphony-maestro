@@ -6,53 +6,62 @@ version: "3"
 
 vars:
   NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
-  NODE_DIR_HOST:
-    sh: echo "${LOCAL_WORKSPACE_FOLDER}/.devcontainer/node"
-  NODE_BUILDER_IMAGE: symphony-studio-node-builder
-  NODE_MODULES_VOLUME: symphony-studio-node-modules
+  COMPOSE_FILE: "{{.ROOT_DIR}}/.devcontainer/docker-compose.yml"
+  COMPOSE_RUN: docker compose -f {{.ROOT_DIR}}/.devcontainer/docker-compose.yml run --rm
+  COMPOSE_DIR: "{{.ROOT_DIR}}/.devcontainer"
+  NB_RUN: "docker compose run -v /home/tunnel49/src/symphony-maestro/.devcontainer/node:/opt/node --rm node-builder"
+  NB2_RUN: "docker compose run --rm node-builder"
+
 
 tasks:
+  sample:
+    dir: >-
+      {{ .COMPOSE_DIR }}
+    cmds:
+      - docker compose build node-builder
+      - echo "Running tests in symphony-studio-node-builder..."
+      - |
+          {{.NB_RUN}} bash -eu <<'BASH'
+            > package2.json jq -n '{"private":true,"type":"module"}' && \
+            pnpm --allow-build=opencode-ai add --save-exact opencode-ai@1.17.4
+          BASH
+      - ls -l /opt/node_modules/.bin
+  sample2:
+    dir: >-
+      {{ .COMPOSE_DIR }}
+    cmds:
+      - docker compose build node-builder
+      - echo "Running tests in symphony-studio-node-builder..."
+      - |
+          {{.NB2_RUN}} bash -eu <<'BASH'
+            > package.json jq -n '{"private":true,"type":"module"}' && \
+            pnpm --allow-build=opencode-ai add --save-exact opencode-ai@1.17.4
+          BASH
+      - ls -l /opt/node_modules/.bin
+
   build:
-    desc: "Populate the node-modules volume from the committed lockfile using pnpm deploy"
+    desc: "Install packages from the committed lockfile into the node-modules volume"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/src" \
-          -v "{{.NODE_MODULES_VOLUME}}:/opt/node" \
-          -e TMPDIR=/tmp \
-          -w /src \
-          {{.NODE_BUILDER_IMAGE}} \
-          sh -c 'rm -rf /opt/node/node_modules && pnpm --store-dir /tmp/pnpm-store --virtual-store-dir /tmp/pnpm-virtual --modules-dir /tmp/node_modules install --frozen-lockfile && pnpm --store-dir /tmp/pnpm-store --filter . deploy --prod /opt/node/node_modules'
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm install --frozen-lockfile
 
   package:add:
     desc: "Add a package: task node:package:add -- <name>@<version>"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm add {{.CLI_ARGS}}
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm add {{.CLI_ARGS}}
 
   package:update:
     desc: "Update a package: task node:package:update -- <name> <version>"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm update {{.CLI_ARGS}}
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm update {{.CLI_ARGS}}
 
   package:rm:
     desc: "Remove a package: task node:package:rm -- <name>"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm remove {{.CLI_ARGS}}
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm remove {{.CLI_ARGS}}
 
   package:list:
     desc: "List direct dependencies from package.json (no container)"
@@ -63,11 +72,7 @@ tasks:
     desc: "Audit dependencies for vulnerabilities"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work:ro" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm audit
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm audit
 
   package:prune:
     desc: "No-op: pnpm store is ephemeral per build (no store volume)"
@@ -83,6 +88,7 @@ tasks:
         if grep -q "^  ${pkg}:" "$file"; then
           echo "already trusted: $pkg"
         else
+          sed -i "s/^allowBuilds:.*/allowBuilds:/" "$file"
           sed -i "s/^allowBuilds:/allowBuilds:\n  ${pkg}: true/" "$file"
           echo "trusted: $pkg"
         fi
@@ -105,8 +111,4 @@ tasks:
     desc: "Check for transitive deps with build scripts not in allowBuilds"
     cmds:
       - |
-        docker run --rm \
-          -v "{{.NODE_DIR_HOST}}:/work:ro" \
-          -w /work \
-          {{.NODE_BUILDER_IMAGE}} \
-          pnpm install --frozen-lockfile --dry-run
+        {{.COMPOSE_RUN}} -w /src node-builder pnpm install --frozen-lockfile --dry-run

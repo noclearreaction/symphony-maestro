@@ -1,10 +1,13 @@
-packages:
-  - "."
-
-injectWorkspacePackages: true
-
-pnpm:
-  minimumReleaseAge: "10080 minutes"
-  allowedDeprecatedVersions: {}
-
-allowBuilds: {}
+{
+  "minimumReleaseAge": 1440,
+  "minimumReleaseAgeStrict": true,
+  "minimumReleaseAgeIgnoreMissingTime": false,
+  "blockExoticSubdeps": true,
+  "strictDepBuilds": true,
+  "dangerouslyAllowAllBuilds": false,
+  "trustPolicy": "no-downgrade",
+  "allowBuilds": {
+    "opencode-ai": true
+  },
+  "injectWorkspacePackages": true
+}

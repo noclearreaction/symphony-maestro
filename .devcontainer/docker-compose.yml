@@ -1,19 +1,16 @@
 # =============================================================================
+# PROJECT NAME — must match the name the devcontainer CLI derives so that
+# `docker compose` commands run inside the container share the same volumes.
+# The devcontainer CLI uses the config directory name (.devcontainer →
+# devcontainer) as the project name when no explicit name is set; we mirror
+# that here so the two are always in sync.
+# =============================================================================
+name: symphony-maestro_devcontainer
+
+# =============================================================================
 # VERSION CONFIGURATION — UPDATE THESE TO UPGRADE TOOLS
 # Renovate manages this file via the dockerfile datasource.
 # =============================================================================
-x-versions: &versions
-  args:
-    # renovate: datasource=golang-version depName=go
-    GO_VERSION: "1.26.4"
-    # renovate: datasource=github-releases depName=denoland/deno
-    DENO_VERSION: "2.8.2"
-    # renovate: datasource=github-releases depName=go-task/task
-    TASK_VERSION: "3.51.1"
-    # renovate: datasource=node depName=node
-    NODE_VERSION: "22.16.0"
-    # renovate: datasource=npm depName=pnpm
-    PNPM_VERSION: "10.12.1"
 
 x-runtime: &runtime
   context: .
@@ -22,21 +19,20 @@ x-runtime: &runtime
 services:
   symphony-studio:
     build:
-      <<: [*runtime, *versions]
+      <<: [*runtime]
       target: final
     image: symphony-studio
     command: sleep infinity
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
-      - node-modules:/opt/node
 
-  node-builder:
+  node-apps:
     build:
-      <<: [*runtime, *versions]
-      target: node-builder
-    image: symphony-studio-node-builder
+      <<: [*runtime]
+      target: node-apps
+    image: symphony-studio-node-apps
     command: "true"
 
 volumes:
   node-modules:
-    name: symphony-studio-node-modules
+  corepack-cache:

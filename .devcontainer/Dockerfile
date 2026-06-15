@@ -3,15 +3,13 @@
 # Renovate manages docker-compose.yml via the dockerfile datasource.
 # =============================================================================
 # renovate: datasource=golang-version depName=go
-ARG GO_VERSION
+ARG GO_VERSION="1.26.4"
 # renovate: datasource=github-releases depName=denoland/deno
-ARG DENO_VERSION
+ARG DENO_VERSION="2.8.2"
 # renovate: datasource=github-releases depName=go-task/task
-ARG TASK_VERSION
+ARG TASK_VERSION="3.51.1"
 # renovate: datasource=node depName=node
-ARG NODE_VERSION
-# renovate: datasource=npm depName=pnpm
-ARG PNPM_VERSION
+ARG NODE_VERSION="22.16.0"
 
 # =============================================================================
 # Stage: download-base
@@ -27,6 +25,46 @@ RUN apt-get update \
         xz-utils \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv/files
+
+# =============================================================================
+# Stage: node-builder
+# Purpose: Prepare Node + pnpm
+# =============================================================================
+FROM node:${NODE_VERSION}-bookworm-slim AS node-builder
+
+ARG PNPM_VERSION
+
+ENV COREPACK_ENABLE_AUTO_PIN=1 \
+    COREPACK_ENABLE_STRICT=1 \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends jq \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable \
+ && install -d -o 1000 -g 1000 /opt/node
+
+USER 1000:1000
+
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /home/node
+
+# =============================================================================
+# Stage: node-apps
+# Purpose: Install node packages into /opt/node
+# =============================================================================
+FROM node-builder AS node-apps
+
+COPY node/pnpm-workspace.yaml /home/node/pnpm-workspace.yaml
+COPY node/package.json /home/node/package.json
+COPY node/pnpm-lock.yaml* /home/node/
+
+RUN --mount=type=cache,id=symphony-node-cache,target=/home/node/.cache/,uid=1000,gid=1000 \
+    --mount=type=cache,id=symphony-node-module-cache,target=/home/node/node_modules/,uid=1000,gid=1000 \
+    [ -f pnpm-lock.yaml ] && export ARGS="$ARGS --frozen-lockfile" ; \
+    pnpm install $ARGS; \
+    pnpm --filter=. --prod deploy dist
 
 # =============================================================================
 # Stage: go-runtime
@@ -98,20 +136,10 @@ RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERS
 COPY --from=task-binary /srv/files/task /usr/local/bin/task
 
 # --- Node tools mount point and PATH ---
-RUN mkdir -p /opt/node && ln -s /opt/node/node_modules/.bin /opt/node/bin
-ENV PATH=/opt/node/bin:$PATH
+ENV PATH=/opt/node/node_modules/.bin:$PATH
+COPY --from=node-apps /home/node/dist/ /opt/node/
 
-# =============================================================================
-# Stage: node-builder
-# Purpose: pnpm build environment for node package management tasks
-# Built as part of docker-compose build; never started automatically (profile: node-tools)
-# =============================================================================
-FROM node:${NODE_VERSION}-bookworm-slim AS node-builder
-ARG PNPM_VERSION
-ENV PNPM_VERSION=${PNPM_VERSION}
-RUN corepack enable && install -d -o 1000 -g 1000 /src /opt/node
-USER 1000:1000
-RUN corepack prepare pnpm@${PNPM_VERSION} --activate
+
 
 # =============================================================================
 # Stage: ci
@@ -125,7 +153,7 @@ ENV CI=true \
 # Stage: final
 # Purpose: Developer environment layered on ci — SSH agent, XDG, build tracking
 # =============================================================================
-FROM ci AS final
+FROM base AS final
 
 # SSH agent profile script
 COPY ssh-agent.sh /etc/profile.d/ssh-agent.sh
@@ -143,7 +171,7 @@ ENV XDG_CONFIG_HOME=/home/vscode/.config \
     XDG_DATA_HOME=/home/vscode/.local/share \
     XDG_CACHE_HOME=/home/vscode/.cache \
     XDG_STATE_HOME=/home/vscode/.local/state \
-    PAGER=cat
+    PAGER=less
 
 # Build tracking
 RUN date +%s > /container_build_id
