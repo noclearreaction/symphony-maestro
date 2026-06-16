@@ -6,7 +6,6 @@ version: "3"
 tasks:
   doctor:
     desc: "Verify all critical tools are correctly wired in the devcontainer"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - echo "--- go ---"
       - go version

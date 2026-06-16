@@ -5,20 +5,18 @@
 version: "3"
 
 vars:
-  NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
-  COMPOSE_DIR: "{{.ROOT_DIR}}/.devcontainer"
+  NODE_DIR: ".devcontainer/node"
+  COMPOSE_DIR: ".devcontainer"
 
 
 tasks:
   build:
     desc: "Build the node-apps image (installs packages into image layer)"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" build node-apps
 
   install:
     desc: "Copy node tools from built image into /opt/node (no rebuild)"
-    dir: '{{.USER_WORKING_DIR}}'
     vars:
       CONTAINER_ID:
         sh: docker create symphony-studio-node-apps
@@ -28,7 +26,6 @@ tasks:
 
   package:add:
     desc: "Add or update a package: task node:package:add -- <name>@<version>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -42,7 +39,6 @@ tasks:
 
   package:rm:
     desc: "Remove a package: task node:package:rm -- <name>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -53,26 +49,22 @@ tasks:
 
   package:update:
     desc: "Update a package version: task node:package:update -- <name>@<version>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - task: package:add
         vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
 
   package:list:
     desc: "List direct dependencies from package.json"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - jq '.dependencies' "{{.NODE_DIR}}/package.json"
 
   package:view:
     desc: "Query npm registry for latest version of a package: task node:package:view -- <name>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" run --rm node-apps pnpm view {{.CLI_ARGS}} version
 
   package:set-manager:
     desc: "Set the pnpm version: task node:package:set-manager -- <version>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - |
         version="{{.CLI_ARGS}}"
@@ -84,7 +76,6 @@ tasks:
 
   trust:add:
     desc: "Allow build scripts for a package: task node:trust:add -- <name>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -95,7 +86,6 @@ tasks:
 
   trust:rm:
     desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -106,6 +96,5 @@ tasks:
 
   trust:list:
     desc: "List trusted packages from pnpm-workspace.yaml"
-    dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - jq '.allowBuilds' "{{.NODE_DIR}}/pnpm-workspace.yaml"
