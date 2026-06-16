@@ -33,13 +33,16 @@ tasks:
         {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}
       VERSION: >-
         {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}
+    preconditions:
+      - sh: >-
+          jq --arg name "{{.NAME}}"
+          --arg version "{{.VERSION}}"
+          '.dependencies[$name] = $version'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
     cmds:
-      - >-
-        jq --arg name "{{.NAME}}"
-        --arg version "{{.VERSION}}"
-        '.dependencies[$name] = $version'
-        package.json > /tmp/package.json.tmp
-        && mv /tmp/package.json.tmp package.json
+      - mv /tmp/package.json.tmp package.json
       - >-
         echo "added: {{.NAME}}@{{.VERSION}}"
 
@@ -50,13 +53,15 @@ tasks:
     vars:
       PKG: >-
         {{.CLI_ARGS}}
+    preconditions:
+      - sh: >-
+          jq --arg name "{{.PKG}}"
+          'del(.dependencies[$name])'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
     cmds:
-      - >-
-        jq --arg name "{{.PKG}}"
-        'del(.dependencies[$name])'
-        package.json > /tmp/package.json.tmp
-        && mv /tmp/package.json.tmp package.json
-      - >-
+      - mv /tmp/package.json.tmp package.json
       - >-
         echo "removed: {{.PKG}}"
 
@@ -88,12 +93,15 @@ tasks:
     vars:
       VERSION: >-
         pnpm@{{.CLI_ARGS}}
+    preconditions:
+      - sh: >-
+          jq --arg version "{{.VERSION}}"
+          '.packageManager = $version'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
     cmds:
-      - >-
-        jq --arg version "{{.VERSION}}"
-        '.packageManager = $version'
-        package.json > /tmp/package.json.tmp
-        && mv /tmp/package.json.tmp package.json
+      - mv /tmp/package.json.tmp package.json
       - >-
         echo "packageManager set to {{.VERSION}}"
 
@@ -104,12 +112,15 @@ tasks:
     vars:
       PKG: >-
         {{.CLI_ARGS}}
+    preconditions:
+      - sh: >-
+          jq --arg pkg "{{.PKG}}"
+          '.allowBuilds[$pkg] = true'
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        msg: >-
+          jq failed — pnpm-workspace.yaml not updated
     cmds:
-      - >-
-        jq --arg pkg "{{.PKG}}"
-        '.allowBuilds[$pkg] = true'
-        pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
-        && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
       - >-
         echo "trusted: {{.PKG}}"
 
@@ -120,12 +131,15 @@ tasks:
     vars:
       PKG: >-
         {{.CLI_ARGS}}
+    preconditions:
+      - sh: >-
+          jq --arg pkg "{{.PKG}}"
+          'del(.allowBuilds[$pkg])'
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        msg: >-
+          jq failed — pnpm-workspace.yaml not updated
     cmds:
-      - >-
-        jq --arg pkg "{{.PKG}}"
-        'del(.allowBuilds[$pkg])'
-        pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
-        && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
       - >-
         echo "removed trust: {{.PKG}}"
 
