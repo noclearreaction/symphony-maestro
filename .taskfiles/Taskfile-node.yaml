@@ -23,6 +23,7 @@ tasks:
   install:
     desc: >-
       Copy node tools from built image into /opt/node (no rebuild)
+    deps: [build]
     sources:
       - .devcontainer/.node-apps-built
     generates:
