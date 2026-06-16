@@ -5,10 +5,10 @@
 version: "3"
 
 vars:
-  # Valid npm package name (plain or @scope/name) — safe for regexFind
-  RE_PKG_NAME: "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$"
-  # Semver-like version string (major.minor...) — safe for regexFind
-  RE_SEMVER: "^[0-9]+\\.[0-9]+"
+  # Valid npm package name — must start and end with a word char; allows ._- in middle
+  RE_PKG_NAME: "^@?\\w([\\w._-]*\\w)?(/\\w([\\w._-]*\\w)?)?$"
+  # Strict semver: major.minor.patch with optional pre-release/build metadata
+  RE_SEMVER: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+][^\\s]+)?$"
 
 tasks:
   usage:
