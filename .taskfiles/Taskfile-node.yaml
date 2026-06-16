@@ -5,12 +5,12 @@
 version: "3"
 
 vars:
-  # Matches <name>@<version> — supports scoped packages (@scope/name@version)
-  RE_PKG_AT_VERSION: "^(@?[^@]+)@([^@]+)$"
+  # Always matches; group 1 = name, group 2 = version (both empty if no @ present)
+  RE_PKG_AT_VERSION: "^(?:(@?[^@]+)@([^@]+)|.*)$"
   # Matches a valid npm package name (plain or @scope/name)
   RE_PKG_NAME: "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$"
-  # Matches a semver-like version string (major.minor...)
-  RE_SEMVER: "^[0-9]+\\.[0-9]+"
+  # Always matches; group 1 = version string (empty if not semver-like)
+  RE_SEMVER: "^(?:([0-9]+\\.[0-9]+[^\\s]*)|.*)$"
 
 tasks:
   usage:
@@ -104,23 +104,21 @@ tasks:
       Does not rebuild the image — run node:build + node:install after.
     dir: .devcontainer/node
     vars:
-      # Split <name>@<version> — supports scoped packages (@scope/name@version)
-      # Regex: ^(@?[^@]+)@([^@]+)$ — group 1 = name, group 2 = version
-      # Empty when CLI_ARGS does not match — preconditions test these directly
+      # group 1 = name, group 2 = version; both empty when CLI_ARGS has no @
       NAME: >-
         {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${1}"}}
       VERSION: >-
         {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${2}"}}
     preconditions:
-      - sh: test -n "{{.NAME}}"
+      - sh: test -n {{.NAME | quote}}
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
-      - sh: test -n "{{.VERSION}}"
+      - sh: test -n {{.VERSION | quote}}
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
       - sh: >-
-          jq --arg name "{{.NAME}}"
-          --arg version "{{.VERSION}}"
+          jq --arg name {{.NAME | quote}}
+          --arg version {{.VERSION | quote}}
           '.dependencies[$name] = $version'
           package.json > /tmp/package.json.tmp
         msg: >-
@@ -128,7 +126,7 @@ tasks:
     cmds:
       - mv /tmp/package.json.tmp package.json
       - >-
-        echo "added: {{.NAME}}@{{.VERSION}}"
+        echo added: {{.NAME | quote}}@{{.VERSION | quote}}
 
   package:rm:
     desc: >-
@@ -144,11 +142,11 @@ tasks:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.PKG}}"
+      - sh: test -n {{.PKG | quote}}
         msg: >-
           argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
-          jq --arg name "{{.PKG}}"
+          jq --arg name {{.PKG | quote}}
           'del(.dependencies[$name])'
           package.json > /tmp/package.json.tmp
         msg: >-
@@ -156,7 +154,7 @@ tasks:
     cmds:
       - mv /tmp/package.json.tmp package.json
       - >-
-        echo "removed: {{.PKG}}"
+        echo removed: {{.PKG | quote}}
 
   package:update:
     desc: >-
@@ -196,11 +194,11 @@ tasks:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.PKG}}"
+      - sh: test -n {{.PKG | quote}}
         msg: >-
           argument must be a valid package name, e.g. typescript or @scope/name
     cmds:
-      - docker compose run --rm node-apps pnpm view {{.PKG}} version
+      - docker compose run --rm node-apps pnpm view {{.PKG | quote}} version
 
   package:set-manager:
     desc: >-
@@ -212,15 +210,15 @@ tasks:
       Example: task -g node:package:set-manager -- 10.12.1
     dir: .devcontainer/node
     vars:
-      # Empty when CLI_ARGS is not a valid semver — precondition tests this directly
-      VERSION: >-
-        {{if regexMatch .RE_SEMVER .CLI_ARGS}}pnpm@{{.CLI_ARGS}}{{end}}
+      # group 1 = semver string; empty when CLI_ARGS is not semver-like
+      SEMVER: >-
+        {{regexReplaceAll .RE_SEMVER .CLI_ARGS "${1}"}}
     preconditions:
-      - sh: test -n "{{.VERSION}}"
+      - sh: test -n {{.SEMVER | quote}}
         msg: >-
           version must be a semver string, e.g. 10.12.1
       - sh: >-
-          jq --arg version "{{.VERSION}}"
+          jq --arg version pnpm@{{.SEMVER | quote}}
           '.packageManager = $version'
           package.json > /tmp/package.json.tmp
         msg: >-
@@ -228,7 +226,7 @@ tasks:
     cmds:
       - mv /tmp/package.json.tmp package.json
       - >-
-        echo "packageManager set to {{.VERSION}}"
+        echo packageManager set to pnpm@{{.SEMVER | quote}}
 
   trust:add:
     desc: >-
@@ -243,11 +241,11 @@ tasks:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.PKG}}"
+      - sh: test -n {{.PKG | quote}}
         msg: >-
           argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
-          jq --arg pkg "{{.PKG}}"
+          jq --arg pkg {{.PKG | quote}}
           '.allowBuilds[$pkg] = true'
           pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
         msg: >-
@@ -255,7 +253,7 @@ tasks:
     cmds:
       - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
       - >-
-        echo "trusted: {{.PKG}}"
+        echo trusted: {{.PKG | quote}}
 
   trust:rm:
     desc: >-
@@ -269,11 +267,11 @@ tasks:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.PKG}}"
+      - sh: test -n {{.PKG | quote}}
         msg: >-
           argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
-          jq --arg pkg "{{.PKG}}"
+          jq --arg pkg {{.PKG | quote}}
           'del(.allowBuilds[$pkg])'
           pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
         msg: >-
@@ -281,7 +279,7 @@ tasks:
     cmds:
       - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
       - >-
-        echo "removed trust: {{.PKG}}"
+        echo removed trust: {{.PKG | quote}}
 
   trust:list:
     desc: >-
