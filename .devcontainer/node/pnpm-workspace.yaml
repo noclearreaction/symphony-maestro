@@ -16,8 +16,8 @@
     "re2": true
   },
   "injectWorkspacePackages": true,
-  "overrides": {
-    "@yarnpkg/libzip": "3.2.1",
-    "semver": "6.3.0"
-  }
+  "trustPolicyExclude": [
+    "@yarnpkg/libzip@3.2.2",
+    "semver@6.3.1"
+  ]
 }
