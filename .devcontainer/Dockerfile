@@ -174,7 +174,8 @@ ENV XDG_CONFIG_HOME=/home/vscode/.config \
     XDG_DATA_HOME=/home/vscode/.local/share \
     XDG_CACHE_HOME=/home/vscode/.cache \
     XDG_STATE_HOME=/home/vscode/.local/state \
-    PAGER=less
+    PAGER=less \
+    TASK_TEMP_DIR=/tmp/task
 
 # task -g global Taskfile (symlinks — resolves at runtime when workspace is mounted)
 # Both vscode and root get the symlink so 'sudo task -g' works too
