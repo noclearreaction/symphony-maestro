@@ -176,8 +176,10 @@ ENV XDG_CONFIG_HOME=/home/vscode/.config \
     XDG_STATE_HOME=/home/vscode/.local/state \
     PAGER=less
 
-# task -g global Taskfile (symlink — resolves at runtime when workspace is mounted)
-RUN ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /home/vscode/Taskfile.yaml
+# task -g global Taskfile (symlinks — resolves at runtime when workspace is mounted)
+# Both vscode and root get the symlink so 'sudo task -g' works too
+RUN ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /home/vscode/Taskfile.yaml \
+ && ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /root/Taskfile.yaml
 
 # Build tracking
 RUN date +%s > /container_build_id
