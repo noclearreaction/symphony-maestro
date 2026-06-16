@@ -98,18 +98,16 @@ tasks:
     vars:
       # Split <name>@<version> — supports scoped packages (@scope/name@version)
       # Regex: ^(@?[^@]+)@([^@]+)$ — group 1 = name, group 2 = version
+      # Empty when CLI_ARGS does not match — preconditions test these directly
       NAME: >-
-        {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}
+        {{if regexMatch "^(@?[^@]+)@([^@]+)$" .CLI_ARGS}}{{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}{{end}}
       VERSION: >-
-        {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}
-      # Non-empty only when CLI_ARGS matches <name>@<version>
-      NAME_VERSION_MATCH: >-
-        {{regexFind "^@?[^@]+@[^@]+" .CLI_ARGS}}
+        {{if regexMatch "^(@?[^@]+)@([^@]+)$" .CLI_ARGS}}{{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}{{end}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
+      - sh: test -n "{{.NAME}}"
         msg: >-
-          argument required: task -g node:package:add -- <name>@<version>
-      - sh: test -n "{{.NAME_VERSION_MATCH}}"
+          argument must be <name>@<version>, e.g. typescript@5.8.3
+      - sh: test -n "{{.VERSION}}"
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
       - sh: >-
@@ -138,7 +136,7 @@ tasks:
       PKG: >-
         {{.CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
+      - sh: test -n "{{.PKG}}"
         msg: >-
           argument required: task -g node:package:rm -- <name>
       - sh: >-
@@ -162,16 +160,6 @@ tasks:
       dependency in package.json.
 
       Does not rebuild the image — run node:build + node:install after.
-    vars:
-      NAME_VERSION_MATCH: >-
-        {{regexFind "^@?[^@]+@[^@]+" .CLI_ARGS}}
-    preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
-        msg: >-
-          argument required: task -g node:package:update -- <name>@<version>
-      - sh: test -n "{{.NAME_VERSION_MATCH}}"
-        msg: >-
-          argument must be <name>@<version>, e.g. typescript@5.8.3
     cmds:
       - task: package:add
         vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
@@ -196,12 +184,15 @@ tasks:
       Queries the npm registry via pnpm inside the node-apps container.
       Useful for checking what version is available before adding a package.
     dir: .devcontainer
+    vars:
+      PKG: >-
+        {{.CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
+      - sh: test -n "{{.PKG}}"
         msg: >-
           argument required: task -g node:package:view -- <name>
     cmds:
-      - docker compose run --rm node-apps pnpm view {{.CLI_ARGS}} version
+      - docker compose run --rm node-apps pnpm view {{.PKG}} version
 
   package:set-manager:
     desc: >-
@@ -213,16 +204,11 @@ tasks:
       Example: task -g node:package:set-manager -- 10.12.1
     dir: .devcontainer/node
     vars:
-      # Non-empty only when CLI_ARGS starts with a semver-like version
-      SEMVER_MATCH: >-
-        {{regexFind "^[0-9]+\\.[0-9]+" .CLI_ARGS}}
+      # Empty when CLI_ARGS is not a valid semver — precondition tests this directly
       VERSION: >-
-        pnpm@{{.CLI_ARGS}}
+        {{if regexMatch "^[0-9]+\\.[0-9]+" .CLI_ARGS}}pnpm@{{.CLI_ARGS}}{{end}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
-        msg: >-
-          argument required: task -g node:package:set-manager -- <version>
-      - sh: test -n "{{.SEMVER_MATCH}}"
+      - sh: test -n "{{.VERSION}}"
         msg: >-
           version must be a semver string, e.g. 10.12.1
       - sh: >-
@@ -249,7 +235,7 @@ tasks:
       PKG: >-
         {{.CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
+      - sh: test -n "{{.PKG}}"
         msg: >-
           argument required: task -g node:trust:add -- <name>
       - sh: >-
@@ -275,7 +261,7 @@ tasks:
       PKG: >-
         {{.CLI_ARGS}}
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
+      - sh: test -n "{{.PKG}}"
         msg: >-
           argument required: task -g node:trust:rm -- <name>
       - sh: >-
