@@ -9,32 +9,23 @@ tasks:
     desc: >-
       Build the node-apps image (installs packages into image layer)
     dir: .devcontainer
-    sources:
-      - Dockerfile
-      - docker-compose.yml
-      - node/package.json
-      - node/pnpm-workspace.yaml
-    generates:
-      - .node-apps-built
     cmds:
       - docker compose build node-apps
-      - touch .node-apps-built
 
   install:
     desc: >-
       Copy node tools from built image into /opt/node (no rebuild)
     deps: [build]
-    sources:
-      - .devcontainer/.node-apps-built
-    generates:
-      - /opt/node/.installed
+    preconditions:
+      - sh: test -w /opt/node
+        msg: >-
+          /opt/node is not writable — run with sufficient privileges
     vars:
       CONTAINER_ID:
         sh: docker create symphony-studio-node-apps
     cmds:
       - docker cp {{.CONTAINER_ID}}:/home/node/dist/. /opt/node/
       - docker rm {{.CONTAINER_ID}}
-      - touch /opt/node/.installed
 
   package:add:
     desc: >-
