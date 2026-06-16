@@ -102,12 +102,14 @@ tasks:
         {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}
       VERSION: >-
         {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}
+      # Non-empty only when CLI_ARGS matches <name>@<version>
+      NAME_VERSION_MATCH: >-
+        {{regexFind "^@?[^@]+@[^@]+" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: >-
           argument required: task -g node:package:add -- <name>@<version>
-      - sh: >-
-          echo "{{.CLI_ARGS}}" | grep -qE '^@?[^@]+@[^@]+'
+      - sh: test -n "{{.NAME_VERSION_MATCH}}"
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
       - sh: >-
@@ -160,12 +162,14 @@ tasks:
       dependency in package.json.
 
       Does not rebuild the image — run node:build + node:install after.
+    vars:
+      NAME_VERSION_MATCH: >-
+        {{regexFind "^@?[^@]+@[^@]+" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: >-
           argument required: task -g node:package:update -- <name>@<version>
-      - sh: >-
-          echo "{{.CLI_ARGS}}" | grep -qE '^@?[^@]+@[^@]+'
+      - sh: test -n "{{.NAME_VERSION_MATCH}}"
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
     cmds:
@@ -209,14 +213,16 @@ tasks:
       Example: task -g node:package:set-manager -- 10.12.1
     dir: .devcontainer/node
     vars:
+      # Non-empty only when CLI_ARGS starts with a semver-like version
+      SEMVER_MATCH: >-
+        {{regexFind "^[0-9]+\\.[0-9]+" .CLI_ARGS}}
       VERSION: >-
         pnpm@{{.CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: >-
           argument required: task -g node:package:set-manager -- <version>
-      - sh: >-
-          echo "{{.CLI_ARGS}}" | grep -qE '^[0-9]+\.[0-9]+'
+      - sh: test -n "{{.SEMVER_MATCH}}"
         msg: >-
           version must be a semver string, e.g. 10.12.1
       - sh: >-
