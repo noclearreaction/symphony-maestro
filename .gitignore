@@ -1,3 +1,8 @@
+.*
+!.gitignore
+!.gitattributes
+!.taskfiles
+
 .symphony/
 node_modules/
 .DS_Store
