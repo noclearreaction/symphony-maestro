@@ -134,7 +134,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -186,7 +186,7 @@ tasks:
     dir: .devcontainer
     vars:
       PKG: >-
-        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -233,7 +233,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -259,7 +259,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
