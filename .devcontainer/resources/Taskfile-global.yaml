@@ -1,0 +1,11 @@
+# Global Taskfile — delegates to workspace root
+# Installed into /home/vscode/Taskfile.yaml so 'task -g' works from any directory.
+# The workspace mount must be present at /workspace for this to resolve.
+version: "3"
+silent: true
+
+includes:
+  workspace:
+    taskfile: /workspace/Taskfile.yaml
+    dir: /workspace
+    flatten: true

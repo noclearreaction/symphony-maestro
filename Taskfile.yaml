@@ -3,10 +3,10 @@ version: "3"
 
 includes:
   devcontainer:
-    taskfile: .devcontainer/Taskfile.yaml
+    taskfile: .taskfiles/Taskfile-devcontainer.yaml
     dir: "."
   node:
-    taskfile: .devcontainer/node/Taskfile.yaml
+    taskfile: .taskfiles/Taskfile-node.yaml
     dir: "."
 
 tasks:

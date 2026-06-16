@@ -176,5 +176,8 @@ ENV XDG_CONFIG_HOME=/home/vscode/.config \
     XDG_STATE_HOME=/home/vscode/.local/state \
     PAGER=less
 
+# task -g global Taskfile (symlink — resolves at runtime when workspace is mounted)
+RUN ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /home/vscode/Taskfile.yaml
+
 # Build tracking
 RUN date +%s > /container_build_id
