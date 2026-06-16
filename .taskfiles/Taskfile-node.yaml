@@ -6,13 +6,15 @@ version: "3"
 
 tasks:
   build:
-    desc: "Build the node-apps image (installs packages into image layer)"
+    desc: >-
+      Build the node-apps image (installs packages into image layer)
     dir: .devcontainer
     cmds:
       - docker compose build node-apps
 
   install:
-    desc: "Copy node tools from built image into /opt/node (no rebuild)"
+    desc: >-
+      Copy node tools from built image into /opt/node (no rebuild)
     vars:
       CONTAINER_ID:
         sh: docker create symphony-studio-node-apps
@@ -21,84 +23,115 @@ tasks:
       - docker rm {{.CONTAINER_ID}}
 
   package:add:
-    desc: "Add or update a package: task node:package:add -- <name>@<version>"
+    desc: >-
+      Add or update a package: task node:package:add -- <name>@<version>
     dir: .devcontainer/node
+    vars:
+      # Split <name>@<version> — supports scoped packages (@scope/name@version)
+      # Regex: ^(@?[^@]+)@([^@]+)$ — group 1 = name, group 2 = version
+      NAME: >-
+        {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}
+      VERSION: >-
+        {{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}
     cmds:
-      - |
-        pkg="{{.CLI_ARGS}}"
-        name="${pkg%@*}"
-        version="${pkg##*@}"
-        jq --arg name "$name" --arg version "$version" \
-          '.dependencies[$name] = $version' \
-          package.json > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp package.json
-        echo "added: $name@$version"
+      - >-
+        jq --arg name "{{.NAME}}"
+        --arg version "{{.VERSION}}"
+        '.dependencies[$name] = $version'
+        package.json > /tmp/package.json.tmp
+        && mv /tmp/package.json.tmp package.json
+      - >-
+        echo "added: {{.NAME}}@{{.VERSION}}"
 
   package:rm:
-    desc: "Remove a package: task node:package:rm -- <name>"
+    desc: >-
+      Remove a package: task node:package:rm -- <name>
     dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{.CLI_ARGS}}
     cmds:
-      - |
-        pkg="{{.CLI_ARGS}}"
-        jq --arg name "$pkg" 'del(.dependencies[$name])' \
-          package.json > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp package.json
-        echo "removed: $pkg"
+      - >-
+        jq --arg name "{{.PKG}}"
+        'del(.dependencies[$name])'
+        package.json > /tmp/package.json.tmp
+        && mv /tmp/package.json.tmp package.json
+      - >-
+      - >-
+        echo "removed: {{.PKG}}"
 
   package:update:
-    desc: "Update a package version: task node:package:update -- <name>@<version>"
+    desc: >-
+      Update a package version: task node:package:update -- <name>@<version>
     cmds:
       - task: package:add
         vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
 
   package:list:
-    desc: "List direct dependencies from package.json"
+    desc: >-
+      List direct dependencies from package.json
     dir: .devcontainer/node
     cmds:
       - jq '.dependencies' package.json
 
   package:view:
-    desc: "Query npm registry for latest version of a package: task node:package:view -- <name>"
+    desc: >-
+      Query npm registry for latest version of a package: task node:package:view -- <name>
     dir: .devcontainer
     cmds:
       - docker compose run --rm node-apps pnpm view {{.CLI_ARGS}} version
 
   package:set-manager:
-    desc: "Set the pnpm version: task node:package:set-manager -- <version>"
+    desc: >-
+      Set the pnpm version: task node:package:set-manager -- <version>
     dir: .devcontainer/node
+    vars:
+      VERSION: >-
+        pnpm@{{.CLI_ARGS}}
     cmds:
-      - |
-        version="{{.CLI_ARGS}}"
-        jq --arg version "pnpm@${version}" \
-          '.packageManager = $version' \
-          package.json > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp package.json
-        echo "packageManager set to pnpm@${version}"
+      - >-
+        jq --arg version "{{.VERSION}}"
+        '.packageManager = $version'
+        package.json > /tmp/package.json.tmp
+        && mv /tmp/package.json.tmp package.json
+      - >-
+        echo "packageManager set to {{.VERSION}}"
 
   trust:add:
-    desc: "Allow build scripts for a package: task node:trust:add -- <name>"
+    desc: >-
+      Allow build scripts for a package: task node:trust:add -- <name>
     dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{.CLI_ARGS}}
     cmds:
-      - |
-        pkg="{{.CLI_ARGS}}"
-        jq --arg pkg "$pkg" '.allowBuilds[$pkg] = true' \
-          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp \
-          && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
-        echo "trusted: $pkg"
+      - >-
+        jq --arg pkg "{{.PKG}}"
+        '.allowBuilds[$pkg] = true'
+        pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - >-
+        echo "trusted: {{.PKG}}"
 
   trust:rm:
-    desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
+    desc: >-
+      Remove build script trust for a package: task node:trust:rm -- <name>
     dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{.CLI_ARGS}}
     cmds:
-      - |
-        pkg="{{.CLI_ARGS}}"
-        jq --arg pkg "$pkg" 'del(.allowBuilds[$pkg])' \
-          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp \
-          && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
-        echo "removed trust: $pkg"
+      - >-
+        jq --arg pkg "{{.PKG}}"
+        'del(.allowBuilds[$pkg])'
+        pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - >-
+        echo "removed trust: {{.PKG}}"
 
   trust:list:
-    desc: "List trusted packages from pnpm-workspace.yaml"
+    desc: >-
+      List trusted packages from pnpm-workspace.yaml
     dir: .devcontainer/node
     cmds:
       - jq '.allowBuilds' pnpm-workspace.yaml
