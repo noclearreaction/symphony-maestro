@@ -9,8 +9,6 @@ tasks:
     cmds:
       - echo "--- go ---"
       - go version
-      - echo "--- gofmt ---"
-      - gofmt -h >/dev/null
       - echo "--- deno ---"
       - deno --version
       - echo "--- task ---"
