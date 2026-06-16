@@ -106,18 +106,18 @@ tasks:
       # Split on \b@ — fires only on the version separator @, not the scope @
       # Produces exactly 2 parts for valid input; 1 part when version is missing
       NAME: >-
-        {{index (regexSplit "\\b@" .CLI_ARGS -1) 0}}
+        {{regexFind .RE_PKG_NAME (index (regexSplit "\\b@" .CLI_ARGS -1) 0)}}
       VERSION: >-
-        {{if gt (regexSplit "\\b@" .CLI_ARGS -1 | len) 1}}{{index (regexSplit "\\b@" .CLI_ARGS -1) 1}}{{end}}
+        {{if gt (regexSplit "\\b@" .CLI_ARGS -1 | len) 1}}{{regexFind .RE_SEMVER (index (regexSplit "\\b@" .CLI_ARGS -1) 1)}}{{end}}
     preconditions:
       - sh: >-
           test {{regexSplit "\\b@" .CLI_ARGS -1 | len}} -eq 2
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
-      - sh: test -n {{regexFind .RE_PKG_NAME .NAME | quote}}
+      - sh: test -n {{.NAME | quote}}
         msg: >-
           name must be a valid package name, e.g. typescript or @scope/name
-      - sh: test -n {{regexFind .RE_SEMVER .VERSION | quote}}
+      - sh: test -n {{.VERSION | quote}}
         msg: >-
           version must be a semver string, e.g. 5.8.3
       - sh: >-
@@ -146,9 +146,10 @@ tasks:
     vars:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
-    requires:
-      vars: [PKG]
     preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg name {{.PKG | quote}}
           'del(.dependencies[$name])'
@@ -218,9 +219,10 @@ tasks:
       # group 1 = semver string; empty when CLI_ARGS is not semver-like
       SEMVER: >-
         {{regexFind .RE_SEMVER .CLI_ARGS}}
-    requires:
-      vars: [SEMVER]
     preconditions:
+      - sh: test -n {{.SEMVER | quote}}
+        msg: >-
+          version must be a semver string, e.g. 10.12.1
       - sh: >-
           jq --arg version pnpm@{{.SEMVER | quote}}
           '.packageManager = $version'
@@ -245,9 +247,10 @@ tasks:
     vars:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
-    requires:
-      vars: [PKG]
     preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg pkg {{.PKG | quote}}
           '.allowBuilds[$pkg] = true'
@@ -271,9 +274,10 @@ tasks:
     vars:
       PKG: >-
         {{regexFind .RE_PKG_NAME .CLI_ARGS}}
-    requires:
-      vars: [PKG]
     preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg pkg {{.PKG | quote}}
           'del(.allowBuilds[$pkg])'
