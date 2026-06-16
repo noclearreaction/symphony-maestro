@@ -134,11 +134,11 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{.CLI_ARGS}}
+        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
-          argument required: task -g node:package:rm -- <name>
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg name "{{.PKG}}"
           'del(.dependencies[$name])'
@@ -186,11 +186,11 @@ tasks:
     dir: .devcontainer
     vars:
       PKG: >-
-        {{.CLI_ARGS}}
+        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
-          argument required: task -g node:package:view -- <name>
+          argument must be a valid package name, e.g. typescript or @scope/name
     cmds:
       - docker compose run --rm node-apps pnpm view {{.PKG}} version
 
@@ -233,11 +233,11 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{.CLI_ARGS}}
+        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
-          argument required: task -g node:trust:add -- <name>
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg pkg "{{.PKG}}"
           '.allowBuilds[$pkg] = true'
@@ -259,11 +259,11 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{.CLI_ARGS}}
+        {{if regexMatch "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
-          argument required: task -g node:trust:rm -- <name>
+          argument must be a valid package name, e.g. typescript or @scope/name
       - sh: >-
           jq --arg pkg "{{.PKG}}"
           'del(.allowBuilds[$pkg])'
