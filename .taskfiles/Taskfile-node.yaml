@@ -108,9 +108,9 @@ tasks:
       # Regex: ^(@?[^@]+)@([^@]+)$ — group 1 = name, group 2 = version
       # Empty when CLI_ARGS does not match — preconditions test these directly
       NAME: >-
-        {{if regexMatch .RE_PKG_AT_VERSION .CLI_ARGS}}{{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${1}"}}{{end}}
+        {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${1}"}}
       VERSION: >-
-        {{if regexMatch .RE_PKG_AT_VERSION .CLI_ARGS}}{{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${2}"}}{{end}}
+        {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${2}"}}
     preconditions:
       - sh: test -n "{{.NAME}}"
         msg: >-
