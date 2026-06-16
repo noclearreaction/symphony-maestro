@@ -8,7 +8,7 @@ tasks:
   default:
     desc: "Show node tasks"
     summary: |
-      Usage: task node:<task> [-- <args>]
+      Usage: task -g node:<task> [-- <args>]
 
       Image lifecycle:
         build              Build the node-apps Docker image
@@ -27,7 +27,7 @@ tasks:
         trust:rm           Remove build script trust          -- <name>
         trust:list         List trusted packages
 
-      Run 'task --summary node:<task>' for detailed usage of a specific task.
+      Run 'task -g --summary node:<task>' for detailed usage of a specific task.
     cmds:
       - task --list --taskfile {{.TASKFILE}}
     silent: true
@@ -35,7 +35,7 @@ tasks:
   list:
     desc: "List node tasks"
     summary: |
-      Usage: task node:list
+      Usage: task -g node:list
 
       Prints all tasks defined in the node Taskfile.
     cmds:
@@ -45,7 +45,7 @@ tasks:
     desc: >-
       Build the node-apps image (installs packages into image layer)
     summary: |
-      Usage: task node:build
+      Usage: task -g node:build
 
       Builds the node-apps Docker image using docker compose. Skipped
       automatically when Dockerfile, docker-compose.yml, package.json, and
@@ -65,7 +65,7 @@ tasks:
     desc: >-
       Copy node tools from built image into /opt/node (no rebuild)
     summary: |
-      Usage: sudo task node:install
+      Usage: sudo task -g node:install
 
       Copies compiled node tools from the built image into /opt/node.
       Requires write access to /opt/node — run with sudo or as root.
@@ -87,10 +87,10 @@ tasks:
     desc: >-
       Add or update a package: task node:package:add -- <name>@<version>
     summary: |
-      Usage: task node:package:add -- <name>@<version>
+      Usage: task -g node:package:add -- <name>@<version>
 
       Adds or updates a dependency in .devcontainer/node/package.json.
-      Supports scoped packages: task node:package:add -- @scope/name@1.0.0
+      Supports scoped packages: task -g node:package:add -- @scope/name@1.0.0
 
       Does not rebuild the image — run node:build + node:install after.
     dir: .devcontainer/node
@@ -118,7 +118,7 @@ tasks:
     desc: >-
       Remove a package: task node:package:rm -- <name>
     summary: |
-      Usage: task node:package:rm -- <name>
+      Usage: task -g node:package:rm -- <name>
 
       Removes a dependency from .devcontainer/node/package.json.
 
@@ -143,7 +143,7 @@ tasks:
     desc: >-
       Update a package version: task node:package:update -- <name>@<version>
     summary: |
-      Usage: task node:package:update -- <name>@<version>
+      Usage: task -g node:package:update -- <name>@<version>
 
       Alias for node:package:add. Updates the version of an existing
       dependency in package.json.
@@ -157,7 +157,7 @@ tasks:
     desc: >-
       List direct dependencies from package.json
     summary: |
-      Usage: task node:package:list
+      Usage: task -g node:package:list
 
       Prints the dependencies object from .devcontainer/node/package.json.
     dir: .devcontainer/node
@@ -168,7 +168,7 @@ tasks:
     desc: >-
       Query npm registry for latest version of a package: task node:package:view -- <name>
     summary: |
-      Usage: task node:package:view -- <name>
+      Usage: task -g node:package:view -- <name>
 
       Queries the npm registry via pnpm inside the node-apps container.
       Useful for checking what version is available before adding a package.
@@ -180,10 +180,10 @@ tasks:
     desc: >-
       Set the pnpm version: task node:package:set-manager -- <version>
     summary: |
-      Usage: task node:package:set-manager -- <version>
+      Usage: task -g node:package:set-manager -- <version>
 
       Sets the packageManager field in package.json to pnpm@<version>.
-      Example: task node:package:set-manager -- 10.12.1
+      Example: task -g node:package:set-manager -- 10.12.1
     dir: .devcontainer/node
     vars:
       VERSION: >-
@@ -204,7 +204,7 @@ tasks:
     desc: >-
       Allow build scripts for a package: task node:trust:add -- <name>
     summary: |
-      Usage: task node:trust:add -- <name>
+      Usage: task -g node:trust:add -- <name>
 
       Adds a package to allowBuilds in pnpm-workspace.yaml, permitting
       its install scripts to run during pnpm install.
@@ -228,7 +228,7 @@ tasks:
     desc: >-
       Remove build script trust for a package: task node:trust:rm -- <name>
     summary: |
-      Usage: task node:trust:rm -- <name>
+      Usage: task -g node:trust:rm -- <name>
 
       Removes a package from allowBuilds in pnpm-workspace.yaml.
     dir: .devcontainer/node
@@ -251,7 +251,7 @@ tasks:
     desc: >-
       List trusted packages from pnpm-workspace.yaml
     summary: |
-      Usage: task node:trust:list
+      Usage: task -g node:trust:list
 
       Prints the allowBuilds object from .devcontainer/node/pnpm-workspace.yaml.
     dir: .devcontainer/node

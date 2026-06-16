@@ -13,14 +13,14 @@ tasks:
   default:
     desc: "Show available tasks"
     summary: |
-      Usage: task [<namespace>:]<task> [-- <args>]
+      Usage: task -g [<namespace>:]<task> [-- <args>]
 
       Namespaces:
         devcontainer    Health checks and devcontainer utilities
         node            Node package and image management
 
-      Run 'task <namespace>:default' for namespace-scoped help.
-      Run 'task --summary <task>' for detailed usage of a specific task.
+      Run 'task -g <namespace>:default' for namespace-scoped help.
+      Run 'task -g --summary <task>' for detailed usage of a specific task.
     cmds:
       - task --list
     silent: true
@@ -28,7 +28,7 @@ tasks:
   list:
     desc: "List all available tasks"
     summary: |
-      Usage: task list
+      Usage: task -g list
 
       Prints all available tasks across all namespaces.
     cmds:
@@ -37,7 +37,7 @@ tasks:
   health:
     desc: "Alias for devcontainer:doctor — check all tools are wired correctly"
     summary: |
-      Usage: task health
+      Usage: task -g health
 
       Runs devcontainer:doctor. Checks that all required tools (go, deno,
       task, gh, docker) are present and executable. Exits non-zero on first
