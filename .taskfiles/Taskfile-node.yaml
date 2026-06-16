@@ -133,6 +133,7 @@ tasks:
         echo added: {{.NAME | quote}}@{{.VERSION | quote}}
 
   package:rm:
+    aliases: [package:remove]
     desc: >-
       Remove a package: task node:package:rm -- <name>
     summary: |
@@ -176,6 +177,7 @@ tasks:
         vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
 
   package:list:
+    aliases: [package:ls]
     desc: >-
       List direct dependencies from package.json
     summary: |
@@ -263,6 +265,7 @@ tasks:
         echo trusted: {{.PKG | quote}}
 
   trust:rm:
+    aliases: [trust:remove]
     desc: >-
       Remove build script trust for a package: task node:trust:rm -- <name>
     summary: |
@@ -290,6 +293,7 @@ tasks:
         echo removed trust: {{.PKG | quote}}
 
   trust:list:
+    aliases: [trust:ls]
     desc: >-
       List trusted packages from pnpm-workspace.yaml
     summary: |
