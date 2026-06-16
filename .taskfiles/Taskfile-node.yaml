@@ -5,18 +5,10 @@
 version: "3"
 
 vars:
-  # Always-matching alternation pattern: ^(?:(capture)|.*)$
-  # Group 1/2 are populated only on the valid branch; empty otherwise.
-  # Use with regexReplaceAll "${1}" — do NOT use with regexFind/regexMatch
-  # (they will always return a match regardless of input validity).
-  RE_PKG_AT_VERSION: "^(?:(@?[^@]+)@([^@]+)|.*)$"
-  # Matches a valid npm package name (plain or @scope/name)
-  # Safe to use with regexFind — returns empty on invalid input.
+  # Valid npm package name (plain or @scope/name) — safe for regexFind
   RE_PKG_NAME: "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$"
-  # Always-matching alternation pattern: ^(?:(capture)|.*)$
-  # Group 1 is the semver string; empty when input is not semver-like.
-  # Use with regexReplaceAll "${1}" — do NOT use with regexFind/regexMatch.
-  RE_SEMVER: "^(?:([0-9]+\\.[0-9]+[^\\s]*)|.*)$"
+  # Semver-like version string (major.minor...) — safe for regexFind
+  RE_SEMVER: "^[0-9]+\\.[0-9]+"
 
 tasks:
   usage:
@@ -110,18 +102,25 @@ tasks:
       Does not rebuild the image — run node:build + node:install after.
     dir: .devcontainer/node
     vars:
-      # group 1 = name, group 2 = version; both empty when CLI_ARGS has no @
+      # Split on \b@ — fires only on the version separator @, not the scope @
+      # Produces exactly 2 parts for valid input; 1 part when version is missing
+      PARTS: >-
+        {{regexSplit "\\b@" .CLI_ARGS -1}}
       NAME: >-
-        {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${1}"}}
+        {{index (regexSplit "\\b@" .CLI_ARGS -1) 0}}
       VERSION: >-
-        {{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${2}"}}
+        {{if gt (regexSplit "\\b@" .CLI_ARGS -1 | len) 1}}{{index (regexSplit "\\b@" .CLI_ARGS -1) 1}}{{end}}
     preconditions:
-      - sh: test -n {{.NAME | quote}}
+      - sh: >-
+          test {{regexSplit "\\b@" .CLI_ARGS -1 | len}} -eq 2
         msg: >-
           argument must be <name>@<version>, e.g. typescript@5.8.3
-      - sh: test -n {{.VERSION | quote}}
+      - sh: test -n {{regexFind .RE_PKG_NAME .NAME | quote}}
         msg: >-
-          argument must be <name>@<version>, e.g. typescript@5.8.3
+          name must be a valid package name, e.g. typescript or @scope/name
+      - sh: test -n {{regexFind .RE_SEMVER .VERSION | quote}}
+        msg: >-
+          version must be a semver string, e.g. 5.8.3
       - sh: >-
           jq --arg name {{.NAME | quote}}
           --arg version {{.VERSION | quote}}
@@ -218,7 +217,7 @@ tasks:
     vars:
       # group 1 = semver string; empty when CLI_ARGS is not semver-like
       SEMVER: >-
-        {{regexReplaceAll .RE_SEMVER .CLI_ARGS "${1}"}}
+        {{regexFind .RE_SEMVER .CLI_ARGS}}
     preconditions:
       - sh: test -n {{.SEMVER | quote}}
         msg: >-
