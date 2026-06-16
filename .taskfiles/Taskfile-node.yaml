@@ -4,16 +4,12 @@
 # Use task node:package:* and task node:trust:* — do not edit the files directly.
 version: "3"
 
-vars:
-  NODE_DIR: ".devcontainer/node"
-  COMPOSE_DIR: ".devcontainer"
-
-
 tasks:
   build:
     desc: "Build the node-apps image (installs packages into image layer)"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer"
     cmds:
-      - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" build node-apps
+      - docker compose build node-apps
 
   install:
     desc: "Copy node tools from built image into /opt/node (no rebuild)"
@@ -26,6 +22,7 @@ tasks:
 
   package:add:
     desc: "Add or update a package: task node:package:add -- <name>@<version>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -33,18 +30,19 @@ tasks:
         version="${pkg##*@}"
         jq --arg name "$name" --arg version "$version" \
           '.dependencies[$name] = $version' \
-          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+          package.json > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp package.json
         echo "added: $name@$version"
 
   package:rm:
     desc: "Remove a package: task node:package:rm -- <name>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
         jq --arg name "$pkg" 'del(.dependencies[$name])' \
-          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+          package.json > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp package.json
         echo "removed: $pkg"
 
   package:update:
@@ -55,46 +53,52 @@ tasks:
 
   package:list:
     desc: "List direct dependencies from package.json"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
-      - jq '.dependencies' "{{.NODE_DIR}}/package.json"
+      - jq '.dependencies' package.json
 
   package:view:
     desc: "Query npm registry for latest version of a package: task node:package:view -- <name>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer"
     cmds:
-      - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" run --rm node-apps pnpm view {{.CLI_ARGS}} version
+      - docker compose run --rm node-apps pnpm view {{.CLI_ARGS}} version
 
   package:set-manager:
     desc: "Set the pnpm version: task node:package:set-manager -- <version>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
       - |
         version="{{.CLI_ARGS}}"
         jq --arg version "pnpm@${version}" \
           '.packageManager = $version' \
-          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
-          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+          package.json > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp package.json
         echo "packageManager set to pnpm@${version}"
 
   trust:add:
     desc: "Allow build scripts for a package: task node:trust:add -- <name>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
-        file="{{.NODE_DIR}}/pnpm-workspace.yaml"
-        jq --arg pkg "$pkg" '.allowBuilds[$pkg] = true' "$file" > /tmp/pnpm-workspace.yaml.tmp \
-          && mv /tmp/pnpm-workspace.yaml.tmp "$file"
+        jq --arg pkg "$pkg" '.allowBuilds[$pkg] = true' \
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp \
+          && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
         echo "trusted: $pkg"
 
   trust:rm:
     desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
-        file="{{.NODE_DIR}}/pnpm-workspace.yaml"
-        jq --arg pkg "$pkg" 'del(.allowBuilds[$pkg])' "$file" > /tmp/pnpm-workspace.yaml.tmp \
-          && mv /tmp/pnpm-workspace.yaml.tmp "$file"
+        jq --arg pkg "$pkg" 'del(.allowBuilds[$pkg])' \
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp \
+          && mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
         echo "removed trust: $pkg"
 
   trust:list:
     desc: "List trusted packages from pnpm-workspace.yaml"
+    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
     cmds:
-      - jq '.allowBuilds' "{{.NODE_DIR}}/pnpm-workspace.yaml"
+      - jq '.allowBuilds' pnpm-workspace.yaml
