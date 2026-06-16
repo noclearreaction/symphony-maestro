@@ -5,11 +5,17 @@
 version: "3"
 
 vars:
-  # Always matches; group 1 = name, group 2 = version (both empty if no @ present)
+  # Always-matching alternation pattern: ^(?:(capture)|.*)$
+  # Group 1/2 are populated only on the valid branch; empty otherwise.
+  # Use with regexReplaceAll "${1}" — do NOT use with regexFind/regexMatch
+  # (they will always return a match regardless of input validity).
   RE_PKG_AT_VERSION: "^(?:(@?[^@]+)@([^@]+)|.*)$"
   # Matches a valid npm package name (plain or @scope/name)
+  # Safe to use with regexFind — returns empty on invalid input.
   RE_PKG_NAME: "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$"
-  # Always matches; group 1 = version string (empty if not semver-like)
+  # Always-matching alternation pattern: ^(?:(capture)|.*)$
+  # Group 1 is the semver string; empty when input is not semver-like.
+  # Use with regexReplaceAll "${1}" — do NOT use with regexFind/regexMatch.
   RE_SEMVER: "^(?:([0-9]+\\.[0-9]+[^\\s]*)|.*)$"
 
 tasks:
