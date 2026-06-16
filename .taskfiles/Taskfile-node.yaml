@@ -4,6 +4,14 @@
 # Use task node:package:* and task node:trust:* — do not edit the files directly.
 version: "3"
 
+vars:
+  # Matches <name>@<version> — supports scoped packages (@scope/name@version)
+  RE_PKG_AT_VERSION: "^(@?[^@]+)@([^@]+)$"
+  # Matches a valid npm package name (plain or @scope/name)
+  RE_PKG_NAME: "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$"
+  # Matches a semver-like version string (major.minor...)
+  RE_SEMVER: "^[0-9]+\\.[0-9]+"
+
 tasks:
   usage:
     desc: "Show node tasks"
@@ -100,9 +108,9 @@ tasks:
       # Regex: ^(@?[^@]+)@([^@]+)$ — group 1 = name, group 2 = version
       # Empty when CLI_ARGS does not match — preconditions test these directly
       NAME: >-
-        {{if regexMatch "^(@?[^@]+)@([^@]+)$" .CLI_ARGS}}{{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${1}"}}{{end}}
+        {{if regexMatch .RE_PKG_AT_VERSION .CLI_ARGS}}{{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${1}"}}{{end}}
       VERSION: >-
-        {{if regexMatch "^(@?[^@]+)@([^@]+)$" .CLI_ARGS}}{{regexReplaceAll "^(@?[^@]+)@([^@]+)$" .CLI_ARGS "${2}"}}{{end}}
+        {{if regexMatch .RE_PKG_AT_VERSION .CLI_ARGS}}{{regexReplaceAll .RE_PKG_AT_VERSION .CLI_ARGS "${2}"}}{{end}}
     preconditions:
       - sh: test -n "{{.NAME}}"
         msg: >-
@@ -134,7 +142,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -186,7 +194,7 @@ tasks:
     dir: .devcontainer
     vars:
       PKG: >-
-        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -206,7 +214,7 @@ tasks:
     vars:
       # Empty when CLI_ARGS is not a valid semver — precondition tests this directly
       VERSION: >-
-        {{if regexMatch "^[0-9]+\\.[0-9]+" .CLI_ARGS}}pnpm@{{.CLI_ARGS}}{{end}}
+        {{if regexMatch .RE_SEMVER .CLI_ARGS}}pnpm@{{.CLI_ARGS}}{{end}}
     preconditions:
       - sh: test -n "{{.VERSION}}"
         msg: >-
@@ -233,7 +241,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
@@ -259,7 +267,7 @@ tasks:
     dir: .devcontainer/node
     vars:
       PKG: >-
-        {{regexFind "^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$" .CLI_ARGS}}
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
     preconditions:
       - sh: test -n "{{.PKG}}"
         msg: >-
