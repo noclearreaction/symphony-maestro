@@ -17,13 +17,14 @@ ARG NODE_VERSION="22.16.0"
 # Output: /srv/files/ working directory with curl, ca-certificates, tar, xz-utils
 # =============================================================================
 FROM debian:bookworm-slim AS download-base
-RUN apt-get update \
+RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib-bookworm,target=/var/lib/apt,sharing=locked \
+    apt-get update \
  && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
         tar \
-        xz-utils \
- && rm -rf /var/lib/apt/lists/*
+        xz-utils
 WORKDIR /srv/files
 
 # =============================================================================
@@ -38,10 +39,11 @@ ENV COREPACK_ENABLE_AUTO_PIN=1 \
     COREPACK_ENABLE_STRICT=1 \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends jq \
- && rm -rf /var/lib/apt/lists/* \
- && corepack enable \
+RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib-bookworm,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+ && apt-get install -y --no-install-recommends jq
+RUN corepack enable \
  && install -d -o 1000 -g 1000 /opt/node
 
 USER 1000:1000
@@ -60,8 +62,8 @@ COPY node/pnpm-workspace.yaml /home/node/pnpm-workspace.yaml
 COPY node/package.json /home/node/package.json
 COPY node/pnpm-lock.yaml* /home/node/
 
-RUN --mount=type=cache,id=symphony-node-cache,target=/home/node/.cache/,uid=1000,gid=1000 \
-    --mount=type=cache,id=symphony-node-module-cache,target=/home/node/node_modules/,uid=1000,gid=1000 \
+RUN --mount=type=cache,id=symphony-node-cache,target=/home/node/.cache/,uid=1000,gid=1000,sharing=locked \
+    --mount=type=cache,id=symphony-node-module-cache,target=/home/node/node_modules/,uid=1000,gid=1000,sharing=locked \
     [ -f pnpm-lock.yaml ] && export ARGS="$ARGS --frozen-lockfile" ; \
     pnpm install $ARGS; \
     pnpm --filter=. --prod deploy dist
@@ -84,12 +86,13 @@ RUN mkdir -p /srv/files/go${GO_VERSION} \
 # =============================================================================
 FROM debian:bookworm-slim AS deno-runtime
 ARG DENO_VERSION
-RUN apt-get update \
+RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib-bookworm,target=/var/lib/apt,sharing=locked \
+    apt-get update \
  && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
-        unzip \
- && rm -rf /var/lib/apt/lists/*
+        unzip
 RUN mkdir -p /srv/files/deno-${DENO_VERSION}/bin \
  && curl -fL \
         -o /tmp/deno.zip \

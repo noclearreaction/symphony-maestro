@@ -1,114 +1,100 @@
 # .devcontainer/node/Taskfile.yaml
-# Node package management tasks — all mutation runs inside symphony-studio-node-builder via DooD.
+# Node package management tasks — dependencies managed via jq, built into image via Docker.
 # See .devcontainer/node/package.json for the managed package list.
-# Use task node:package:* and task node:trust:* — do not run pnpm directly.
+# Use task node:package:* and task node:trust:* — do not edit the files directly.
 version: "3"
 
 vars:
   NODE_DIR: "{{.ROOT_DIR}}/.devcontainer/node"
-  COMPOSE_FILE: "{{.ROOT_DIR}}/.devcontainer/docker-compose.yml"
-  COMPOSE_RUN: docker compose -f {{.ROOT_DIR}}/.devcontainer/docker-compose.yml run --rm
   COMPOSE_DIR: "{{.ROOT_DIR}}/.devcontainer"
-  NB_RUN: "docker compose run -v /home/tunnel49/src/symphony-maestro/.devcontainer/node:/opt/node --rm node-builder"
-  NB2_RUN: "docker compose run --rm node-builder"
 
 
 tasks:
-  sample:
-    dir: >-
-      {{ .COMPOSE_DIR }}
-    cmds:
-      - docker compose build node-builder
-      - echo "Running tests in symphony-studio-node-builder..."
-      - |
-          {{.NB_RUN}} bash -eu <<'BASH'
-            > package2.json jq -n '{"private":true,"type":"module"}' && \
-            pnpm --allow-build=opencode-ai add --save-exact opencode-ai@1.17.4
-          BASH
-      - ls -l /opt/node_modules/.bin
-  sample2:
-    dir: >-
-      {{ .COMPOSE_DIR }}
-    cmds:
-      - docker compose build node-builder
-      - echo "Running tests in symphony-studio-node-builder..."
-      - |
-          {{.NB2_RUN}} bash -eu <<'BASH'
-            > package.json jq -n '{"private":true,"type":"module"}' && \
-            pnpm --allow-build=opencode-ai add --save-exact opencode-ai@1.17.4
-          BASH
-      - ls -l /opt/node_modules/.bin
-
   build:
-    desc: "Install packages from the committed lockfile into the node-modules volume"
+    desc: "Build the node-apps image (installs packages into image layer)"
     cmds:
-      - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm install --frozen-lockfile
+      - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" build node-apps
+
+  install:
+    desc: "Copy node tools from built image into /opt/node (no rebuild)"
+    vars:
+      CONTAINER_ID:
+        sh: docker create symphony-studio-node-apps
+    cmds:
+      - docker cp {{.CONTAINER_ID}}:/home/node/dist/. /opt/node/
+      - docker rm {{.CONTAINER_ID}}
 
   package:add:
-    desc: "Add a package: task node:package:add -- <name>@<version>"
+    desc: "Add or update a package: task node:package:add -- <name>@<version>"
     cmds:
       - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm add {{.CLI_ARGS}}
-
-  package:update:
-    desc: "Update a package: task node:package:update -- <name> <version>"
-    cmds:
-      - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm update {{.CLI_ARGS}}
+        pkg="{{.CLI_ARGS}}"
+        name="${pkg%@*}"
+        version="${pkg##*@}"
+        jq --arg name "$name" --arg version "$version" \
+          '.dependencies[$name] = $version' \
+          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+        echo "added: $name@$version"
 
   package:rm:
     desc: "Remove a package: task node:package:rm -- <name>"
     cmds:
       - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm remove {{.CLI_ARGS}}
+        pkg="{{.CLI_ARGS}}"
+        jq --arg name "$pkg" 'del(.dependencies[$name])' \
+          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+        echo "removed: $pkg"
+
+  package:update:
+    desc: "Update a package version: task node:package:update -- <name>@<version>"
+    cmds:
+      - task: package:add
+        vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
 
   package:list:
-    desc: "List direct dependencies from package.json (no container)"
+    desc: "List direct dependencies from package.json"
     cmds:
-      - cat "{{.NODE_DIR}}/package.json"
+      - jq '.dependencies' "{{.NODE_DIR}}/package.json"
 
-  package:audit:
-    desc: "Audit dependencies for vulnerabilities"
+  package:view:
+    desc: "Query npm registry for latest version of a package: task node:package:view -- <name>"
+    cmds:
+      - docker compose -f "{{.COMPOSE_DIR}}/docker-compose.yml" run --rm node-apps pnpm view {{.CLI_ARGS}} version
+
+  package:set-manager:
+    desc: "Set the pnpm version: task node:package:set-manager -- <version>"
     cmds:
       - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm audit
-
-  package:prune:
-    desc: "No-op: pnpm store is ephemeral per build (no store volume)"
-    cmds:
-      - echo 'pnpm store is ephemeral; nothing to prune'
+        version="{{.CLI_ARGS}}"
+        jq --arg version "pnpm@${version}" \
+          '.packageManager = $version' \
+          "{{.NODE_DIR}}/package.json" > /tmp/package.json.tmp \
+          && mv /tmp/package.json.tmp "{{.NODE_DIR}}/package.json"
+        echo "packageManager set to pnpm@${version}"
 
   trust:add:
     desc: "Allow build scripts for a package: task node:trust:add -- <name>"
     cmds:
       - |
-        pkg={{.CLI_ARGS}}
+        pkg="{{.CLI_ARGS}}"
         file="{{.NODE_DIR}}/pnpm-workspace.yaml"
-        if grep -q "^  ${pkg}:" "$file"; then
-          echo "already trusted: $pkg"
-        else
-          sed -i "s/^allowBuilds:.*/allowBuilds:/" "$file"
-          sed -i "s/^allowBuilds:/allowBuilds:\n  ${pkg}: true/" "$file"
-          echo "trusted: $pkg"
-        fi
+        jq --arg pkg "$pkg" '.allowBuilds[$pkg] = true' "$file" > /tmp/pnpm-workspace.yaml.tmp \
+          && mv /tmp/pnpm-workspace.yaml.tmp "$file"
+        echo "trusted: $pkg"
 
   trust:rm:
     desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
     cmds:
       - |
-        pkg={{.CLI_ARGS}}
-        sed -i "/^  ${pkg}: true/d" "{{.NODE_DIR}}/pnpm-workspace.yaml"
+        pkg="{{.CLI_ARGS}}"
+        file="{{.NODE_DIR}}/pnpm-workspace.yaml"
+        jq --arg pkg "$pkg" 'del(.allowBuilds[$pkg])' "$file" > /tmp/pnpm-workspace.yaml.tmp \
+          && mv /tmp/pnpm-workspace.yaml.tmp "$file"
         echo "removed trust: $pkg"
 
   trust:list:
-    desc: "List trusted packages from pnpm-workspace.yaml (no container)"
+    desc: "List trusted packages from pnpm-workspace.yaml"
     cmds:
-      - |
-        grep -A 100 "^allowBuilds:" "{{.NODE_DIR}}/pnpm-workspace.yaml" | tail -n +2 | grep "^  " || echo "(none)"
-
-  trust:verify:
-    desc: "Check for transitive deps with build scripts not in allowBuilds"
-    cmds:
-      - |
-        {{.COMPOSE_RUN}} -w /src node-builder pnpm install --frozen-lockfile --dry-run
+      - jq '.allowBuilds' "{{.NODE_DIR}}/pnpm-workspace.yaml"
