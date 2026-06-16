@@ -7,7 +7,7 @@ version: "3"
 tasks:
   build:
     desc: "Build the node-apps image (installs packages into image layer)"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer"
+    dir: .devcontainer
     cmds:
       - docker compose build node-apps
 
@@ -22,7 +22,7 @@ tasks:
 
   package:add:
     desc: "Add or update a package: task node:package:add -- <name>@<version>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -36,7 +36,7 @@ tasks:
 
   package:rm:
     desc: "Remove a package: task node:package:rm -- <name>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -53,19 +53,19 @@ tasks:
 
   package:list:
     desc: "List direct dependencies from package.json"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - jq '.dependencies' package.json
 
   package:view:
     desc: "Query npm registry for latest version of a package: task node:package:view -- <name>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer"
+    dir: .devcontainer
     cmds:
       - docker compose run --rm node-apps pnpm view {{.CLI_ARGS}} version
 
   package:set-manager:
     desc: "Set the pnpm version: task node:package:set-manager -- <version>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - |
         version="{{.CLI_ARGS}}"
@@ -77,7 +77,7 @@ tasks:
 
   trust:add:
     desc: "Allow build scripts for a package: task node:trust:add -- <name>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -88,7 +88,7 @@ tasks:
 
   trust:rm:
     desc: "Remove build script trust for a package: task node:trust:rm -- <name>"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - |
         pkg="{{.CLI_ARGS}}"
@@ -99,6 +99,6 @@ tasks:
 
   trust:list:
     desc: "List trusted packages from pnpm-workspace.yaml"
-    dir: "{{.TASKFILE_DIR}}/../.devcontainer/node"
+    dir: .devcontainer/node
     cmds:
       - jq '.allowBuilds' pnpm-workspace.yaml

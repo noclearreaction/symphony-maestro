@@ -4,10 +4,10 @@ version: "3"
 includes:
   devcontainer:
     taskfile: .taskfiles/Taskfile-devcontainer.yaml
-    dir: "."
+    dir: "{{.TASKFILE_DIR}}"
   node:
     taskfile: .taskfiles/Taskfile-node.yaml
-    dir: "."
+    dir: "{{.TASKFILE_DIR}}"
 
 tasks:
   health:
