@@ -10,7 +10,37 @@ includes:
     dir: "{{.TASKFILE_DIR}}"
 
 tasks:
+  default:
+    desc: "Show available tasks"
+    summary: |
+      Usage: task [<namespace>:]<task> [-- <args>]
+
+      Namespaces:
+        devcontainer    Health checks and devcontainer utilities
+        node            Node package and image management
+
+      Run 'task <namespace>:default' for namespace-scoped help.
+      Run 'task --summary <task>' for detailed usage of a specific task.
+    cmds:
+      - task --list
+    silent: true
+
+  list:
+    desc: "List all available tasks"
+    summary: |
+      Usage: task list
+
+      Prints all available tasks across all namespaces.
+    cmds:
+      - task --list
+
   health:
     desc: "Alias for devcontainer:doctor — check all tools are wired correctly"
+    summary: |
+      Usage: task health
+
+      Runs devcontainer:doctor. Checks that all required tools (go, deno,
+      task, gh, docker) are present and executable. Exits non-zero on first
+      failure.
     cmds:
       - task: devcontainer:doctor

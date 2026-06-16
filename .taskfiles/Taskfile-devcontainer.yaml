@@ -4,8 +4,37 @@
 version: "3"
 
 tasks:
+  default:
+    desc: "Show devcontainer tasks"
+    summary: |
+      Usage: task devcontainer:<task>
+
+      Tasks:
+        doctor    Verify all critical tools are present and wired correctly
+
+      Run 'task --summary devcontainer:<task>' for detailed usage.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+    silent: true
+
+  list:
+    desc: "List devcontainer tasks"
+    summary: |
+      Usage: task devcontainer:list
+
+      Prints all tasks defined in the devcontainer Taskfile.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
   doctor:
     desc: "Verify all critical tools are correctly wired in the devcontainer"
+    summary: |
+      Usage: task devcontainer:doctor
+
+      Checks each required tool in turn and prints its version:
+        go, deno, task, gh, docker
+
+      Exits non-zero on first failure so the broken tool is immediately visible.
     cmds:
       - echo "--- go ---"
       - go version

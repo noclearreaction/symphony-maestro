@@ -5,9 +5,53 @@
 version: "3"
 
 tasks:
+  default:
+    desc: "Show node tasks"
+    summary: |
+      Usage: task node:<task> [-- <args>]
+
+      Image lifecycle:
+        build              Build the node-apps Docker image
+        install            Copy built tools into /opt/node  [requires write access]
+
+      Package management:
+        package:add        Add or update a dependency       -- <name>@<version>
+        package:rm         Remove a dependency              -- <name>
+        package:update     Update a dependency version      -- <name>@<version>
+        package:list       List current dependencies
+        package:view       Query npm registry for a package -- <name>
+        package:set-manager  Set the pnpm version           -- <version>
+
+      Build trust:
+        trust:add          Allow build scripts for a package  -- <name>
+        trust:rm           Remove build script trust          -- <name>
+        trust:list         List trusted packages
+
+      Run 'task --summary node:<task>' for detailed usage of a specific task.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+    silent: true
+
+  list:
+    desc: "List node tasks"
+    summary: |
+      Usage: task node:list
+
+      Prints all tasks defined in the node Taskfile.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
   build:
     desc: >-
       Build the node-apps image (installs packages into image layer)
+    summary: |
+      Usage: task node:build
+
+      Builds the node-apps Docker image using docker compose. Skipped
+      automatically when Dockerfile, docker-compose.yml, package.json, and
+      pnpm-workspace.yaml are all unchanged (Task source checksum).
+
+      Automatically invoked by node:install via deps.
     dir: .devcontainer
     sources:
       - Dockerfile
@@ -20,6 +64,13 @@ tasks:
   install:
     desc: >-
       Copy node tools from built image into /opt/node (no rebuild)
+    summary: |
+      Usage: sudo task node:install
+
+      Copies compiled node tools from the built image into /opt/node.
+      Requires write access to /opt/node — run with sudo or as root.
+
+      Automatically builds the image first via deps: [build].
     deps: [build]
     preconditions:
       - sh: test -w /opt/node
@@ -35,6 +86,13 @@ tasks:
   package:add:
     desc: >-
       Add or update a package: task node:package:add -- <name>@<version>
+    summary: |
+      Usage: task node:package:add -- <name>@<version>
+
+      Adds or updates a dependency in .devcontainer/node/package.json.
+      Supports scoped packages: task node:package:add -- @scope/name@1.0.0
+
+      Does not rebuild the image — run node:build + node:install after.
     dir: .devcontainer/node
     vars:
       # Split <name>@<version> — supports scoped packages (@scope/name@version)
@@ -59,6 +117,12 @@ tasks:
   package:rm:
     desc: >-
       Remove a package: task node:package:rm -- <name>
+    summary: |
+      Usage: task node:package:rm -- <name>
+
+      Removes a dependency from .devcontainer/node/package.json.
+
+      Does not rebuild the image — run node:build + node:install after.
     dir: .devcontainer/node
     vars:
       PKG: >-
@@ -78,6 +142,13 @@ tasks:
   package:update:
     desc: >-
       Update a package version: task node:package:update -- <name>@<version>
+    summary: |
+      Usage: task node:package:update -- <name>@<version>
+
+      Alias for node:package:add. Updates the version of an existing
+      dependency in package.json.
+
+      Does not rebuild the image — run node:build + node:install after.
     cmds:
       - task: package:add
         vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
@@ -85,6 +156,10 @@ tasks:
   package:list:
     desc: >-
       List direct dependencies from package.json
+    summary: |
+      Usage: task node:package:list
+
+      Prints the dependencies object from .devcontainer/node/package.json.
     dir: .devcontainer/node
     cmds:
       - jq '.dependencies' package.json
@@ -92,6 +167,11 @@ tasks:
   package:view:
     desc: >-
       Query npm registry for latest version of a package: task node:package:view -- <name>
+    summary: |
+      Usage: task node:package:view -- <name>
+
+      Queries the npm registry via pnpm inside the node-apps container.
+      Useful for checking what version is available before adding a package.
     dir: .devcontainer
     cmds:
       - docker compose run --rm node-apps pnpm view {{.CLI_ARGS}} version
@@ -99,6 +179,11 @@ tasks:
   package:set-manager:
     desc: >-
       Set the pnpm version: task node:package:set-manager -- <version>
+    summary: |
+      Usage: task node:package:set-manager -- <version>
+
+      Sets the packageManager field in package.json to pnpm@<version>.
+      Example: task node:package:set-manager -- 10.12.1
     dir: .devcontainer/node
     vars:
       VERSION: >-
@@ -118,6 +203,11 @@ tasks:
   trust:add:
     desc: >-
       Allow build scripts for a package: task node:trust:add -- <name>
+    summary: |
+      Usage: task node:trust:add -- <name>
+
+      Adds a package to allowBuilds in pnpm-workspace.yaml, permitting
+      its install scripts to run during pnpm install.
     dir: .devcontainer/node
     vars:
       PKG: >-
@@ -137,6 +227,10 @@ tasks:
   trust:rm:
     desc: >-
       Remove build script trust for a package: task node:trust:rm -- <name>
+    summary: |
+      Usage: task node:trust:rm -- <name>
+
+      Removes a package from allowBuilds in pnpm-workspace.yaml.
     dir: .devcontainer/node
     vars:
       PKG: >-
@@ -156,6 +250,10 @@ tasks:
   trust:list:
     desc: >-
       List trusted packages from pnpm-workspace.yaml
+    summary: |
+      Usage: task node:trust:list
+
+      Prints the allowBuilds object from .devcontainer/node/pnpm-workspace.yaml.
     dir: .devcontainer/node
     cmds:
       - jq '.allowBuilds' pnpm-workspace.yaml
