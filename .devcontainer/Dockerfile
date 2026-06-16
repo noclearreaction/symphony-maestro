@@ -9,7 +9,7 @@ ARG DENO_VERSION="2.8.2"
 # renovate: datasource=github-releases depName=go-task/task
 ARG TASK_VERSION="3.51.1"
 # renovate: datasource=node depName=node
-ARG NODE_VERSION="22.16.0"
+ARG NODE_VERSION="24.16.0"
 
 # =============================================================================
 # Stage: download-base
@@ -141,6 +141,7 @@ COPY --from=task-binary /srv/files/task /usr/local/bin/task
 # --- Node tools mount point and PATH ---
 ENV PATH=/opt/node/node_modules/.bin:$PATH
 COPY --from=node-apps /home/node/dist/ /opt/node/
+COPY --from=node-apps /usr/local/bin/node /usr/local/bin/node
 
 
 
