@@ -4,8 +4,9 @@
 version: "3"
 
 tasks:
-  default:
+  usage:
     desc: "Show devcontainer tasks"
+    aliases: [default, help]
     summary: |
       Usage: task -g devcontainer:<task>
 

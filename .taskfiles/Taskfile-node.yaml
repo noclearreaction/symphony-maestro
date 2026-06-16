@@ -5,8 +5,9 @@
 version: "3"
 
 tasks:
-  default:
+  usage:
     desc: "Show node tasks"
+    aliases: [default, help]
     summary: |
       Usage: task -g node:<task> [-- <args>]
 

@@ -10,8 +10,9 @@ includes:
     dir: "{{.TASKFILE_DIR}}"
 
 tasks:
-  default:
+  usage:
     desc: "Show available tasks"
+    aliases: [default, help]
     summary: |
       Usage: task -g [<namespace>:]<task> [-- <args>]
 
@@ -19,7 +20,7 @@ tasks:
         devcontainer    Health checks and devcontainer utilities
         node            Node package and image management
 
-      Run 'task -g <namespace>:default' for namespace-scoped help.
+      Run 'task -g <namespace>:usage' for namespace-scoped help.
       Run 'task -g --summary <task>' for detailed usage of a specific task.
     cmds:
       - task --list
