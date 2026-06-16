@@ -9,6 +9,11 @@ tasks:
     desc: >-
       Build the node-apps image (installs packages into image layer)
     dir: .devcontainer
+    sources:
+      - Dockerfile
+      - docker-compose.yml
+      - node/package.json
+      - node/pnpm-workspace.yaml
     cmds:
       - docker compose build node-apps
 
