@@ -18,7 +18,7 @@ tasks:
       Usage: task -g node:<task> [-- <args>]
 
       Image lifecycle:
-        build              Build the node-apps Docker image
+        build              Build the node-apps image via bake
         install            Copy built tools into /opt/node  [requires write access]
 
       Package management:
@@ -50,23 +50,26 @@ tasks:
 
   build:
     desc: >-
-      Build the node-apps image (installs packages into image layer)
+      Build the node-apps image via bake
     summary: |
       Usage: task -g node:build
 
-      Builds the node-apps Docker image using docker compose. Skipped
-      automatically when Dockerfile, docker-compose.yml, package.json, and
-      pnpm-workspace.yaml are all unchanged (Task source checksum).
+      Builds the node-apps Docker image using docker buildx bake. Skipped
+      automatically when Dockerfiles, bake files, versions, or package
+      manifests are unchanged (Task source checksum).
 
       Automatically invoked by node:install via deps.
     dir: .devcontainer
     sources:
-      - Dockerfile
-      - docker-compose.yml
+      - versions.hcl
+      - versions.env
+      - docker-bake.hcl
+      - docker/Dockerfile.node-apps
+      - docker/Dockerfile.node-builder
       - node/package.json
       - node/pnpm-workspace.yaml
     cmds:
-      - docker compose build node-apps
+      - docker buildx bake -f versions.hcl -f docker-bake.hcl node-apps
 
   install:
     desc: >-
