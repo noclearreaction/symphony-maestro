@@ -1,0 +1,7 @@
+# check=skip=InvalidDefaultArgInFrom
+ARG GO_VERSION
+FROM golang:${GO_VERSION}-alpine
+
+ARG GO_VERSION
+RUN mkdir -p /srv/files/go${GO_VERSION} \
+ && cp -r /usr/local/go/. /srv/files/go${GO_VERSION}/
