@@ -1,0 +1,10 @@
+# .taskfiles/Taskfile-docker.yaml
+# Health tasks for Docker.
+version: "3"
+
+tasks:
+  doctor:
+    desc: "Verify docker is present and the daemon is reachable"
+    cmds:
+      - docker info >/dev/null
+    silent: true

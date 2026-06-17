@@ -8,12 +8,14 @@ tasks:
     desc: "Show devcontainer tasks"
     aliases: [default, help]
     summary: |
-      Usage: task -g devcontainer:<task>
+      Usage: task devcontainer:<task>
 
       Tasks:
-        doctor    Verify all critical tools are present and wired correctly
+        status    Full health report: tool checks + dependency versions
+        doctor    Silently verify all critical tools are present and wired
+        versions  Check dependency versions in the devcontainer image
 
-      Run 'task -g --summary devcontainer:<task>' for detailed usage.
+      Run 'task --summary devcontainer:<task>' for detailed usage.
     cmds:
       - task --list --taskfile {{.TASKFILE}}
     silent: true
@@ -30,22 +32,58 @@ tasks:
   doctor:
     desc: "Verify all critical tools are correctly wired in the devcontainer"
     summary: |
-      Usage: task -g devcontainer:doctor
+      Usage: task devcontainer:doctor
 
-      Checks each required tool in turn and prints its version:
+      Silently checks each required tool is present and functional:
         go, deno, task, gh, docker
 
-      Exits non-zero on first failure so the broken tool is immediately visible.
+      Exits non-zero on first failure. No output on success.
+      Run devcontainer:status for a full verbose report.
     cmds:
-      - echo "--- go ---"
-      - go version
-      - echo "--- deno ---"
-      - deno --version
-      - echo "--- task ---"
-      - task --version
-      - echo "--- gh ---"
-      - gh --version
-      - echo "--- docker ---"
-      - docker info >/dev/null
+      - task: :go:doctor
+      - task: :deno:doctor
+      - task: :task:doctor
+      - task: :gh:doctor
+      - task: :docker:doctor
       - echo "All tools OK"
-    # Exit non-zero on first failure so the problem is immediately visible
+    silent: true
+
+  status:
+    desc: "Full container health report: tool checks + dependency versions"
+    summary: |
+      Usage: task devcontainer:status
+
+      Runs all tool health checks (devcontainer:doctor) then reports
+      dependency versions (devcontainer:versions).
+    cmds:
+      - task: doctor
+      - task: versions
+
+  versions:
+    desc: "Check dependency versions in the devcontainer image"
+    summary: |
+      Usage: task -g devcontainer:versions [SHOW_UPDATES=1] [SHOW_UPTODATE=0] [SHOW_SKIPPED=1]
+
+      Reports available dependency updates for the devcontainer image.
+      By default shows updates and skipped entries; hides up-to-date packages.
+    vars:
+      SHOW_UPDATES:   '{{.SHOW_UPDATES   | default "1"}}'
+      SHOW_UPTODATE:  '{{.SHOW_UPTODATE  | default "0"}}'
+      SHOW_SKIPPED:   '{{.SHOW_SKIPPED   | default "1"}}'
+    requires:
+      vars:
+        - name: SHOW_UPDATES
+          enum: ["1", "0"]
+        - name: SHOW_UPTODATE
+          enum: ["1", "0"]
+        - name: SHOW_SKIPPED
+          enum: ["1", "0"]
+    cmds:
+      - /workspace/bin/versions-check.ts
+          {{if not (atoi .SHOW_UPDATES)}}--no-updates{{end}}
+          {{if not (atoi .SHOW_UPTODATE)}}--no-uptodate{{end}}
+          {{if not (atoi .SHOW_SKIPPED)}}--no-skipped{{end}}
+          {{if .GITHUB_TOKEN}}--github-token={{.GITHUB_TOKEN}}{{end}}
+    silent: true
+
+
