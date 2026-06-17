@@ -19,7 +19,7 @@ tasks:
     desc: "Copy node tools from built image into /opt/node (no rebuild)"
     vars:
       CONTAINER_ID:
-        sh: docker create symphony-studio-node-apps
+        sh: docker create node-apps:${COMPOSE_PROJECT_NAME:-symphony-maestro}
     cmds:
       - docker cp {{.CONTAINER_ID}}:/home/node/dist/. /opt/node/
       - docker rm {{.CONTAINER_ID}}

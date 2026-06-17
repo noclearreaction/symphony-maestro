@@ -1,10 +1,10 @@
 #!/bin/sh
-# .devcontainer/post-start — runs on every container start via postStartCommand
+# .devcontainer/bin/post-start — runs on every container start via postStartCommand
 # This script is executed (not sourced), so it runs in its own process.
 set -e
 
-# Run the full tool health check; failures are visible in the terminal on start.
-task devcontainer:doctor
+# Run the full container status report: tool health checks + dependency versions.
+task devcontainer:status
 
 # ---------------------------------------------------------------------------
 # Future hooks (add here when needed):

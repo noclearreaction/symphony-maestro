@@ -1,25 +1,20 @@
 # =============================================================================
-# PROJECT NAME — must match the name the devcontainer CLI derives so that
-# `docker compose` commands run inside the container share the same volumes.
-# The devcontainer CLI uses the config directory name (.devcontainer →
-# devcontainer) as the project name when no explicit name is set; we mirror
-# that here so the two are always in sync.
-# =============================================================================
-# =============================================================================
 # Runner layer — references pre-built images only; no build definitions here.
 # Images are built by: docker buildx bake -f versions.hcl -f docker-bake.hcl
+# Project name and image tags are scoped by COMPOSE_PROJECT_NAME from .env.
 # =============================================================================
-name: symphony-maestro
 
 services:
-  symphony-studio:
-    image: symphony-studio:local
+  devcontainer-runtime:
+    image: devcontainer:${COMPOSE_PROJECT_NAME}
     command: sleep infinity
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
 
   node-apps:
-    image: symphony-studio-node-apps:local
+    image: node-apps:${COMPOSE_PROJECT_NAME}
     command: "true"
 
 volumes:

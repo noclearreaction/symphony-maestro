@@ -10,6 +10,18 @@
 #   docker buildx bake -f .devcontainer/versions.hcl -f .devcontainer/docker-bake.hcl --print
 # =============================================================================
 
+group "default" {
+  targets = [
+    "devcontainer", 
+    "node-apps", 
+    "renovate"
+  ]
+}
+
+variable "PROJECT" {
+  default = "symphony-maestro"
+}
+
 # ---------------------------------------------------------------------------
 # Leaf targets — no inter-target dependencies, build in parallel
 # ---------------------------------------------------------------------------
@@ -68,14 +80,27 @@ target "node-apps" {
   contexts = {
     node-builder = "target:node-builder"
   }
-  tags = ["symphony-studio-node-apps:local"]
+  tags = ["node-apps:${PROJECT}"]
 }
 
 # ---------------------------------------------------------------------------
-# Final assembly — symphony-studio
+# Renovate — pull and retag upstream image as local
 # ---------------------------------------------------------------------------
 
-target "symphony-studio" {
+target "renovate" {
+  context    = "."
+  dockerfile = "docker/Dockerfile.renovate"
+  args = {
+    RENOVATE_VERSION = VERSIONS.renovate
+  }
+  tags = ["renovate:${PROJECT}"]
+}
+
+# ---------------------------------------------------------------------------
+# Final assembly — devcontainer
+# ---------------------------------------------------------------------------
+
+target "devcontainer" {
   context    = "."
   dockerfile = "docker/Dockerfile.symphony-studio"
   contexts = {
@@ -89,11 +114,5 @@ target "symphony-studio" {
     GO_VERSION     = VERSIONS.go
     DENO_VERSION   = VERSIONS.deno
   }
-  tags = ["symphony-studio:local"]
-}
-
-# Default builds the devcontainer image (node-apps is an intermediate, not a
-# separate deliverable — it is reached transitively via symphony-studio).
-group "default" {
-  targets = ["symphony-studio"]
+  tags = ["devcontainer:${PROJECT}"]
 }

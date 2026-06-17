@@ -1,9 +1,9 @@
 {
-  "name": "Symphony Studio",
-  "initializeCommand": "cd .devcontainer && docker buildx bake -f versions.hcl -f docker-bake.hcl",
+  "name": "${localWorkspaceFolderBasename}",
+  "initializeCommand": ".devcontainer/bin/initialize",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "symphony-studio",
-  "runServices": ["symphony-studio"],
+  "service": "devcontainer-runtime",
+  "runServices": ["devcontainer-runtime"],
   "workspaceFolder": "/workspace",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:1": {
@@ -23,7 +23,7 @@
     "source=${localWorkspaceFolderBasename}-vscode-user-data,target=/home/vscode/.vscode-server/data/User,type=volume"
   ],
   "postCreateCommand": "for dir in /home/vscode/.vscode-server/extensions /home/vscode/.vscode-server/data/User; do [ -d \"$dir\" ] && sudo chown -R vscode:vscode \"$dir\"; done || true",
-  "postStartCommand": ".devcontainer/post-start",
+  "postStartCommand": ".devcontainer/bin/post-start",
   "remoteUser": "vscode",
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
