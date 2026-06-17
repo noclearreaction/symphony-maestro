@@ -50,10 +50,16 @@ const cleanup = () => {
 globalThis.addEventListener("unload", cleanup);
 
 // Step 1: run renovate.
+// Use a named volume for renovate's cache so registry responses are reused
+// across runs. The volume name is scoped to the project to avoid cross-project
+// collisions.
+const renovateCacheVolume = `renovate-cache-${composeProjectName}`;
+
 const renovateArgs = [
   "run",
   "--name", containerName,
   "-v", `${workspaceFolder}:/usr/src/app`,
+  "-v", `${renovateCacheVolume}:/tmp/renovate/cache`,
   "-e", "LOG_LEVEL=error",
 ];
 if (githubToken) renovateArgs.push("-e", `GITHUB_COM_TOKEN=${githubToken}`);
