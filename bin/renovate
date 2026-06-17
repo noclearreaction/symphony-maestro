@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# bin/renovate — thin wrapper around the project-tagged renovate image.
+# Build the image with: docker buildx bake -f .devcontainer/versions.hcl -f .devcontainer/docker-bake.hcl renovate
+# Behaves like a local renovate install: passes all arguments through,
+# mounts the current directory as the repo root, and shares /tmp.
+
+set -e
+
+exec docker run --rm \
+  -v "${LOCAL_WORKSPACE_FOLDER}:/usr/src/app" \
+  -e LOG_LEVEL \
+  "renovate:${COMPOSE_PROJECT_NAME}" "$@"
