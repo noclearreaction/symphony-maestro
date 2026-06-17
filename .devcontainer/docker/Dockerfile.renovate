@@ -1,3 +1,7 @@
 # check=skip=InvalidDefaultArgInFrom
 ARG RENOVATE_VERSION
 FROM renovate/renovate:${RENOVATE_VERSION}
+
+# Pre-initialize containerbase tools at build time so docker-entrypoint.sh
+# skips the slow "containerbase-cli init tool all" step on every container start.
+RUN containerbase-cli init tool all
