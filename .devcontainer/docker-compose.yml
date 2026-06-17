@@ -5,32 +5,21 @@
 # devcontainer) as the project name when no explicit name is set; we mirror
 # that here so the two are always in sync.
 # =============================================================================
-name: symphony-maestro_devcontainer
-
 # =============================================================================
-# VERSION CONFIGURATION — UPDATE THESE TO UPGRADE TOOLS
-# Renovate manages this file via the dockerfile datasource.
+# Runner layer — references pre-built images only; no build definitions here.
+# Images are built by: docker buildx bake -f versions.hcl -f docker-bake.hcl
 # =============================================================================
-
-x-runtime: &runtime
-  context: .
-  dockerfile: Dockerfile
+name: symphony-maestro
 
 services:
   symphony-studio:
-    build:
-      <<: [*runtime]
-      target: final
-    image: symphony-studio
+    image: symphony-studio:local
     command: sleep infinity
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
 
   node-apps:
-    build:
-      <<: [*runtime]
-      target: node-apps
-    image: symphony-studio-node-apps
+    image: symphony-studio-node-apps:local
     command: "true"
 
 volumes:
