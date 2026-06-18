@@ -8,16 +8,7 @@
   "trustPolicy": "no-downgrade",
   "allowBuilds": {
     "opencode-ai": true,
-    "@fission-ai/openspec": true,
-    "better-sqlite3": true,
-    "core-js-pure": true,
-    "dtrace-provider": true,
-    "protobufjs": true,
-    "re2": true
+    "@fission-ai/openspec": true
   },
-  "injectWorkspacePackages": true,
-  "trustPolicyExclude": [
-    "@yarnpkg/libzip@3.2.2",
-    "semver@6.3.1"
-  ]
+  "injectWorkspacePackages": true
 }
