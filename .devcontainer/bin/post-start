@@ -1,0 +1,23 @@
+#!/bin/sh
+# .devcontainer/bin/post-start — runs on every container start via postStartCommand
+# This script is executed (not sourced), so it runs in its own process.
+set -e
+
+# Run the full container status report: tool health checks + dependency versions.
+task devcontainer:status
+
+# ---------------------------------------------------------------------------
+# Future hooks (add here when needed):
+# ---------------------------------------------------------------------------
+
+# Git hooks setup (when tools/hooks/ is added to this repo):
+# task hooks:install
+
+# ---------------------------------------------------------------------------
+# MCP sidecar stubs (add docker run invocations here when sidecars are needed):
+# ---------------------------------------------------------------------------
+
+# Example:
+# docker run -d --rm --name mcp-git \
+#   -v /var/run/docker.sock:/var/run/docker.sock \
+#   ghcr.io/org/mcp-git:latest

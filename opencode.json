@@ -4,7 +4,7 @@
     "AGENTS.md",
     "governance/constitution.md",
   ],
-  "default_agent": "advisor",
+  "default_agent": "orchestrator",
   "agent": {
     "build": {
       "description": "Disabled during bootstrap to prevent premature implementation.",

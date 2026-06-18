@@ -1,0 +1,14 @@
+{
+  "minimumReleaseAge": 1440,
+  "minimumReleaseAgeStrict": true,
+  "minimumReleaseAgeIgnoreMissingTime": false,
+  "blockExoticSubdeps": true,
+  "strictDepBuilds": true,
+  "dangerouslyAllowAllBuilds": false,
+  "trustPolicy": "no-downgrade",
+  "allowBuilds": {
+    "opencode-ai": true,
+    "@fission-ai/openspec": true
+  },
+  "injectWorkspacePackages": true
+}

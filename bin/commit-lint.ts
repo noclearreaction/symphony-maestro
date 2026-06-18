@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /home/tunnel49/.deno/bin/deno run --allow-read --allow-env
+#!/usr/bin/env -S deno run --allow-read --allow-env
 // bin/commit-lint.ts
 
 const commitMsgFile = Deno.args[0];

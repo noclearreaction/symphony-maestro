@@ -1,0 +1,24 @@
+# =============================================================================
+# Runner layer — references pre-built images only; no build definitions here.
+# Images are built by: docker buildx bake -f versions.hcl -f docker-bake.hcl
+# Project name and image tags are scoped by COMPOSE_PROJECT_NAME from .env.
+# =============================================================================
+
+services:
+  devcontainer-runtime:
+    image: devcontainer:${COMPOSE_PROJECT_NAME}
+    platform: linux/amd64
+    command: sleep infinity
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
+    volumes:
+      - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
+
+  node-apps:
+    image: node-apps:${COMPOSE_PROJECT_NAME}
+    platform: linux/amd64
+    command: "true"
+
+volumes:
+  node-modules:
+  corepack-cache:
