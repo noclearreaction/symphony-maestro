@@ -1,3 +1,14 @@
+.*
+!.gitignore
+!.gitattributes
+!.devcontainer
+!.taskfiles
+
 .symphony/
+.task/
 node_modules/
 .DS_Store
+.env
+!.devcontainer/.env
+logs/
+.devcontainer/devcontainer-lock.json

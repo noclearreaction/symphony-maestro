@@ -1,0 +1,24 @@
+# .devcontainer/Taskfile.yaml
+# Devcontainer health checks and utility tasks.
+# Included by the root Taskfile.yaml under the devcontainer: namespace.
+version: "3"
+silent: true
+
+tasks:
+  doctor:
+    desc: "Verify all critical tools are correctly wired in the devcontainer"
+    cmds:
+      - echo "--- go ---"
+      - go version
+      - echo "--- gofmt ---"
+      - gofmt -h >/dev/null
+      - echo "--- deno ---"
+      - deno --version
+      - echo "--- task ---"
+      - task --version
+      - echo "--- gh ---"
+      - gh --version
+      - echo "--- docker ---"
+      - docker info >/dev/null
+      - echo "All tools OK"
+    # Exit non-zero on first failure so the problem is immediately visible

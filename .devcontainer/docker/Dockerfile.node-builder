@@ -1,0 +1,21 @@
+# check=skip=InvalidDefaultArgInFrom
+ARG NODE_VERSION
+FROM node:${NODE_VERSION}-bookworm-slim
+
+ENV COREPACK_ENABLE_AUTO_PIN=1 \
+    COREPACK_ENABLE_STRICT=1 \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib-bookworm,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+ && apt-get install -y --no-install-recommends jq
+
+RUN corepack enable \
+ && install -d -o 1000 -g 1000 /opt/node
+
+USER 1000:1000
+
+RUN corepack prepare pnpm --activate
+
+WORKDIR /home/node

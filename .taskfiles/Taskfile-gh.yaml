@@ -1,0 +1,10 @@
+# .taskfiles/Taskfile-gh.yaml
+# Health tasks for the GitHub CLI.
+version: "3"
+silent: true
+
+tasks:
+  doctor:
+    desc: "Verify gh CLI is present and working"
+    cmds:
+      - gh --version >/dev/null

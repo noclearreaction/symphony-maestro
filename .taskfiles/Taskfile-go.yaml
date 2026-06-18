@@ -1,0 +1,10 @@
+# .taskfiles/Taskfile-go.yaml
+# Health tasks for the Go toolchain.
+version: "3"
+silent: true
+
+tasks:
+  doctor:
+    desc: "Verify go is present and working"
+    cmds:
+      - go version >/dev/null

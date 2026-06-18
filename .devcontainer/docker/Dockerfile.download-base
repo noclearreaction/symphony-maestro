@@ -1,0 +1,14 @@
+# check=skip=InvalidDefaultArgInFrom
+ARG DEBIAN_VERSION
+FROM debian:${DEBIAN_VERSION}
+
+RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib-bookworm,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+ && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        tar \
+        xz-utils
+
+WORKDIR /srv/files

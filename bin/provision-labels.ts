@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /home/tunnel49/.deno/bin/deno run --allow-run=gh
+#!/usr/bin/env -S deno run --allow-run=gh
 // bin/provision-labels.ts
 
 console.log("%c=== Provisioning Standardized GitHub Labels ===", "color: blue; font-weight: bold");

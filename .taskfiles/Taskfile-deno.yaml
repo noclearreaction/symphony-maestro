@@ -1,0 +1,10 @@
+# .taskfiles/Taskfile-deno.yaml
+# Health tasks for Deno.
+version: "3"
+silent: true
+
+tasks:
+  doctor:
+    desc: "Verify deno is present and working"
+    cmds:
+      - deno --version >/dev/null
