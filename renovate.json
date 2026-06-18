@@ -6,8 +6,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Update version pins in .devcontainer/versions.env",
-      "managerFilePatterns": ["/(^|/)versions\\.env$/"],
+      "description": "Update version pins in .devcontainer/versions.hcl",
+      "managerFilePatterns": ["/(^|/)versions\.hcl$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>.+?)\\n\\S+=(?<currentValue>[^\\s]+)"
       ]
@@ -19,7 +19,7 @@
       "enabled": false
     },
     {
-      "matchFileNames": [".devcontainer/versions.env"],
+      "matchFileNames": [".devcontainer/versions.hcl"],
       "groupName": "devcontainer tools",
       "automerge": false
     },

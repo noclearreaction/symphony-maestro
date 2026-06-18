@@ -62,7 +62,6 @@ tasks:
     dir: .devcontainer
     sources:
       - versions.hcl
-      - versions.env
       - docker-bake.hcl
       - docker/Dockerfile.node-apps
       - docker/Dockerfile.node-builder
