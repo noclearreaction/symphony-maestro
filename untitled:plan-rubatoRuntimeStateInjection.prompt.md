@@ -49,4 +49,4 @@ Confirm proposal, design, tasks, spec, review, and issue diffs all align.
 - /workspace/openspec/changes/rubato-runtime-state-injection/review.md
 - /workspace/openspec/changes/rubato-runtime-state-injection/issue-diff.md
 - /workspace/openspec/changes/rubato-runtime-state-injection/change-diff.md
-- /workspace/openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md
+- /workspace/openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md

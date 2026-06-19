@@ -4,13 +4,19 @@ This change defines a durable runtime-injection architecture for rubato, an Open
 
 The immediate need is to enrich AI turns with current repository state without requiring manual prompt edits, while preserving statelessness and keeping runtime behavior safe, deterministic, and observable.
 
+Delivery sequencing:
+- Stage A: minimal non-mutating runtime behavior.
+- Stage B: MVP plugin-based injection behavior.
+- Task 7 contract-freeze work.
+- Stage C: refinement and polish.
+
 ## Goals / Non-Goals
 
 **Goals:**
 - Define a marker/anchor format in `messages[0]` that is human-readable and machine-parseable, and controls which injection plugins run for a given request.
 - Support static per-plugin arguments in the anchor so each plugin can customize behavior without out-of-band config.
 - Inject runtime plugin output into `messages[-1]` while keeping `messages[0]` mostly stable except for idempotent plugin guidance augmentation.
-- Inject plugin-presence usage guidance into `messages[0]` once per conversation context using a deterministic canonical template so cache-relevant content is stable.
+- Inject plugin-presence usage guidance into `messages[0]` using deterministic content checks so cache-relevant content is stable.
 - Start with a git-status-focused MVP plugin while designing a plugin contract that supports additional plugins without redesign.
 - Enforce fail-fast behavior for declared plugin execution failures.
 - Keep runtime stateless by refreshing plugin outputs on each request.
@@ -40,7 +46,7 @@ Rubato prepends runtime state to the last user message and may also augment `mes
 
 Rationale:
 - Keeps dynamic state near user turn context (`messages[-1]`) while allowing one-time declarative guidance in `messages[0]`.
-- Uses idempotent augmentation to avoid repetitive prompt growth across repeated calls.
+- Uses idempotent, content-driven augmentation to avoid repetitive prompt growth across repeated calls.
 - Uses deterministic canonical rendering so the same anchor/plugin declaration yields the same `messages[0]` guidance across sessions, preserving upstream cache behavior.
 
 Alternative considered:
@@ -129,9 +135,9 @@ sequenceDiagram
 	C->>R: POST /v1/chat/completions
 	R->>R: Parse anchor from messages[0]
 	R->>R: Resolve declared plugin keys + args
-	alt Canonical guidance block absent in this session
+	alt Canonical guidance block absent from messages[0]
 		R->>R: Render canonical guidance vN
-		R->>R: Inject guidance into messages[0] once
+		R->>R: Inject guidance into messages[0]
 	else Canonical guidance block already present
 		R->>R: Keep messages[0] unchanged
 	end

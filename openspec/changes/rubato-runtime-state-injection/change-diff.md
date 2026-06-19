@@ -30,7 +30,7 @@ References:
 - `spike/issue-45-opencode-cache/proxy/main.go:16`
 - `spike/issue-45-opencode-cache/proxy/main.go:110-200`
 - `openspec/changes/rubato-runtime-state-injection/design.md:26-44`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:18-27`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:18-27`
 
 ### 2) Activation model: always-on forwarding vs anchor-gated behavior
 
@@ -43,7 +43,7 @@ Discrepancy:
 
 References:
 - `spike/issue-45-opencode-cache/proxy/main.go:44-46`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:3-16`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:3-16`
 - `openspec/changes/rubato-runtime-state-injection/tasks.md:3-6`
 
 ### 3) Error semantics: best-effort forwarding vs fail-fast plugin contract
@@ -58,7 +58,7 @@ Discrepancy:
 References:
 - `spike/issue-45-opencode-cache/proxy/main.go:156-165`
 - `openspec/changes/rubato-runtime-state-injection/design.md:62-70`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:56-65`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:56-65`
 
 ### 4) Data handling and privacy posture: full payload logging vs bounded decision-path logging
 
@@ -88,7 +88,7 @@ References:
 - `spike/issue-45-opencode-cache/proxy/main.go:58-69`
 - `spike/issue-45-opencode-cache/proxy/main.go:159`
 - `openspec/changes/rubato-runtime-state-injection/design.md:49-60`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:33-39`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:33-39`
 
 ### 6) Architecture direction: single hardcoded upstream vs plugin-extensible execution
 
@@ -102,7 +102,7 @@ Discrepancy:
 References:
 - `spike/issue-45-opencode-cache/proxy/main.go:16`
 - `openspec/changes/rubato-runtime-state-injection/design.md:82-90`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:78-83`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:78-83`
 - `openspec/changes/rubato-runtime-state-injection/tasks.md:10-13`
 
 ### 7) Repository-state source: DB/session analytics focus vs git hygiene runtime signals
@@ -117,7 +117,7 @@ Discrepancy:
 References:
 - `spike/issue-45-opencode-cache/findings/sf-2-observability.md:14-23`
 - `spike/issue-45-opencode-cache/findings/sf-2-observability.md:54-57`
-- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:67-76`
+- `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:67-76`
 - `openspec/changes/rubato-runtime-state-injection/tasks.md:27-29`
 
 ### 8) Lifecycle intent: temporary spike harness vs durable runtime capability

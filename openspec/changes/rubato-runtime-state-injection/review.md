@@ -5,7 +5,9 @@ Reviewer: GitHub Copilot (GPT-5.3-Codex)
 
 ## Findings
 
-### 1. High - Malformed-anchor behavior is contradictory/underspecified
+Status key: `resolved` means the discrepancy is addressed in current artifacts.
+
+### 1. High - Malformed-anchor behavior was contradictory/underspecified (`resolved`)
 
 The spec states that requests without a valid anchor are forwarded unchanged, while tasks and design require strict parsing with deterministic parse failures.
 
@@ -14,18 +16,18 @@ Current texts leave malformed-but-present anchor behavior ambiguous:
 - fail-fast with explicit parse error
 
 References:
-- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:14
-- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:16
+- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:14
+- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:16
 - openspec/changes/rubato-runtime-state-injection/tasks.md:4
 - openspec/changes/rubato-runtime-state-injection/design.md:180
 
 Risk:
 - Implementers and tests may encode conflicting behavior.
 
-Recommendation:
-- Add a dedicated scenario for malformed anchor input with explicit response semantics and status/error shape.
+Resolution:
+- Added malformed-anchor fail-fast scenario to spec and aligned task/design intent.
 
-### 2. Medium - Statelessness intent conflicts with session-oriented wording
+### 2. Medium - Statelessness intent conflicted with session-oriented wording (`resolved`)
 
 The change claims stateless per-request behavior, but guidance injection is framed as once per conversation/session and sequence flow branches on session presence.
 
@@ -38,30 +40,29 @@ References:
 Risk:
 - Implementation may accidentally introduce hidden per-session state.
 
-Recommendation:
-- Specify that idempotence is derived solely from request content (for example, marker detection in messages[0]) and requires no server-side session memory.
+Resolution:
+- Updated wording to request-content-driven idempotence and removed session-memory implication from core flow text.
 
-### 3. Medium - git hygiene metric "committed count" is ambiguous
+### 3. Medium - git hygiene metric "committed count" was ambiguous (`resolved`)
 
-The MVP requires a committed count but does not define exact derivation. This can be interpreted in multiple, incompatible ways.
+The MVP language previously used "committed count" without exact derivation, which allowed multiple incompatible interpretations.
 
 References:
 - openspec/changes/rubato-runtime-state-injection/proposal.md:10
-- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-injection/spec.md:68
+- openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md:68
 - openspec/changes/rubato-runtime-state-injection/tasks.md:27
 
 Risk:
 - Inconsistent plugin output and brittle tests.
 
-Recommendation:
-- Replace with unambiguous metric names and explicit derivation rules.
+Resolution:
+- Replaced ambiguous wording with explicit metric names (commits-ahead, staged, unstaged tracked-modified, untracked).
 
 ## Open Questions
 
-1. Should malformed anchors be hard failures or no-anchor pass-through?
-2. For guidance idempotence, should equality be byte-exact block match or semantic equivalence of declared plugins and args?
-3. Should detached-HEAD and bare-repo behavior be included in the MVP contract now or deferred?
+1. For guidance idempotence, should equality be byte-exact block match or semantic equivalence of declared plugins and args?
+2. Should detached-HEAD and bare-repo behavior be included in the MVP contract now or deferred?
 
 ## Overall Assessment
 
-Direction is strong, especially on fail-fast plugin behavior and deterministic guidance. Clarifying the three items above before implementation will reduce drift and test churn.
+Direction is strong, especially on fail-fast behavior, staged sequencing, and deterministic guidance. Remaining questions are now narrower and implementation-focused.

@@ -15,6 +15,10 @@ The system SHALL support runtime injection only when `messages[0].content` conta
 - **WHEN** an inbound request does not contain a valid rubato anchor block in `messages[0].content`
 - **THEN** the system forwards the request without runtime injection
 
+#### Scenario: Malformed anchor fails fast
+- **WHEN** an inbound request contains a malformed rubato anchor block in `messages[0].content`
+- **THEN** the system returns a request failure response and does not forward upstream
+
 ### Requirement: Injection Target And Controlled Prompt Mutation
 The system SHALL prepend runtime state output to `messages[-1]` for eligible requests and SHALL augment `messages[0]` with plugin guidance in an idempotent manner.
 
@@ -65,11 +69,11 @@ The system SHALL fail the request when any declared plugin fails to execute, ret
 - **THEN** the system returns a request failure response indicating an unknown plugin key
 
 ### Requirement: Git Status MVP Plugin
-The system SHALL provide a `git_status` plugin in MVP that reports current repository hygiene signals including branch name, ahead/behind counts, committed changes count, staged changes count, and untracked file count.
+The system SHALL provide a `git_status` plugin in MVP that reports current repository hygiene signals including branch name, ahead/behind counts, commits-ahead count, staged changes count, unstaged tracked-modified count, and untracked file count.
 
 #### Scenario: Git status plugin success
 - **WHEN** the request anchor includes `git_status` and repository state is readable
-- **THEN** the injected runtime state includes git hygiene signals for branch, ahead/behind, committed, staged, and untracked counts
+- **THEN** the injected runtime state includes git hygiene signals for branch, ahead/behind, commits-ahead, staged, unstaged tracked-modified, and untracked counts
 
 #### Scenario: Git status plugin repository error
 - **WHEN** the request anchor includes `git_status` but repository status cannot be determined

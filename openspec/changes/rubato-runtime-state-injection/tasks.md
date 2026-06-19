@@ -1,9 +1,13 @@
+## Stage A - Minimal Non-Mutating Runtime Behavior
+
 ## 1. Request Path Foundation
 
 - [ ] 1.1 Add a request pre-processing stage in rubato that inspects `messages[0].content` for the runtime injection anchor block
 - [ ] 1.2 Implement strict anchor parsing with deterministic errors for malformed anchor content
 - [ ] 1.2.1 Extend anchor parsing to support per-plugin static argument maps with schema validation
 - [ ] 1.3 Add request eligibility checks so non-anchor requests bypass injection and forward unchanged
+
+## Stage B - MVP Injection Using Plugin Contract
 
 ## 2. Plugin Contract And Execution
 
@@ -24,7 +28,7 @@
 
 ## 4. Git Status MVP Plugin
 
-- [ ] 4.1 Implement `git_status` plugin to collect branch name, ahead/behind counts, committed count, staged count, and untracked count
+- [ ] 4.1 Implement `git_status` plugin to collect branch name, ahead/behind counts, commits-ahead count, staged count, unstaged tracked-modified count, and untracked count
 - [ ] 4.2 Normalize git plugin output into bounded AI-consumable text without making exact phrasing part of behavior contract
 - [ ] 4.3 Add git-specific failure mapping for non-repo and command execution errors
 
@@ -43,6 +47,13 @@
 - [ ] 6.3 Add tests verifying fail-fast responses for unknown plugin keys and plugin execution failures
 - [ ] 6.4 Add tests verifying per-request refresh behavior by changing repository state between consecutive requests
 - [ ] 6.5 Run end-to-end verification with opencode routed through rubato inside devcontainer
+
+## Task 7 Sequence Rule
+
+- [ ] Complete all Stage A and Stage B items before starting Stage C refinement tasks.
+- [ ] Complete Task 7 contract freeze before Stage C refinement tasks.
+
+## Stage C - Refinement And Polish
 
 ## 7. POC-Guided API Contract Freeze
 
