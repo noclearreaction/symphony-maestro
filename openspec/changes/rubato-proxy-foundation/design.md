@@ -20,8 +20,8 @@ This change isolates infrastructure from behavior. Rubato must first exist as a 
 
 ### 1) Go project layout is explicit from day one
 
-Rubato is organized under `tools/rubato/` with:
-- `cmd/rubato/`: executable entrypoint
+Rubato is organized under module root `rubato/` with:
+- `cmd/rubato`: executable entrypoint
 - `internal/`: request pipeline, transport, and handler internals
 - `pkg/`: externally reusable types/helpers only when needed
 - `test/`: integration-style tests and fixtures

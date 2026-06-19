@@ -5,7 +5,7 @@ The system SHALL provide Rubato as a first-class Go service in this repository w
 
 #### Scenario: Standard project layout exists
 - **WHEN** the Rubato source tree is inspected
-- **THEN** it includes `cmd/`, `internal/`, `pkg/`, and `test/` directories under `tools/rubato/`
+- **THEN** it includes `cmd/`, `internal/`, `pkg/`, and `test/` directories under module root `rubato/`
 
 #### Scenario: Executable entrypoint exists
 - **WHEN** Rubato is built from source

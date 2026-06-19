@@ -1,6 +1,6 @@
 ## 1. Go Project Foundation
 
-- [ ] 1.1 Create `tools/rubato/` Go module and baseline tooling files.
+- [ ] 1.1 Create `rubato/` Go module and baseline tooling files.
 - [ ] 1.2 Scaffold standard directories: `cmd/`, `internal/`, `pkg/`, `test/`.
 - [ ] 1.3 Implement `cmd/rubato` entrypoint and runtime config loading.
 
