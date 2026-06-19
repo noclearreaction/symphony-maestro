@@ -1,3 +1,12 @@
+## Status
+
+Superseded by split changes:
+- `openspec/changes/rubato-proxy-foundation/`
+- `openspec/changes/rubato-plugin-git-status/`
+- `openspec/changes/rubato-runtime-polish/`
+
+This design is retained as historical context only.
+
 ## Context
 
 This change defines a durable runtime-injection architecture for rubato, an OpenRouter-compatible request router that can enrich AI requests with current repository state. The design is intentionally independent of any specific prototype or prior implementation so it remains valid if existing exploratory code is removed.

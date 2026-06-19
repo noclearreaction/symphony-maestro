@@ -69,14 +69,22 @@ The system SHALL fail the request when any declared plugin fails to execute, ret
 - **THEN** the system returns a request failure response indicating an unknown plugin key
 
 ### Requirement: Git Status MVP Plugin
-The system SHALL provide a `git_status` plugin in MVP that reports current repository hygiene signals including branch name, ahead/behind counts, commits-ahead count, staged changes count, unstaged tracked-modified count, and untracked file count.
+The system SHALL provide a `git_status` plugin in MVP that reports current repository hygiene signals including branch name or HEAD state, ahead/behind counts, commits-ahead count, staged changes count, unstaged tracked-modified count, and untracked file count. Detached HEAD and bare repository states SHALL be reported as observable output visible to the model, not as errors.
 
 #### Scenario: Git status plugin success
 - **WHEN** the request anchor includes `git_status` and repository state is readable
 - **THEN** the injected runtime state includes git hygiene signals for branch, ahead/behind, commits-ahead, staged, unstaged tracked-modified, and untracked counts
 
+#### Scenario: Git status plugin detached HEAD
+- **WHEN** the request anchor includes `git_status` and the repository is in detached HEAD state
+- **THEN** the injected runtime state reports the detached HEAD reference instead of a branch name and includes all other hygiene signals normally
+
+#### Scenario: Git status plugin bare repository
+- **WHEN** the request anchor includes `git_status` and the repository is a bare repository
+- **THEN** the injected runtime state reports that the repository is bare and includes only the signals that are available for bare repositories
+
 #### Scenario: Git status plugin repository error
-- **WHEN** the request anchor includes `git_status` but repository status cannot be determined
+- **WHEN** the request anchor includes `git_status` but repository state cannot be determined (not a git repository, git not available, or unreadable working tree)
 - **THEN** the request fails with a git_status-specific error response
 
 ### Requirement: Plugin Extensibility Contract

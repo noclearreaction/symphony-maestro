@@ -60,8 +60,9 @@ Resolution:
 
 ## Open Questions
 
-1. For guidance idempotence, should equality be byte-exact block match or semantic equivalence of declared plugins and args?
-2. Should detached-HEAD and bare-repo behavior be included in the MVP contract now or deferred?
+1. ~~For guidance idempotence, should equality be byte-exact block match or semantic equivalence of declared plugins and args?~~ **Resolved: byte-identical.** The cache-stability requirement drives this — semantically equivalent but non-identical text would invalidate prefix caches. Artifacts already reflect this.
+
+2. ~~Should detached-HEAD and bare-repo behavior be included in the MVP contract now or deferred?~~ **Resolved: in MVP contract as observable output.** Detached-HEAD and bare-repo are not error conditions. The git_status plugin SHALL report them as visible state in the output so the model can reason about repository context. Spec updated with explicit scenarios.
 
 ## Overall Assessment
 

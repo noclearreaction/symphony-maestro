@@ -7,6 +7,7 @@ Scope: reconciliation pass for staged Rubato plan execution.
 
 | Discrepancy | Resolution | Status |
 |---|---|---|
+| Monolithic Rubato change was too broad for clean execution | Split into `rubato-proxy-foundation`, `rubato-plugin-git-status`, and `rubato-runtime-polish`; marked monolithic tasks as superseded. | Resolved |
 | Naming drift between change and spec namespace | Renamed spec path to `specs/rubato-runtime-state-injection/spec.md` and updated references. | Resolved |
 | Malformed-anchor behavior ambiguous | Added explicit malformed-anchor fail-fast scenario in spec. | Resolved |
 | Statelessness wording mixed with session language | Updated proposal/design wording to request-content-driven behavior and stateless semantics. | Resolved |
@@ -18,10 +19,10 @@ Scope: reconciliation pass for staged Rubato plan execution.
 
 | Issue | Action | Result |
 |---|---|---|
-| #61 | Updated comments and issue body to make it the primary staged implementation issue. | Updated |
+| #61 | Rewrote issue body to point to split changes as authoritative implementation sequence. | Updated |
 | #60 | Updated comments and issue body to position as supporting infrastructure. | Updated |
 | #62 | Updated comments and issue body to Stage C sequencing. | Updated |
-| #24 | Added scope-alignment comment and cross-reference. | Updated |
+| #24 | Closed as superseded by staged Rubato change and issue #61, with residual-scope guidance. | Closed |
 | #43 | Added alignment comment; retained as spike parent context. | Updated |
 | #55 | Closed with superseded/completed rationale under staged Rubato track. | Closed |
 | #56 | No action required (already closed). | No Change |
@@ -29,11 +30,15 @@ Scope: reconciliation pass for staged Rubato plan execution.
 
 ## Remaining Open Items
 
-1. Decide whether guidance idempotence equality should be strictly byte-exact block matching or semantic equivalence.
-2. Decide whether detached-HEAD and bare-repo behavior are in MVP contract or deferred.
+All open items resolved.
+
+| Item | Resolution |
+|---|---|
+| Guidance idempotence equality | Byte-identical. Cache-stability requires it; artifacts already committed to this. |
+| Detached-HEAD and bare-repo behavior | In MVP contract as observable output, not error conditions. Spec updated with explicit scenarios. |
 
 ## Verification Snapshot
 
 1. Issue disposition matrix exists: `openspec/changes/rubato-runtime-state-injection/issue-disposition.md`.
 2. Canonical spec path exists: `openspec/changes/rubato-runtime-state-injection/specs/rubato-runtime-state-injection/spec.md`.
-3. Staged plan prompt is current: `untitled:plan-rubatoRuntimeStateInjection.prompt.md`.
+3. Monolithic change is superseded by split changes with dedicated artifacts.

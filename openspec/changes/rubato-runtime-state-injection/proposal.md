@@ -1,3 +1,12 @@
+## Status
+
+Superseded by split changes:
+- `openspec/changes/rubato-proxy-foundation/`
+- `openspec/changes/rubato-plugin-git-status/`
+- `openspec/changes/rubato-runtime-polish/`
+
+This artifact is retained for historical traceability and should not be used as the active implementation task list.
+
 ## Why
 
 The project needs a reliable way to inject current runtime repository state into AI turns without depending on host tooling layout or manual copy/paste. A dedicated rubato runtime-injection capability is needed now to restore business workflow velocity after the devcontainer isolation pivot.
