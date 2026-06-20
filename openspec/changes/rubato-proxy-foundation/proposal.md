@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- Create a production-grade Go project for Rubato under a dedicated module root `rubato/` using a standard layout with `cmd/`, `internal/`, `pkg/`, and `test/`.
+- Create a production-grade Go project for Rubato at repository root using a standard layout with `cmd/`, `internal/`, `pkg/`, and `test/`, with Rubato code under package namespace `internal/rubato/`.
 - Implement a minimal HTTP proxy path for chat-completions forwarding with no runtime injection behavior.
 - Add baseline request validation, upstream forwarding, and deterministic error responses for malformed HTTP requests and upstream failures.
 - Add unit tests and focused component tests for proxy pass-through behavior.
@@ -22,6 +22,6 @@
 
 ## Impact
 
-- Affected systems: `rubato/` source layout, local build/test workflow, proxy runtime entrypoint.
+- Affected systems: repository-root Go source layout, `internal/rubato/` package namespace, local build/test workflow, proxy runtime entrypoint.
 - Affected behavior: requests are forwarded unchanged (no injection yet).
 - Dependencies: existing upstream-compatible chat-completions API contract.
