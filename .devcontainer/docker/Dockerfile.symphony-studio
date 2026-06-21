@@ -37,9 +37,11 @@ RUN echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.bashrc \
 
 # --- VS Code server directories ---
 RUN mkdir -p \
-        /home/vscode/.vscode-server/extensions \
-        /home/vscode/.vscode-server/data/User \
- && chown -R vscode:vscode /home/vscode/.vscode-server
+    /home/vscode/.ssh \
+    /home/vscode/.vscode-server/extensions \
+    /home/vscode/.vscode-server/data/User \
+ && chown -R vscode:vscode /home/vscode/.ssh /home/vscode/.vscode-server \
+ && chmod 700 /home/vscode/.ssh
 
 # --- XDG and pager ---
 ENV XDG_CONFIG_HOME=/home/vscode/.config \

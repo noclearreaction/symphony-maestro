@@ -1,0 +1,10 @@
+#!/bin/sh
+# .devcontainer/bin/post-create -- runs once after container creation via postCreateCommand
+# This script is executed (not sourced), so it runs in its own process.
+set -e
+
+for dir in /home/vscode/.vscode-server/extensions /home/vscode/.vscode-server/data/User; do
+  if [ -d "$dir" ]; then
+    sudo chown -R vscode:vscode "$dir"
+  fi
+done

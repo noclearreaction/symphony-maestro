@@ -1,5 +1,5 @@
 .*
-!.gitignore
+!**/.gitignore
 !.gitattributes
 !.devcontainer
 !.taskfiles
@@ -24,7 +24,6 @@ logs/
 *.test
 *.out
 vendor/
-bin/
 dist/
 
 # Editor artifacts

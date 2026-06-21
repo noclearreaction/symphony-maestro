@@ -18,11 +18,10 @@
   },
   "mounts": [
     "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,readonly",
-    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly",
     "source=${localWorkspaceFolderBasename}-vscode-extensions,target=/home/vscode/.vscode-server/extensions,type=volume",
     "source=${localWorkspaceFolderBasename}-vscode-user-data,target=/home/vscode/.vscode-server/data/User,type=volume"
   ],
-  "postCreateCommand": "sh -c 'LOG=/tmp/devcontainer-postCreate.log && echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] postCreateCommand starting\" > \"$LOG\" && { [ -d \"$HOME/.ssh-host\" ] && echo \"✓ .ssh-host mount found\" || echo \"✗ .ssh-host mount NOT found\"; } | tee -a \"$LOG\" && for dir in /home/vscode/.vscode-server/extensions /home/vscode/.vscode-server/data/User; do [ -d \"$dir\" ] && sudo chown -R vscode:vscode \"$dir\"; done || true && echo \"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] postCreateCommand complete\" >> \"$LOG\"'",
+  "postCreateCommand": ".devcontainer/bin/post-create",
   "postStartCommand": ".devcontainer/bin/post-start",
   "remoteUser": "vscode",
   "remoteEnv": {

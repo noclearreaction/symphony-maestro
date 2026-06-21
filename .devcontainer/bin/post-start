@@ -3,16 +3,6 @@
 # This script is executed (not sourced), so it runs in its own process.
 set -e
 
-# Initialize SSH directory from read-only host mount.
-# The host .ssh is mounted to .ssh-host to avoid virtiofs socket binding limitations.
-# We copy keys and config to a local .ssh directory where SSH agent can create sockets.
-if [ -d "$HOME/.ssh-host" ] && [ ! -d "$HOME/.ssh" ]; then
-	mkdir -p "$HOME/.ssh"
-	cp -r "$HOME/.ssh-host"/* "$HOME/.ssh/" 2>/dev/null || true
-	chmod 700 "$HOME/.ssh"
-	chmod 600 "$HOME/.ssh"/* 2>/dev/null || true
-fi
-
 # Keep post-start fast: run only local tool checks.
 task devcontainer:doctor
 

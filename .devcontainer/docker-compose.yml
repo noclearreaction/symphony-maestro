@@ -13,6 +13,7 @@ services:
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
+      - symphony-ssh:/home/vscode/.ssh
 
   node-apps:
     image: node-apps:${COMPOSE_PROJECT_NAME}
@@ -20,5 +21,7 @@ services:
     command: "true"
 
 volumes:
+  symphony-ssh:
+    name: symphony-ssh
   node-modules:
   corepack-cache:
