@@ -9,6 +9,7 @@ func TestLoadDefaults(t *testing.T) {
 	// Clear environment variables
 	os.Unsetenv("RUBATO_UPSTREAM_URL")
 	os.Unsetenv("RUBATO_LISTEN_ADDR")
+	os.Unsetenv("OPENROUTER_API_KEY")
 
 	cfg := Load()
 
@@ -19,13 +20,19 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ListenAddr != ":8080" {
 		t.Errorf("expected default listen addr, got %s", cfg.ListenAddr)
 	}
+
+	if cfg.UpstreamAPIKey != "" {
+		t.Errorf("expected default empty upstream API key, got %s", cfg.UpstreamAPIKey)
+	}
 }
 
 func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RUBATO_UPSTREAM_URL", "http://api.example.com")
 	os.Setenv("RUBATO_LISTEN_ADDR", ":9000")
+	os.Setenv("OPENROUTER_API_KEY", "test-key")
 	defer os.Unsetenv("RUBATO_UPSTREAM_URL")
 	defer os.Unsetenv("RUBATO_LISTEN_ADDR")
+	defer os.Unsetenv("OPENROUTER_API_KEY")
 
 	cfg := Load()
 
@@ -35,6 +42,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if cfg.ListenAddr != ":9000" {
 		t.Errorf("expected listen addr from env, got %s", cfg.ListenAddr)
+	}
+
+	if cfg.UpstreamAPIKey != "test-key" {
+		t.Errorf("expected upstream API key from env, got %s", cfg.UpstreamAPIKey)
 	}
 }
 
@@ -72,12 +83,17 @@ func TestValidate(t *testing.T) {
 
 func TestString(t *testing.T) {
 	cfg := &Config{
-		UpstreamURL: "http://localhost:8000",
-		ListenAddr:  ":8080",
+		UpstreamURL:    "http://localhost:8000",
+		UpstreamAPIKey: "secret",
+		ListenAddr:     ":8080",
 	}
 
 	str := cfg.String()
 	if len(str) == 0 {
 		t.Errorf("expected non-empty string representation")
+	}
+
+	if str == "Config{UpstreamURL: http://localhost:8000, UpstreamAPIKey: secret, ListenAddr: :8080}" {
+		t.Errorf("expected API key to be redacted in string representation")
 	}
 }

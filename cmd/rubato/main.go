@@ -18,7 +18,7 @@ func main() {
 	log.Printf("Starting Rubato with %s", cfg)
 
 	// Create the proxy handler
-	handler := proxy.NewHandler(cfg.UpstreamURL)
+	handler := proxy.NewHandler(cfg.UpstreamURL, cfg.UpstreamAPIKey)
 
 	// Register routes
 	mux := http.NewServeMux()

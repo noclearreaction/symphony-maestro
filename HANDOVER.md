@@ -35,3 +35,31 @@ Static prefix injected into `messages[-1]` when `role == "user"`. Model responde
 - #62 — structured logging
 - #64 — subcommand validation bug (rubato — may be moot after compose removal)
 - #60 series — rubato hygiene (60e, 60f largely moot after devcontainer pivot)
+
+## Basic usage (devcontainer)
+
+- Rubato autostarts on devcontainer start from `.devcontainer/bin/post-start`.
+- Default route is enabled via devcontainer `remoteEnv`: `OPENAI_BASE_URL=http://127.0.0.1:8080/v1`.
+- Default model in `opencode.json` is `opencode/deepseek-v4-flash-free`.
+
+### Setup
+
+1. Put your OpenRouter key in `/workspace/.env`:
+
+	`OPENROUTER_API_KEY=...`
+
+2. Rebuild/reopen the devcontainer (or rerun `.devcontainer/bin/post-start`).
+
+### Verify
+
+1. Check Rubato is listening:
+
+	`lsof -iTCP:8080 -sTCP:LISTEN -n -P`
+
+2. Run a smoke request through opencode:
+
+	`opencode run --format json "Reply with exactly OK"`
+
+3. Confirm reply text in output and inspect logs if needed:
+
+	`tail -n 50 /tmp/rubato.log`

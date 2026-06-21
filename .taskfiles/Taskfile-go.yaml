@@ -4,7 +4,55 @@ version: "3"
 silent: true
 
 tasks:
+  usage:
+    desc: "Show available Go tasks"
+    summary: |
+      Usage: task go:<task>
+
+      Available tasks:
+        doctor      Verify the Go toolchain is present
+        build       Build Go target (parameterized)
+        test        Run all Go tests
+        coverage    Run Go tests with coverage enabled
+        clean       Remove Go build artifacts
+
+      Build examples:
+        task go:build
+        task go:build -- TARGET=./cmd/rubato OUTPUT=bin/rubato
+    cmds:
+      - task --list
+
   doctor:
     desc: "Verify go is present and working"
     cmds:
       - go version >/dev/null
+
+  build:
+    desc: "Build Go target (default: ./...)"
+    vars:
+      TARGET: '{{.TARGET | default "./..."}}'
+      OUTPUT: '{{.OUTPUT | default ""}}'
+    cmds:
+      - |
+        if [ -n "{{.OUTPUT}}" ]; then
+          mkdir -p "$(dirname {{.OUTPUT}})"
+          go build -o {{.OUTPUT}} {{.TARGET}}
+        else
+          go build {{.TARGET}}
+        fi
+
+  test:
+    desc: "Run Go tests"
+    cmds:
+      - go test ./...
+
+  coverage:
+    desc: "Run Go tests with coverage"
+    cmds:
+      - go test -cover ./...
+
+  clean:
+    desc: "Remove Go build artifacts"
+    cmds:
+      - rm -rf bin
+      - go clean

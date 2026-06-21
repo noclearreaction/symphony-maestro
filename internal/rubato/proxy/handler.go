@@ -11,15 +11,17 @@ import (
 
 // Handler manages proxy requests to the upstream service.
 type Handler struct {
-	upstreamURL string
-	client      *http.Client
+	upstreamURL    string
+	upstreamAPIKey string
+	client         *http.Client
 }
 
 // NewHandler creates a new proxy handler.
-func NewHandler(upstreamURL string) *Handler {
+func NewHandler(upstreamURL, upstreamAPIKey string) *Handler {
 	return &Handler{
-		upstreamURL: upstreamURL,
-		client:      &http.Client{},
+		upstreamURL:    upstreamURL,
+		upstreamAPIKey: upstreamAPIKey,
+		client:         &http.Client{},
 	}
 }
 
@@ -92,6 +94,11 @@ func (h *Handler) forwardRequest(ctx context.Context, body []byte, header http.H
 	// Ensure content type is set
 	if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// Prefer client Authorization header; fall back to configured upstream key.
+	if req.Header.Get("Authorization") == "" && h.upstreamAPIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+h.upstreamAPIKey)
 	}
 
 	return h.client.Do(req)

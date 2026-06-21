@@ -17,6 +17,9 @@ includes:
   go:
     taskfile: .taskfiles/Taskfile-go.yaml
     dir: "{{.TASKFILE_DIR}}"
+  rubato:
+    taskfile: .taskfiles/Taskfile-rubato.yaml
+    dir: "{{.TASKFILE_DIR}}"
   deno:
     taskfile: .taskfiles/Taskfile-deno.yaml
     dir: "{{.TASKFILE_DIR}}"
@@ -44,6 +47,7 @@ tasks:
         devcontainer    Container health checks and utilities
         node            Node package and image management
         go              Go toolchain health
+        rubato          Rubato proxy lifecycle and logs
         deno            Deno health
         task            Task runner health
         gh              GitHub CLI health

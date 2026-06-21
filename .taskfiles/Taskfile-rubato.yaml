@@ -1,0 +1,109 @@
+# .taskfiles/Taskfile-rubato.yaml
+# Rubato proxy lifecycle tasks.
+version: "3"
+silent: true
+
+vars:
+  RUBATO_BIN: /home/vscode/.local/bin/rubato
+  RUBATO_LOG: /tmp/rubato.log
+  RUBATO_UPSTREAM_URL: https://openrouter.ai/api/v1
+  RUBATO_LISTEN_ADDR: ":8080"
+  RUBATO_PORT:
+    sh: echo "{{.RUBATO_LISTEN_ADDR}}" | sed 's/^://'
+
+tasks:
+  usage:
+    desc: "Show Rubato tasks"
+    aliases: [default, help]
+    summary: |
+      Usage: task rubato:<task>
+
+      Tasks:
+        build      Build Rubato binary only
+        start      Start Rubato proxy in background
+        stop       Stop Rubato proxy process on configured port
+        restart    Restart Rubato proxy
+        status     Show listener/PID for Rubato port
+        logs       Tail Rubato log output
+        autostart  Start only when not already listening
+
+      Run 'task --summary rubato:<task>' for detailed usage.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
+  list:
+    desc: "List Rubato tasks"
+    summary: |
+      Usage: task -g rubato:list
+
+      Prints all tasks defined in the Rubato taskfile.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
+  build:
+    desc: "Build Rubato binary (cmd/rubato only)"
+    method: checksum
+    sources:
+      - cmd/rubato/**/*.go
+      - internal/rubato/**/*.go
+      - go.mod
+    generates:
+      - "{{.RUBATO_BIN}}"
+    cmds:
+      - task: :go:build
+        vars:
+          TARGET: ./cmd/rubato
+          OUTPUT: "{{.RUBATO_BIN}}"
+
+  start:
+    desc: "Start Rubato in background"
+    dir: /workspace
+    dotenv: [.env]
+    deps:
+      - build
+    env:
+      RUBATO_UPSTREAM_URL: "{{.RUBATO_UPSTREAM_URL}}"
+      RUBATO_LISTEN_ADDR: "{{.RUBATO_LISTEN_ADDR}}"
+    if: '! lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    cmds:
+      - |
+        nohup {{.RUBATO_BIN}} >{{.RUBATO_LOG}} 2>&1 &
+        echo "Rubato started on {{.RUBATO_LISTEN_ADDR}} (log: {{.RUBATO_LOG}})"
+
+  autostart:
+    desc: "Start Rubato only if not already running"
+    if: '! lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    cmds:
+      - task: start
+
+  stop:
+    desc: "Stop Rubato listener"
+    if: 'lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    cmds:
+      - |
+        pids=$(lsof -tiTCP:{{.RUBATO_PORT}} -sTCP:LISTEN 2>/dev/null || true)
+        if [ -z "$pids" ]; then
+          echo "No listener found on {{.RUBATO_LISTEN_ADDR}}"
+          exit 0
+        fi
+        /bin/kill $pids
+        echo "Stopped listener(s) on {{.RUBATO_LISTEN_ADDR}}: $pids"
+
+  restart:
+    desc: "Restart Rubato"
+    cmds:
+      - task: stop
+      - task: start
+
+  status:
+    desc: "Show Rubato listener status"
+    if: 'lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    cmds:
+      - lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P
+
+  logs:
+    desc: "Tail Rubato logs"
+    sources:
+      - "{{.RUBATO_LOG}}"
+    cmds:
+      - tail -n 100 {{.RUBATO_LOG}}

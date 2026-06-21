@@ -6,6 +6,9 @@ set -e
 # Run the full container status report: tool health checks + dependency versions.
 task devcontainer:status
 
+# Rubato lifecycle is managed via task namespace.
+task rubato:autostart
+
 # ---------------------------------------------------------------------------
 # Future hooks (add here when needed):
 # ---------------------------------------------------------------------------

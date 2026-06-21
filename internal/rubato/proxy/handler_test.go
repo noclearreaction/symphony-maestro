@@ -9,7 +9,7 @@ import (
 )
 
 func TestChatCompletions_MethodNotAllowed(t *testing.T) {
-	handler := NewHandler("http://localhost:8000")
+	handler := NewHandler("http://localhost:8000", "")
 
 	// Test GET method not allowed
 	req := httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil)
@@ -32,7 +32,7 @@ func TestChatCompletions_MethodNotAllowed(t *testing.T) {
 }
 
 func TestChatCompletions_MalformedJSON(t *testing.T) {
-	handler := NewHandler("http://localhost:8000")
+	handler := NewHandler("http://localhost:8000", "")
 
 	// Test malformed JSON
 	malformedBody := bytes.NewBufferString(`{invalid json}`)
@@ -64,7 +64,7 @@ func TestChatCompletions_ValidRequest(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL)
+	handler := NewHandler(upstream.URL, "")
 
 	// Test valid JSON request
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
@@ -96,7 +96,7 @@ func TestChatCompletions_UpstreamFailure(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL)
+	handler := NewHandler(upstream.URL, "")
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)
@@ -121,7 +121,7 @@ func TestChatCompletions_PassThroughHeaders(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL)
+	handler := NewHandler(upstream.URL, "")
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)

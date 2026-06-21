@@ -9,6 +9,8 @@ import (
 type Config struct {
 	// UpstreamURL is the base URL of the upstream service
 	UpstreamURL string
+	// UpstreamAPIKey is an optional bearer token used for upstream requests.
+	UpstreamAPIKey string
 	// ListenAddr is the address to listen on (host:port)
 	ListenAddr string
 }
@@ -26,9 +28,12 @@ func Load() *Config {
 		listenAddr = ":8080"
 	}
 
+	upstreamAPIKey := os.Getenv("OPENROUTER_API_KEY")
+
 	return &Config{
-		UpstreamURL: upstream,
-		ListenAddr:  listenAddr,
+		UpstreamURL:    upstream,
+		UpstreamAPIKey: upstreamAPIKey,
+		ListenAddr:     listenAddr,
 	}
 }
 
@@ -45,5 +50,9 @@ func (c *Config) Validate() error {
 
 // String returns a string representation of the config.
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{UpstreamURL: %s, ListenAddr: %s}", c.UpstreamURL, c.ListenAddr)
+	keyStatus := "unset"
+	if c.UpstreamAPIKey != "" {
+		keyStatus = "set"
+	}
+	return fmt.Sprintf("Config{UpstreamURL: %s, UpstreamAPIKey: %s, ListenAddr: %s}", c.UpstreamURL, keyStatus, c.ListenAddr)
 }

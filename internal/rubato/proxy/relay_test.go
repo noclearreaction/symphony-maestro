@@ -34,7 +34,7 @@ func TestPassThroughRelay(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL)
+	handler := NewHandler(upstream.URL, "")
 
 	// Create request with specific content
 	originalBody := map[string]interface{}{
@@ -94,7 +94,7 @@ func TestPassThroughRelay(t *testing.T) {
 
 // TestDeterministicClientError verifies error responses are deterministic.
 func TestDeterministicClientError(t *testing.T) {
-	handler := NewHandler("http://localhost:8000")
+	handler := NewHandler("http://localhost:8000", "")
 
 	// Test with invalid JSON
 	invalidBody := bytes.NewBufferString(`{invalid}`)
@@ -136,7 +136,7 @@ func TestDeterministicUpstreamError(t *testing.T) {
 	upstreamURL := upstream.URL
 	upstream.Close()
 
-	handler := NewHandler(upstreamURL)
+	handler := NewHandler(upstreamURL, "")
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)
@@ -181,12 +181,36 @@ func TestHeaderPassThrough(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL)
+	handler := NewHandler(upstream.URL, "")
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)
 	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("X-Custom", "custom-value")
+	w := httptest.NewRecorder()
+
+	handler.ChatCompletions(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+// TestConfiguredAuthorizationFallback verifies Rubato can inject upstream auth when client omits it.
+func TestConfiguredAuthorizationFallback(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer configured-token" {
+			t.Errorf("expected configured upstream Authorization header")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"ok": "true"})
+	}))
+	defer upstream.Close()
+
+	handler := NewHandler(upstream.URL, "configured-token")
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-4","messages":[]}`))
 	w := httptest.NewRecorder()
 
 	handler.ChatCompletions(w, req)
