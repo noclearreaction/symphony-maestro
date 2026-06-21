@@ -16,7 +16,8 @@ COPY --from=go-stage /srv/files/go${GO_VERSION} /opt/go${GO_VERSION}
 RUN update-alternatives --install /usr/local/bin/go go /opt/go${GO_VERSION}/bin/go 100 \
         --slave /usr/local/bin/gofmt gofmt /opt/go${GO_VERSION}/bin/gofmt
 ENV GOROOT=/opt/go${GO_VERSION} \
-    GOPATH=/home/vscode/go
+    GOPATH=/home/vscode/go \
+    GOBIN=/home/vscode/.local/bin
 
 # --- Deno ---
 COPY --from=deno-stage /srv/files/deno-${DENO_VERSION} /opt/deno-${DENO_VERSION}
@@ -37,10 +38,11 @@ RUN echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.bashrc \
 
 # --- VS Code server directories ---
 RUN mkdir -p \
+    /home/vscode/.local/bin \
     /home/vscode/.ssh \
     /home/vscode/.vscode-server/extensions \
     /home/vscode/.vscode-server/data/User \
- && chown -R vscode:vscode /home/vscode/.ssh /home/vscode/.vscode-server \
+ && chown -R vscode:vscode /home/vscode/.local /home/vscode/.ssh /home/vscode/.vscode-server \
  && chmod 700 /home/vscode/.ssh
 
 # --- XDG and pager ---

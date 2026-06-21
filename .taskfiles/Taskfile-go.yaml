@@ -14,11 +14,12 @@ tasks:
         build       Build Go target (parameterized)
         test        Run all Go tests
         coverage    Run Go tests with coverage enabled
-        clean       Remove Go build artifacts
+        clean       Run go clean
 
       Build examples:
         task go:build
-        task go:build -- TARGET=./cmd/rubato OUTPUT=bin/rubato
+        task go:build -- TARGET=./cmd/rubato OUTPUT=/home/vscode/.local/bin/rubato
+        go install ./cmd/rubato
     cmds:
       - task --list
 
@@ -52,7 +53,6 @@ tasks:
       - go test -cover ./...
 
   clean:
-    desc: "Remove Go build artifacts"
+    desc: "Run Go clean (does not remove repository directories)"
     cmds:
-      - rm -rf bin
       - go clean
