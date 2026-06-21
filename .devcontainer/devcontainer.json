@@ -18,7 +18,7 @@
   },
   "mounts": [
     "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,readonly",
-    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly",
     "source=${localWorkspaceFolderBasename}-vscode-extensions,target=/home/vscode/.vscode-server/extensions,type=volume",
     "source=${localWorkspaceFolderBasename}-vscode-user-data,target=/home/vscode/.vscode-server/data/User,type=volume"
   ],
