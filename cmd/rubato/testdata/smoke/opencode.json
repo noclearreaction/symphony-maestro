@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [],
+  "default_agent": "smoke",
+  "provider": {
+    "openrouter": {
+      "options": {
+        "baseURL": "http://127.0.0.1:18080/v1"
+      }
+    }
+  }
+}

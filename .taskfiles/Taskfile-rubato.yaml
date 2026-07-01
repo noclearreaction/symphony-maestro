@@ -6,7 +6,7 @@ silent: true
 vars:
   RUBATO_BIN: /home/vscode/.local/bin/rubato
   RUBATO_LOG: /tmp/rubato.log
-  RUBATO_UPSTREAM_URL: https://openrouter.ai/api/v1
+  RUBATO_UPSTREAM_URL: https://openrouter.ai/api
   RUBATO_LISTEN_ADDR: ":8080"
   RUBATO_PORT:
     sh: echo "{{.RUBATO_LISTEN_ADDR}}" | sed 's/^://'

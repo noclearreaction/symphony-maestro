@@ -27,6 +27,8 @@ func NewHandler(upstreamURL, upstreamAPIKey string) *Handler {
 
 // ChatCompletions handles POST /v1/chat/completions requests.
 func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
+	log.Printf("proxying %s %s", r.Method, r.URL.Path)
+
 	// Only allow POST requests
 	if r.Method != http.MethodPost {
 		h.respondMethodNotAllowed(w)
@@ -49,9 +51,10 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		h.respondBadRequest(w, "invalid JSON in request body")
 		return
 	}
+	log.Printf("request body: %s", body)
 
 	// Forward to upstream
-	resp, err := h.forwardRequest(r.Context(), body, r.Header)
+	resp, err := h.forwardRequest(r.Context(), r.URL.Path, body, r.Header)
 	if err != nil {
 		log.Printf("error forwarding request: %v", err)
 		h.respondUpstreamFailure(w)
@@ -76,8 +79,8 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 }
 
 // forwardRequest sends the request to the upstream service.
-func (h *Handler) forwardRequest(ctx context.Context, body []byte, header http.Header) (*http.Response, error) {
-	url := h.upstreamURL + "/v1/chat/completions"
+func (h *Handler) forwardRequest(ctx context.Context, path string, body []byte, header http.Header) (*http.Response, error) {
+	url := h.upstreamURL + path
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
