@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/mutate"
 )
 
 // Handler manages proxy requests to the upstream service.
@@ -14,14 +16,17 @@ type Handler struct {
 	upstreamURL    string
 	upstreamAPIKey string
 	client         *http.Client
+	injector       *mutate.Injector // nil = no injection
 }
 
 // NewHandler creates a new proxy handler.
-func NewHandler(upstreamURL, upstreamAPIKey string) *Handler {
+// injector may be nil to disable plugin-based injection.
+func NewHandler(upstreamURL, upstreamAPIKey string, injector *mutate.Injector) *Handler {
 	return &Handler{
 		upstreamURL:    upstreamURL,
 		upstreamAPIKey: upstreamAPIKey,
 		client:         &http.Client{},
+		injector:       injector,
 	}
 }
 
@@ -52,6 +57,18 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("request body: %s", body)
+
+	// Apply plugin injection when configured.
+	if h.injector != nil {
+		mutated, err := h.injector.Apply(r.Context(), body)
+		if err != nil {
+			log.Printf("injection error: %v", err)
+			h.respondBadRequest(w, "request injection failed: "+err.Error())
+			return
+		}
+		body = mutated
+		log.Printf("injected request body: %s", body)
+	}
 
 	// Forward to upstream
 	resp, err := h.forwardRequest(r.Context(), r.URL.Path, body, r.Header)

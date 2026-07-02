@@ -80,6 +80,23 @@ func TestSmokeRoundTrip(t *testing.T) {
 	if !bytes.Contains(rubatoLog.Bytes(), []byte(probe)) {
 		t.Errorf("probe token %q not found in rubato log — request may not have reached rubato\nrubato output:\n%s", probe, rubatoLog.String())
 	}
+
+	// Verify the injection pipeline fired end-to-end:
+	//   1. The state fence marker must appear in the injected body log line —
+	//      confirms rubato mutated the body before forwarding.
+	//   2. The [git_status] section must be present — confirms the plugin ran.
+	//   3. "branch:" must appear — confirms real git data was collected and
+	//      included in the body that was sent to the upstream LLM.
+	log := rubatoLog.Bytes()
+	if !bytes.Contains(log, []byte("```rubato:state")) {
+		t.Errorf("runtime-state block not found in rubato log — plugin injection may not have fired\nrubato output:\n%s", rubatoLog.String())
+	}
+	if !bytes.Contains(log, []byte("[git_status]")) {
+		t.Errorf("[git_status] section not found in rubato log — git_status plugin may not have executed\nrubato output:\n%s", rubatoLog.String())
+	}
+	if !bytes.Contains(log, []byte("branch:")) {
+		t.Errorf("git branch data not found in rubato log — git_status plugin output may be empty\nrubato output:\n%s", rubatoLog.String())
+	}
 }
 
 // startRubato starts the test binary as a rubato subprocess on smokeRubatoPort,

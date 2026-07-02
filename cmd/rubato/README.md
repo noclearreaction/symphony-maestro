@@ -76,25 +76,33 @@ The test skips (not fails) if `OPENROUTER_API_KEY` is unset or `opencode` is not
 
 ### Manual verification
 
-To verify Rubato routing without running the test:
+The smoke test uses port `18080` so it does not conflict with the devcontainer
+instance on `:8080`. To run the same scenario by hand, use two terminals.
 
-1. Confirm Rubato is listening:
+**Terminal 1 — start Rubato**
 
-   ```bash
-   lsof -iTCP:8080 -sTCP:LISTEN -n -P
-   ```
+```bash
+cd /workspace
+RUBATO_LISTEN_ADDR=:18080 \
+RUBATO_UPSTREAM_URL=https://openrouter.ai/api \
+go run ./cmd/rubato/
+```
 
-2. Run a request through the devcontainer-routed instance:
+**Terminal 2 — run opencode**
 
-   ```bash
-   cd /tmp && \
-   OPENCODE_CONFIG=/workspace/cmd/rubato/testdata/smoke/opencode.json \
-   OPENCODE_CONFIG_DIR=/workspace/cmd/rubato/testdata/smoke \
-   opencode run --pure --model openrouter/openai/gpt-4o-mini --agent smoke --format json --title smoke "hello"
-   ```
+The fixture `testdata/smoke/opencode.json` overrides the `openrouter` provider
+`baseURL` to `http://127.0.0.1:18080/v1`. The smoke agent declares the
+`git_status` anchor.
 
-3. Inspect the Rubato log:
+```bash
+set -a && source /workspace/.env && set +a
+cd /tmp
+OPENCODE_CONFIG=/workspace/cmd/rubato/testdata/smoke/opencode.json \
+OPENCODE_CONFIG_DIR=/workspace/cmd/rubato/testdata/smoke \
+opencode run --pure \
+  --model openrouter/openai/gpt-4o-mini \
+  --agent smoke \
+  "What branch am I on right now?"
+```
 
-   ```bash
-   tail -n 50 /tmp/rubato.log
-   ```
+Switch back to Terminal 1 to see the injection in the log.

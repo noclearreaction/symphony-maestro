@@ -14,4 +14,8 @@ permission:
   websearch: deny
 ---
 
+```rubato:anchor
+{"plugins":["git_status"]}
+```
+
 Reply concisely. Do not use any tools.

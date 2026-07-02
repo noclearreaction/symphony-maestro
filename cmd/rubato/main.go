@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/config"
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/mutate"
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/plugin"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/proxy"
 )
 
@@ -17,8 +19,12 @@ func main() {
 
 	log.Printf("Starting Rubato with %s", cfg)
 
+	// Wire plugin registry and injector.
+	registry := plugin.NewRegistry(plugin.NewGitStatus())
+	injector := mutate.NewInjector(registry)
+
 	// Create the proxy handler
-	handler := proxy.NewHandler(cfg.UpstreamURL, cfg.UpstreamAPIKey)
+	handler := proxy.NewHandler(cfg.UpstreamURL, cfg.UpstreamAPIKey, injector)
 
 	// Register routes
 	mux := http.NewServeMux()

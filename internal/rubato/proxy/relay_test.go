@@ -34,7 +34,7 @@ func TestPassThroughRelay(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL, "")
+	handler := NewHandler(upstream.URL, "", nil)
 
 	// Create request with specific content
 	originalBody := map[string]interface{}{
@@ -94,7 +94,7 @@ func TestPassThroughRelay(t *testing.T) {
 
 // TestDeterministicClientError verifies error responses are deterministic.
 func TestDeterministicClientError(t *testing.T) {
-	handler := NewHandler("http://localhost:8000", "")
+	handler := NewHandler("http://localhost:8000", "", nil)
 
 	// Test with invalid JSON
 	invalidBody := bytes.NewBufferString(`{invalid}`)
@@ -136,7 +136,7 @@ func TestDeterministicUpstreamError(t *testing.T) {
 	upstreamURL := upstream.URL
 	upstream.Close()
 
-	handler := NewHandler(upstreamURL, "")
+	handler := NewHandler(upstreamURL, "", nil)
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)
@@ -181,7 +181,7 @@ func TestHeaderPassThrough(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL, "")
+	handler := NewHandler(upstream.URL, "", nil)
 
 	validBody := bytes.NewBufferString(`{"model": "gpt-4", "messages": []}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", validBody)
@@ -208,7 +208,7 @@ func TestConfiguredAuthorizationFallback(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	handler := NewHandler(upstream.URL, "configured-token")
+	handler := NewHandler(upstream.URL, "configured-token", nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(`{"model":"gpt-4","messages":[]}`))
 	w := httptest.NewRecorder()
