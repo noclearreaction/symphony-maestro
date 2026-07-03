@@ -83,12 +83,12 @@ func runGoTest(ctx context.Context, dir string) (string, error) {
 
 func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 	var (
-		ran         int
-		cachedPkgs  int
-		pkgFailed   bool
-		failures    []testKey
-		testOutputs = make(map[testKey][]string)
-		pkgCached   = make(map[string]bool)
+		ran          int
+		cachedPkgs   int
+		pkgFailed    bool
+		failures     []testKey
+		testOutputs  = make(map[testKey][]string)
+		pkgCached    = make(map[string]bool)
 		pkgOutputBuf strings.Builder
 	)
 
