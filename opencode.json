@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openrouter/deepseek/deepseek-chat-v3-0324:free",
+  "model": "openrouter/deepseek/deepseek-chat-v3-0324",
   "instructions": [
     "AGENTS.md",
     "governance/constitution.md",
