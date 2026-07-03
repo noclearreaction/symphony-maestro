@@ -56,6 +56,26 @@ task rubato:status   # show listener/PID
 task rubato:logs     # tail /tmp/rubato.log
 ```
 
+## rplugin — run a plugin from the terminal
+
+`rplugin` is a standalone binary that executes a single named rubato plugin and prints its output to stdout. Use it to verify plugin behavior, inspect ambient state, and test args without starting the proxy.
+
+```bash
+go run ./cmd/rplugin <plugin-name> [--working-dir <path>] [--args <json>]
+```
+
+### Examples
+
+```bash
+# git_status in the current workspace
+go run ./cmd/rplugin git_status --working-dir /workspace
+
+# go_test with a custom timeout
+go run ./cmd/rplugin go_test --working-dir /workspace --args '{"timeout_seconds":30}'
+```
+
+Errors (unknown plugin, execution failure, invalid JSON) are written to stderr and the process exits with code 1.
+
 ## Smoke test
 
 `smoke_test.go` verifies the full round-trip: opencode → Rubato → upstream → opencode. It is tagged `//go:build smoke` and never runs under `go test ./...`.
