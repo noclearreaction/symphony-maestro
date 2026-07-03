@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/mutate"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/plugin"
 )
@@ -28,7 +29,7 @@ type stubPlugin struct {
 }
 
 func (s *stubPlugin) Name() string { return s.name }
-func (s *stubPlugin) Execute(_ context.Context, _ map[string]any) (string, error) {
+func (s *stubPlugin) Execute(_ context.Context, _ []anchor.Option) (string, error) {
 	return s.out, s.err
 }
 
@@ -106,7 +107,7 @@ func TestApply_MalformedAnchor_ReturnsError(t *testing.T) {
 func TestApply_ValidAnchor_RuntimeStatePrependedToLastMessage(t *testing.T) {
 	pluginOut := "branch: main\nahead: 0\nbehind: 0\nstaged: 0\nunstaged: 0\nuntracked: 0"
 	inj := newInjector(pluginOut)
-	sysContent := anchorBlock(`{"plugins":["git_status"]}`) + "\nYou are an assistant."
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`) + "\nYou are an assistant."
 	in := body(sysContent, "What is 2+2?")
 	out, err := inj.Apply(context.Background(), in)
 	if err != nil {
@@ -131,7 +132,7 @@ func TestApply_ValidAnchor_RuntimeStatePrependedToLastMessage(t *testing.T) {
 
 func TestApply_ValidAnchor_GuidanceInjectedInSystemMessage(t *testing.T) {
 	inj := newInjector("branch: main")
-	sysContent := anchorBlock(`{"plugins":["git_status"]}`) + " You are an assistant."
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`) + " You are an assistant."
 	in := body(sysContent, "Hello")
 	out, err := inj.Apply(context.Background(), in)
 	if err != nil {
@@ -149,7 +150,7 @@ func TestApply_ValidAnchor_GuidanceInjectedInSystemMessage(t *testing.T) {
 
 func TestApply_GuidanceIdempotent(t *testing.T) {
 	inj := newInjector("branch: main")
-	sysContent := anchorBlock(`{"plugins":["git_status"]}`) +
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`) +
 		"\n\n```rubato:guidance\nalready injected\n```"
 	in := body(sysContent, "Hello")
 	out, err := inj.Apply(context.Background(), in)
@@ -166,7 +167,7 @@ func TestApply_GuidanceIdempotent(t *testing.T) {
 
 func TestApply_ByteIdenticalGuidance(t *testing.T) {
 	inj := newInjector("branch: main")
-	sysContent := anchorBlock(`{"plugins":["git_status"]}`) + " System message."
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`) + " System message."
 
 	out1, err := inj.Apply(context.Background(), body(sysContent, "msg1"))
 	if err != nil {
@@ -232,7 +233,7 @@ func TestApply_SingleMessage_ReturnsError(t *testing.T) {
 	in, _ := json.Marshal(map[string]any{
 		"model": "test",
 		"messages": []map[string]any{
-			{"role": "system", "content": anchorBlock(`{"plugins":["git_status"]}`)},
+			{"role": "system", "content": anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`)},
 		},
 	})
 	_, err := inj.Apply(context.Background(), in)
@@ -243,7 +244,7 @@ func TestApply_SingleMessage_ReturnsError(t *testing.T) {
 
 func TestApply_UnknownPlugin_ReturnsError(t *testing.T) {
 	inj := mutate.NewInjector(plugin.NewRegistry())
-	sysContent := anchorBlock(`{"plugins":["no_such_plugin"]}`)
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"no_such_plugin"}]}`)
 	_, err := inj.Apply(context.Background(), body(sysContent, "Hello"))
 	if err == nil {
 		t.Fatal("expected error for unknown plugin")
@@ -255,7 +256,7 @@ func TestApply_UnknownPlugin_ReturnsError(t *testing.T) {
 
 func TestApply_ExtraTopLevelFieldsPreserved(t *testing.T) {
 	inj := newInjector("branch: main")
-	sysContent := anchorBlock(`{"plugins":["git_status"]}`) + " System."
+	sysContent := anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`) + " System."
 	in := bodyExtra(sysContent, "User msg")
 	out, err := inj.Apply(context.Background(), in)
 	if err != nil {
@@ -276,7 +277,7 @@ func TestApply_ArrayContent_HandledCorrectly(t *testing.T) {
 	in, _ := json.Marshal(map[string]any{
 		"model": "test",
 		"messages": []map[string]any{
-			{"role": "system", "content": anchorBlock(`{"plugins":["git_status"]}`)},
+			{"role": "system", "content": anchorBlock(`{"plugins":[{"plugin":"git_status"}]}`)},
 			{"role": "user", "content": []map[string]any{
 				{"type": "text", "text": "Array content user message"},
 			}},

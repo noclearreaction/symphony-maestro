@@ -3,14 +3,16 @@ package plugin
 import (
 	"context"
 	"fmt"
+
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 )
 
 // Plugin is the contract all rubato plugins must implement.
 type Plugin interface {
 	Name() string
-	// Execute runs the plugin with the given static args and returns its output.
-	// Args may be nil when none were declared in the anchor.
-	Execute(ctx context.Context, args map[string]any) (string, error)
+	// Execute runs the plugin with the given options and returns its output.
+	// Options may be empty when none were declared in the anchor descriptor.
+	Execute(ctx context.Context, options []anchor.Option) (string, error)
 }
 
 // Registry resolves and executes declared plugins by name.
@@ -28,20 +30,20 @@ func NewRegistry(plugins ...Plugin) *Registry {
 	return r
 }
 
-// Execute runs each name in declared, in order, and returns their outputs keyed by name.
+// Execute runs each descriptor in order and returns outputs keyed by plugin name.
 // Returns an error immediately for unknown plugin names or execution failures (fail-fast).
-func (r *Registry) Execute(ctx context.Context, declared []string, args map[string]map[string]any) (map[string]string, error) {
-	out := make(map[string]string, len(declared))
-	for _, name := range declared {
-		p, ok := r.plugins[name]
+func (r *Registry) Execute(ctx context.Context, descriptors []anchor.PluginDescriptor) (map[string]string, error) {
+	out := make(map[string]string, len(descriptors))
+	for _, d := range descriptors {
+		p, ok := r.plugins[d.Plugin]
 		if !ok {
-			return nil, fmt.Errorf("unknown plugin: %q", name)
+			return nil, fmt.Errorf("unknown plugin: %q", d.Plugin)
 		}
-		result, err := p.Execute(ctx, args[name])
+		result, err := p.Execute(ctx, d.Options)
 		if err != nil {
-			return nil, fmt.Errorf("plugin %q: %w", name, err)
+			return nil, fmt.Errorf("plugin %q: %w", d.Plugin, err)
 		}
-		out[name] = result
+		out[d.Plugin] = result
 	}
 	return out, nil
 }

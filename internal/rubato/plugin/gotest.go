@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 )
 
 const (
@@ -25,16 +27,16 @@ func NewGoTest() *GoTest { return &GoTest{} }
 
 func (g *GoTest) Name() string { return "go_test" }
 
-// Execute runs go test -json ./... in args["working_dir"] (or process CWD if absent).
-// Optional args["timeout_seconds"] (float64) overrides the default 60s timeout.
-func (g *GoTest) Execute(ctx context.Context, args map[string]any) (string, error) {
+// Execute runs go test -json ./... in the working_dir option (or process CWD if absent).
+// Optional timeout_seconds option overrides the default 60s timeout.
+func (g *GoTest) Execute(ctx context.Context, options []anchor.Option) (string, error) {
 	dir := ""
-	if v, ok := args["working_dir"].(string); ok {
+	if v, ok := anchor.StringOption(options, "working_dir"); ok {
 		dir = v
 	}
 	timeout := goTestDefaultTimeout
-	if v, ok := args["timeout_seconds"].(float64); ok && v > 0 {
-		timeout = time.Duration(v * float64(time.Second))
+	if v := anchor.IntOption(options, "timeout_seconds", 0); v > 0 {
+		timeout = time.Duration(v) * time.Second
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

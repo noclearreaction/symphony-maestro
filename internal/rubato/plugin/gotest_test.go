@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/plugin"
 )
 
@@ -34,7 +35,7 @@ import "testing"
 func TestAlwaysPass(t *testing.T) {}
 `)
 	p := plugin.NewGoTest()
-	out, err := p.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestAlwaysFail(t *testing.T) {
 }
 `)
 	p := plugin.NewGoTest()
-	out, err := p.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,9 +81,9 @@ func TestSlow(t *testing.T) {
 }
 `)
 	p := plugin.NewGoTest()
-	_, err := p.Execute(context.Background(), map[string]any{
-		"working_dir":     dir,
-		"timeout_seconds": float64(1),
+	_, err := p.Execute(context.Background(), []anchor.Option{
+		{Name: "working_dir", Setting: dir},
+		{Name: "timeout_seconds", Setting: float64(1)},
 	})
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
@@ -105,7 +106,7 @@ func TestVerboseFail(t *testing.T) {
 `
 	dir := makeModule(t, "verbose_test.go", src)
 	p := plugin.NewGoTest()
-	out, err := p.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -132,7 +133,7 @@ func TestGoTest_NonModule(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := plugin.NewGoTest()
-	_, err := p.Execute(context.Background(), map[string]any{"working_dir": dir})
+	_, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err == nil {
 		t.Fatal("expected error for non-module directory, got nil")
 	}
@@ -163,3 +164,4 @@ func TestDefaultPass(t *testing.T) {}
 		t.Errorf("expected output to start with 'tests: ', got:\n%s", out)
 	}
 }
+

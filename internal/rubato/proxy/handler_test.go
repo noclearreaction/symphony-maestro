@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/mutate"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/plugin"
 )
@@ -21,7 +22,7 @@ type injectablePlugin struct {
 }
 
 func (p *injectablePlugin) Name() string { return p.name }
-func (p *injectablePlugin) Execute(_ context.Context, _ map[string]any) (string, error) {
+func (p *injectablePlugin) Execute(_ context.Context, _ []anchor.Option) (string, error) {
 	return p.out, p.err
 }
 
@@ -191,7 +192,7 @@ func TestChatCompletions_InjectorMutatesRequest(t *testing.T) {
 	handler := NewHandler(upstream.URL, "", injector)
 
 	reqBody := "{\"model\":\"gpt-4\",\"messages\":[" +
-		"{\"role\":\"system\",\"content\":\"```rubato:anchor\\n{\\\"plugins\\\":[\\\"git_status\\\"]}\\n``` You are an assistant.\"}," +
+		"{\"role\":\"system\",\"content\":\"```rubato:anchor\\n{\\\"plugins\\\":[{\\\"plugin\\\":\\\"git_status\\\"}]}\\n``` You are an assistant.\"}," +
 		"{\"role\":\"user\",\"content\":\"Hello\"}" +
 		"]}"
 
@@ -247,7 +248,7 @@ func TestChatCompletions_NoInjector_AnchorPassedThrough(t *testing.T) {
 
 	handler := NewHandler(upstream.URL, "", nil)
 
-	reqBody := "{\"model\":\"gpt-4\",\"messages\":[{\"role\":\"system\",\"content\":\"```rubato:anchor\\n{\\\"plugins\\\":[\\\"git_status\\\"]}\\n```\"}" +
+	reqBody := "{\"model\":\"gpt-4\",\"messages\":[{\"role\":\"system\",\"content\":\"```rubato:anchor\\n{\\\"plugins\\\":[{\\\"plugin\\\":\\\"git_status\\\"}]}\\n```\"}" +
 		",{\"role\":\"user\",\"content\":\"Hello\"}]}"
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBufferString(reqBody))
 	req.Header.Set("Content-Type", "application/json")

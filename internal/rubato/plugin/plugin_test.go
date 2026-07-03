@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/plugin"
 )
 
@@ -20,13 +21,13 @@ type stubPlugin struct {
 }
 
 func (s *stubPlugin) Name() string { return s.name }
-func (s *stubPlugin) Execute(_ context.Context, _ map[string]any) (string, error) {
+func (s *stubPlugin) Execute(_ context.Context, _ []anchor.Option) (string, error) {
 	return s.out, s.err
 }
 
 func TestRegistry_KnownPlugin(t *testing.T) {
 	r := plugin.NewRegistry(&stubPlugin{name: "stub", out: "hello"})
-	out, err := r.Execute(context.Background(), []string{"stub"}, nil)
+	out, err := r.Execute(context.Background(), []anchor.PluginDescriptor{{Plugin: "stub"}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -37,7 +38,7 @@ func TestRegistry_KnownPlugin(t *testing.T) {
 
 func TestRegistry_UnknownPlugin(t *testing.T) {
 	r := plugin.NewRegistry()
-	_, err := r.Execute(context.Background(), []string{"no-such"}, nil)
+	_, err := r.Execute(context.Background(), []anchor.PluginDescriptor{{Plugin: "no-such"}})
 	if err == nil {
 		t.Fatal("expected error for unknown plugin")
 	}
@@ -48,7 +49,7 @@ func TestRegistry_UnknownPlugin(t *testing.T) {
 
 func TestRegistry_PluginFailure(t *testing.T) {
 	r := plugin.NewRegistry(&stubPlugin{name: "bad", err: context.DeadlineExceeded})
-	_, err := r.Execute(context.Background(), []string{"bad"}, nil)
+	_, err := r.Execute(context.Background(), []anchor.PluginDescriptor{{Plugin: "bad"}})
 	if err == nil {
 		t.Fatal("expected error for plugin failure")
 	}
@@ -62,7 +63,10 @@ func TestRegistry_MultiplePlugins(t *testing.T) {
 		&stubPlugin{name: "a", out: "output-a"},
 		&stubPlugin{name: "b", out: "output-b"},
 	)
-	out, err := r.Execute(context.Background(), []string{"a", "b"}, nil)
+	out, err := r.Execute(context.Background(), []anchor.PluginDescriptor{
+		{Plugin: "a"},
+		{Plugin: "b"},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -73,7 +77,10 @@ func TestRegistry_MultiplePlugins(t *testing.T) {
 
 func TestRegistry_FailFastOnFirstUnknown(t *testing.T) {
 	r := plugin.NewRegistry(&stubPlugin{name: "good", out: "ok"})
-	_, err := r.Execute(context.Background(), []string{"good", "missing"}, nil)
+	_, err := r.Execute(context.Background(), []anchor.PluginDescriptor{
+		{Plugin: "good"},
+		{Plugin: "missing"},
+	})
 	if err == nil {
 		t.Fatal("expected error when second plugin is unknown")
 	}
@@ -84,7 +91,7 @@ func TestRegistry_NoSessionReuse(t *testing.T) {
 	calls := 0
 	r := plugin.NewRegistry(&stubPlugin{name: "counter", out: "fresh"})
 	for i := 0; i < 3; i++ {
-		out, err := r.Execute(context.Background(), []string{"counter"}, nil)
+		out, err := r.Execute(context.Background(), []anchor.PluginDescriptor{{Plugin: "counter"}})
 		if err != nil {
 			t.Fatalf("call %d: %v", i, err)
 		}
@@ -136,7 +143,7 @@ func TestGitStatus_NormalRepo_CleanWorkingTree(t *testing.T) {
 	dir := initRepo(t)
 
 	g := plugin.NewGitStatus()
-	out, err := g.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := g.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +182,7 @@ func TestGitStatus_NormalRepo_WithChanges(t *testing.T) {
 	}
 
 	g := plugin.NewGitStatus()
-	out, err := g.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := g.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -198,7 +205,7 @@ func TestGitStatus_DetachedHead(t *testing.T) {
 	}
 
 	g := plugin.NewGitStatus()
-	out, err := g.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := g.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -220,7 +227,7 @@ func TestGitStatus_BareRepo(t *testing.T) {
 	}
 
 	g := plugin.NewGitStatus()
-	out, err := g.Execute(context.Background(), map[string]any{"working_dir": dir})
+	out, err := g.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -234,7 +241,7 @@ func TestGitStatus_NonRepo(t *testing.T) {
 	dir := t.TempDir() // plain directory, no git repo
 
 	g := plugin.NewGitStatus()
-	_, err := g.Execute(context.Background(), map[string]any{"working_dir": dir})
+	_, err := g.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err == nil {
 		t.Fatal("expected error for non-repo directory")
 	}

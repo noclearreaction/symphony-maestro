@@ -79,9 +79,15 @@ func (inj *Injector) Apply(ctx context.Context, body []byte) ([]byte, error) {
 	}
 
 	// Execute declared plugins.
-	outputs, err := inj.registry.Execute(ctx, block.Plugins, block.Args)
+	outputs, err := inj.registry.Execute(ctx, block.Plugins)
 	if err != nil {
 		return nil, err
+	}
+
+	// Extract plugin names in declaration order for building state/guidance blocks.
+	names := make([]string, len(block.Plugins))
+	for i, d := range block.Plugins {
+		names[i] = d.Plugin
 	}
 
 	// Need at least 2 messages: messages[0] (system) and messages[-1] (user turn).
@@ -90,27 +96,23 @@ func (inj *Injector) Apply(ctx context.Context, body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("mutate: need at least 2 messages for injection")
 	}
 
-	// Mutate messages[-1]: prepend runtime-state block.
-	var lastMsg rawMsg
-	if err := json.Unmarshal(msgs[last], &lastMsg); err != nil {
-		return nil, fmt.Errorf("mutate: messages[-1]: %w", err)
-	}
-	lastContent, ok := lastMsg["content"]
-	if !ok {
-		return nil, fmt.Errorf("mutate: messages[-1]: missing content field")
-	}
-	stateBlock := buildStateBlock(block.Plugins, outputs)
-	lastMsg["content"], err = prependToContent(lastContent, stateBlock+"\n\n")
-	if err != nil {
-		return nil, fmt.Errorf("mutate: messages[-1].content: %w", err)
-	}
-	msgs[last], err = json.Marshal(lastMsg)
-	if err != nil {
-		return nil, fmt.Errorf("mutate: re-marshal messages[-1]: %w", err)
+	// On-change injection: determine which plugins need re-injection.
+	maxAge := block.MaxAge()
+	var injectNames []string
+	if maxAge == 0 {
+		// max_age 0: always inject all plugins unconditionally.
+		injectNames = names
+	} else {
+		prior := scanPriorState(msgs, maxAge)
+		for _, name := range names {
+			if outputs[name] != prior[name] {
+				injectNames = append(injectNames, name)
+			}
+		}
 	}
 
 	// Mutate messages[0]: inject guidance when absent (idempotent).
-	guidance := buildGuidance(block.Plugins)
+	guidance := buildGuidance(names)
 	if !strings.Contains(firstText, "```rubato:guidance") {
 		first["content"], err = appendToContent(firstContent, "\n\n"+guidance)
 		if err != nil {
@@ -119,6 +121,31 @@ func (inj *Injector) Apply(ctx context.Context, body []byte) ([]byte, error) {
 		msgs[0], err = json.Marshal(first)
 		if err != nil {
 			return nil, fmt.Errorf("mutate: re-marshal messages[0]: %w", err)
+		}
+	}
+
+	// Only prepend a state block when at least one plugin needs injection.
+	if len(injectNames) > 0 {
+		var lastMsg rawMsg
+		if err := json.Unmarshal(msgs[last], &lastMsg); err != nil {
+			return nil, fmt.Errorf("mutate: messages[-1]: %w", err)
+		}
+		lastContent, ok := lastMsg["content"]
+		if !ok {
+			return nil, fmt.Errorf("mutate: messages[-1]: missing content field")
+		}
+		injectOutputs := make(map[string]string, len(injectNames))
+		for _, n := range injectNames {
+			injectOutputs[n] = outputs[n]
+		}
+		stateBlock := buildStateBlock(injectNames, injectOutputs)
+		lastMsg["content"], err = prependToContent(lastContent, stateBlock+"\n\n")
+		if err != nil {
+			return nil, fmt.Errorf("mutate: messages[-1].content: %w", err)
+		}
+		msgs[last], err = json.Marshal(lastMsg)
+		if err != nil {
+			return nil, fmt.Errorf("mutate: re-marshal messages[-1]: %w", err)
 		}
 	}
 
@@ -245,4 +272,83 @@ func appendToContent(content json.RawMessage, suffix string) (json.RawMessage, e
 	result = append(result, parts...)
 	result = append(result, suffixPart)
 	return json.Marshal(result)
+}
+
+// scanPriorState scans backward through msgs[0..len-2] (up to maxAge positions)
+// for rubato:state blocks, returning the most recent known output per plugin name.
+// msgs[-1] (the current user turn being mutated) is excluded from the scan.
+func scanPriorState(msgs []json.RawMessage, maxAge int) map[string]string {
+	result := make(map[string]string)
+	last := len(msgs) - 2 // index of msgs[-2]: exclude current user turn
+	if last < 0 {
+		return result
+	}
+	// Scan at most maxAge messages, from newest (last) to oldest.
+	for i := last; i >= 0 && i > last-maxAge; i-- {
+		text := textFromMsg(msgs[i])
+		if text == "" {
+			continue
+		}
+		for name, output := range parseStateBlock(text) {
+			if _, seen := result[name]; !seen {
+				result[name] = output // most recent wins
+			}
+		}
+	}
+	return result
+}
+
+// textFromMsg extracts combined plain text from a message JSON object.
+// Returns "" on any error (best-effort for backward scanning).
+func textFromMsg(msg json.RawMessage) string {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(msg, &m); err != nil {
+		return ""
+	}
+	content, ok := m["content"]
+	if !ok {
+		return ""
+	}
+	text, _ := textFrom(content)
+	return text
+}
+
+// parseStateBlock parses a rubato:state fenced block from text, returning
+// per-plugin output keyed by plugin name. Returns an empty map when no state
+// block is present.
+func parseStateBlock(text string) map[string]string {
+	result := make(map[string]string)
+	lines := strings.Split(text, "\n")
+	inBlock := false
+	currentPlugin := ""
+	var currentLines []string
+
+	for _, line := range lines {
+		if !inBlock {
+			if line == "```rubato:state" {
+				inBlock = true
+			}
+			continue
+		}
+		// Close fence ends the block.
+		if line == "```" {
+			if currentPlugin != "" {
+				result[currentPlugin] = strings.TrimRight(strings.Join(currentLines, "\n"), "\n")
+			}
+			break
+		}
+		// Section header: [plugin_name]
+		if len(line) >= 2 && line[0] == '[' && line[len(line)-1] == ']' {
+			if currentPlugin != "" {
+				result[currentPlugin] = strings.TrimRight(strings.Join(currentLines, "\n"), "\n")
+			}
+			currentPlugin = line[1 : len(line)-1]
+			currentLines = nil
+			continue
+		}
+		if currentPlugin != "" {
+			currentLines = append(currentLines, line)
+		}
+	}
+	return result
 }

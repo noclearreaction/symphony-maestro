@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 )
 
 const gitTimeout = 5 * time.Second
@@ -19,11 +21,11 @@ func NewGitStatus() *GitStatus { return &GitStatus{} }
 
 func (g *GitStatus) Name() string { return "git_status" }
 
-// Execute runs git commands in args["working_dir"] (or the process CWD if absent)
+// Execute runs git commands in the working_dir option (or the process CWD if absent)
 // and returns formatted status lines.
-func (g *GitStatus) Execute(ctx context.Context, args map[string]any) (string, error) {
+func (g *GitStatus) Execute(ctx context.Context, options []anchor.Option) (string, error) {
 	dir := ""
-	if v, ok := args["working_dir"].(string); ok {
+	if v, ok := anchor.StringOption(options, "working_dir"); ok {
 		dir = v
 	}
 	ctx, cancel := context.WithTimeout(ctx, gitTimeout)

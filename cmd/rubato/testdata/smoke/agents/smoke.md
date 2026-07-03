@@ -15,7 +15,7 @@ permission:
 ---
 
 ```rubato:anchor
-{"plugins":["git_status","go_test"]}
+{"plugins":[{"plugin":"git_status"},{"plugin":"go_test"}]}
 ```
 
 Reply concisely. Do not use any tools.
