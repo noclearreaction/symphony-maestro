@@ -133,9 +133,12 @@ func TestGoTest_NonModule(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := plugin.NewGoTest()
-	_, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
-	if err == nil {
-		t.Fatal("expected error for non-module directory, got nil")
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
+	if err != nil {
+		t.Fatalf("unexpected hard error (should surface as tests: error): %v", err)
+	}
+	if !strings.HasPrefix(out, "tests: error") {
+		t.Errorf("expected output to start with 'tests: error', got:\n%s", out)
 	}
 }
 

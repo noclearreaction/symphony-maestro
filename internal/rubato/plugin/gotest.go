@@ -78,13 +78,15 @@ func runGoTest(ctx context.Context, dir string) (string, error) {
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("go_test: execution timed out: %w", ctx.Err())
 		}
-		// No JSON output at all — build failure or not a Go module.
+		// No JSON output at all — not a Go module or pre-parse setup failure.
+		// Return as injected content so the AI sees the error rather than
+		// the proxy failing the whole request.
 		if len(out) == 0 {
 			msg := strings.TrimSpace(stderr.String())
 			if msg == "" {
 				msg = err.Error()
 			}
-			return "", fmt.Errorf("go_test: %s", msg)
+			return "tests: error\n" + msg, nil
 		}
 		// Non-zero exit with output — test failures or build errors; parse below.
 	}
@@ -115,6 +117,9 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 		key := testKey{ev.Package, ev.Test}
 
 		switch ev.Action {
+		case "build-output":
+			// Compiler error lines — emitted before the package-level fail event.
+			pkgOutputBuf.WriteString(ev.Output)
 		case "output":
 			if ev.Test != "" {
 				testOutputs[key] = append(testOutputs[key], ev.Output)
@@ -134,13 +139,14 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 	}
 
 	// A package-level failure with no individual test failures means a build
-	// or module setup error — surface the package output as an error.
+	// error. Surface the compiler output as injected content so the AI sees
+	// which package and file failed rather than the proxy failing the request.
 	if pkgFailed && len(failures) == 0 && execErr != nil {
 		msg := strings.TrimSpace(pkgOutputBuf.String())
 		if msg == "" {
 			msg = execErr.Error()
 		}
-		return "", fmt.Errorf("go_test: %s", msg)
+		return "tests: error\n" + msg, nil
 	}
 
 	var sb strings.Builder
