@@ -1,11 +1,11 @@
-## 1. Anchor Parameters Parsing
+## 1. Anchor Options Parsing
 
-- [ ] 1.1 Add `Parameters []map[string]any` field to `anchor.Block`; parse from top-level `parameters` array in anchor JSON.
-- [ ] 1.2 Add `MaxAge() int` method on `Block`: returns `parameters[0]["max_age"]` as int, defaulting to 100; returns 0 when explicitly set to 0.
-- [ ] 1.3 Test: anchor with `parameters:[{"max_age":50}]` returns MaxAge 50.
-- [ ] 1.4 Test: anchor without `parameters` returns MaxAge 100.
-- [ ] 1.5 Test: anchor with `max_age:0` returns MaxAge 0.
-- [ ] 1.6 Test: unknown parameter keys are preserved and do not cause parse errors.
+- [ ] 1.1 Add `Options []map[string]any` field to `anchor.Block`; parse from top-level `options` array in anchor JSON.
+- [ ] 1.2 Add `MaxAge() int` method on `Block`: scans `Options` array for entry where `key == "max_age"`, returns `value` as int; defaults to 100 when not found; returns 0 when explicitly set to 0.
+- [ ] 1.3 Test: anchor with `options:[{"key":"max_age","value":50}]` returns MaxAge 50.
+- [ ] 1.4 Test: anchor without `options` returns MaxAge 100.
+- [ ] 1.5 Test: anchor with `max_age` value 0 returns MaxAge 0.
+- [ ] 1.6 Test: unknown option keys are preserved and do not cause parse errors.
 
 ## 2. Backward State Scan
 

@@ -4,7 +4,7 @@ Rubato currently injects a full `rubato:state` block on every proxied request tu
 
 ## What Changes
 
-- Extend `rubato:anchor` with an optional `parameters` array for rubato-level config, starting with `max_age` (the maximum number of messages before a plugin's state is considered stale and must be re-injected regardless of change).
+- Extend `rubato:anchor` with an optional `options` array for rubato-level config, starting with `max_age` (the maximum number of messages before a plugin's state is considered stale and must be re-injected regardless of change).
 - On each request, scan backward through prior messages (bounded by `max_age`) to find the last injected output per plugin.
 - Inject only the plugins whose output has changed or that have not been seen within the `max_age` window.
 - When no plugins require injection, skip the state block entirely.
@@ -14,7 +14,7 @@ Rubato currently injects a full `rubato:state` block on every proxied request tu
 
 ### New Capabilities
 
-- `anchor-parameters`: The `rubato:anchor` block accepts a top-level `parameters` array for rubato-level config. Initially supports `max_age` (default 100, `0` = always inject).
+- `anchor-options`: The `rubato:anchor` block accepts a top-level `options` array of `{key, value}` objects for rubato-level config. Initially supports `max_age` (default 100, `0` = always inject).
 - `on-change-injection`: Rubato injects only changed or stale plugin outputs per turn, rather than the full state block every turn.
 
 ### Modified Capabilities
@@ -23,7 +23,7 @@ Rubato currently injects a full `rubato:state` block on every proxied request tu
 
 ## Impact
 
-- `internal/rubato/anchor/anchor.go` and `anchor_test.go`: parse `parameters` array, expose `MaxAge`
+- `internal/rubato/anchor/anchor.go` and `anchor_test.go`: parse `options` array, expose `MaxAge()`
 - `internal/rubato/mutate/mutate.go` and `mutate_test.go`: backward scan, per-plugin diff, partial state block
 - No changes to plugin implementations, proxy handler, or main.go
 - No breaking changes to existing anchors — absent `parameters` defaults to `max_age: 100`

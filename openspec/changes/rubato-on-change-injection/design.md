@@ -21,13 +21,13 @@ The `anchor.Block` struct currently holds `Plugins []string` and `Args map[strin
 
 ## Decisions
 
-### D-1) `parameters` is an array of objects, not a flat map
+### D-1) `options` is an array of explicit `{key, value}` objects
 
 ```json
-{"plugins":["git_status"],"parameters":[{"max_age":50}]}
+{"plugins":["git_status"],"options":[{"key":"max_age","value":50}]}
 ```
 
-Rationale: extensible without versioning the anchor format. Future parameters add new objects to the array; parsers ignore unknown keys. A flat top-level key would conflate rubato config with plugin args.
+Rationale: each option is a self-describing key-value pair. Parsers scan the array for entries where `key` matches a known name and read `value`; unknown keys are ignored. This avoids the implicit single-key-per-object convention and makes the structure unambiguous regardless of what future options are added.
 
 ### D-2) `max_age: 0` means always inject
 
