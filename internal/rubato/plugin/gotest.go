@@ -95,11 +95,9 @@ func runGoTest(ctx context.Context, dir string) (string, error) {
 func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 	var (
 		ran          int
-		cachedPkgs   int
 		pkgFailed    bool
 		failures     []testKey
 		testOutputs  = make(map[testKey][]string)
-		pkgCached    = make(map[string]bool)
 		pkgOutputBuf strings.Builder
 	)
 
@@ -122,9 +120,6 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 				testOutputs[key] = append(testOutputs[key], ev.Output)
 			} else {
 				pkgOutputBuf.WriteString(ev.Output)
-				if strings.Contains(ev.Output, "(cached)") {
-					pkgCached[ev.Package] = true
-				}
 			}
 		case "pass", "fail", "skip":
 			if ev.Test != "" {
@@ -134,8 +129,6 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 				}
 			} else if ev.Action == "fail" {
 				pkgFailed = true
-			} else if ev.Action == "pass" && pkgCached[ev.Package] {
-				cachedPkgs++
 			}
 		}
 	}
@@ -154,9 +147,6 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 	if len(failures) == 0 {
 		sb.WriteString("tests: pass\n")
 		sb.WriteString(fmt.Sprintf("ran: %d", ran))
-		if cachedPkgs > 0 {
-			sb.WriteString(fmt.Sprintf("\ncached: %d pkg(s)", cachedPkgs))
-		}
 	} else {
 		sb.WriteString("tests: fail\n")
 		sb.WriteString(fmt.Sprintf("ran: %d\n", ran))
