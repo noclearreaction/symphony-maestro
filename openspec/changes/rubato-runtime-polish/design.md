@@ -45,28 +45,29 @@ Polish is complete only when routed workflow tests pass in the actual devcontain
 Rationale:
 - Prevents local-only confidence that fails in real workflow topology.
 
-## Open Questions
+### 5) On-change injection — Option A with anchor-configured window
 
-### OQ-1) State injection frequency — always vs. on-change
+Rubato injects only the plugins whose output has changed since they were last seen in message history, scanned backward up to `repeat` messages (default 100, configurable in the `rubato:anchor` block).
 
-Currently rubato injects a fresh `rubato:state` block on every request turn.
-Since the full message history is present in each request body, rubato could
-instead scan backwards through prior messages to find the most recent output
-per plugin and skip injection when output is unchanged.
+Per-plugin logic:
+- Found in window, output unchanged → skip
+- Found in window, output changed → inject
+- Not found in window (first turn, or beyond `repeat` limit) → inject (reminder)
 
-Decision needed:
-- **Always inject** (current): simple, correct, ~60-80 tokens per plugin per
-  turn, negligible for 5-10 small plugins against typical 32k+ contexts.
-- **Inject on change**: scan `messages[1..-2]` for previous `rubato:state`
-  blocks, compare fresh output per plugin, only prepend if any differ. ~20-30
-  lines in the `mutate` package. Quieter in stable long conversations.
+When any plugins require injection, only those plugins appear in the `rubato:state` block. When no plugins changed and all are within the window, no state block is prepended.
 
-Sub-question: if only *some* plugins change, inject only changed plugins or
-always inject the full set?
+The `max_age` field is read from a `parameters` array in the anchor JSON:
+```json
+{"plugins":["git_status","go_test"],"parameters":[{"max_age":50}]}
+```
+The `Block` struct gains a `Parameters` field parsed from the top-level `parameters` array. `MaxAge` is extracted from the first object in that array; absent defaults to 100. `max_age: 0` means always inject regardless of history. The `parameters` key is reserved for rubato-level config, distinct from per-plugin `args`.
 
-This decision should be made before closing rubato-runtime-polish. If
-on-change is chosen, the implementation belongs in `mutate.Apply` and requires
-a new test covering the suppression case.
+Guidance text does NOT explain absence semantics — any explicit hint risks triggering the model to substitute tool calls for ambient state it already has.
 
-- Refinement-only guardrails can defer legitimate improvements; accepted to preserve staged integrity.
-- More verification work increases short-term cycle time; accepted to reduce regressions.
+Rationale:
+- Keeps injected blocks minimal and signal-rich (presence = something changed)
+- Bounded scan (O(repeat)) prevents O(n) cost on long conversations
+- Forced reminder after `repeat` turns handles context compression in long sessions
+- Per-plugin atomicity lets each plugin signal independently
+
+## Risks / Trade-offs
