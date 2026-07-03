@@ -1,11 +1,17 @@
-## 1. Anchor Options Parsing
+## 1. Anchor Format Redesign
 
-- [ ] 1.1 Add `Options []map[string]any` field to `anchor.Block`; parse from top-level `options` array in anchor JSON.
-- [ ] 1.2 Add `MaxAge() int` method on `Block`: scans `Options` array for entry where `name == "max_age"`, returns `setting` as int; defaults to 100 when not found; returns 0 when explicitly set to 0.
-- [ ] 1.3 Test: anchor with `options:[{"name":"max_age","setting":50}]` returns MaxAge 50.
-- [ ] 1.4 Test: anchor without `options` returns MaxAge 100.
-- [ ] 1.5 Test: anchor with `max_age` value 0 returns MaxAge 0.
-- [ ] 1.6 Test: unknown option keys are preserved and do not cause parse errors.
+- [ ] 1.1 Define `Option struct { Name string; Setting any }` and `PluginDescriptor struct { Plugin string; Options []Option }` in the anchor package.
+- [ ] 1.2 Update `Block`: replace `Plugins []string` with `Plugins []PluginDescriptor`; replace `Args map[string]map[string]any` with `Options []Option` (top-level rubato options).
+- [ ] 1.3 Update anchor parser to parse `plugins` as `[]PluginDescriptor` and top-level `options` as `[]Option`.
+- [ ] 1.4 Add `MaxAge() int` method on `Block`: scans `Options` for `name == "max_age"`, returns `setting` as int; defaults to 100; returns 0 when explicitly set to 0.
+- [ ] 1.5 Update all existing anchor tests to use the new plugin descriptor format.
+- [ ] 1.6 Test: plugin descriptor with no options parses correctly.
+- [ ] 1.7 Test: plugin descriptor with options returns correct per-plugin option values.
+- [ ] 1.8 Test: top-level options absent returns MaxAge 100.
+- [ ] 1.9 Test: top-level `max_age` 0 returns MaxAge 0.
+- [ ] 1.10 Test: unknown option names are preserved without error.
+- [ ] 1.11 Update `mutate` package to extract plugin names and per-plugin options from `[]PluginDescriptor` instead of `block.Plugins []string` + `block.Args`.
+- [ ] 1.12 Update all existing `rubato:anchor` blocks in smoke fixtures, specs, and README examples to the new format.
 
 ## 2. Backward State Scan
 

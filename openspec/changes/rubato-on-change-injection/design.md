@@ -21,13 +21,21 @@ The `anchor.Block` struct currently holds `Plugins []string` and `Args map[strin
 
 ## Decisions
 
-### D-1) `options` is an array of explicit `{key, value}` objects
+### D-1) Unified anchor format — plugin descriptors with co-located options
 
 ```json
-{"plugins":["git_status"],"options":[{"name":"max_age","setting":50}]}
+{
+  "plugins": [
+    {"plugin": "git_status"},
+    {"plugin": "go_test", "options": [{"name": "timeout_seconds", "setting": 30}]}
+  ],
+  "options": [{"name": "max_age", "setting": 50}]
+}
 ```
 
-Rationale: each option is a self-describing name/setting pair. Parsers scan the array for entries where `name` matches a known option and read `setting`; unknown names are ignored. This avoids the implicit single-key-per-object convention and makes the structure unambiguous regardless of what future options are added.
+`plugins` becomes an array of descriptor objects, each with a `plugin` name and an optional `options` array of `{name, setting}` pairs — `setting` itself is optional, allowing flag-style options with no value. Top-level `options` carry rubato-level config. The existing `args` top-level key is removed.
+
+Rationale: plugin name and its config are co-located; the format is consistent throughout; no separate args lookup. The `{name, setting}` shape is used uniformly for both plugin options and rubato options. This is a breaking change to the current string-array `plugins` format — acceptable since nothing is deployed.
 
 ### D-2) `max_age: 0` means always inject
 
