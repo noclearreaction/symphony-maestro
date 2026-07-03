@@ -24,10 +24,10 @@ The `anchor.Block` struct currently holds `Plugins []string` and `Args map[strin
 ### D-1) `options` is an array of explicit `{key, value}` objects
 
 ```json
-{"plugins":["git_status"],"options":[{"key":"max_age","value":50}]}
+{"plugins":["git_status"],"options":[{"name":"max_age","setting":50}]}
 ```
 
-Rationale: each option is a self-describing key-value pair. Parsers scan the array for entries where `key` matches a known name and read `value`; unknown keys are ignored. This avoids the implicit single-key-per-object convention and makes the structure unambiguous regardless of what future options are added.
+Rationale: each option is a self-describing name/setting pair. Parsers scan the array for entries where `name` matches a known option and read `setting`; unknown names are ignored. This avoids the implicit single-key-per-object convention and makes the structure unambiguous regardless of what future options are added.
 
 ### D-2) `max_age: 0` means always inject
 

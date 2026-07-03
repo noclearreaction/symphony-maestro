@@ -14,7 +14,7 @@ Rubato currently injects a full `rubato:state` block on every proxied request tu
 
 ### New Capabilities
 
-- `anchor-options`: The `rubato:anchor` block accepts a top-level `options` array of `{key, value}` objects for rubato-level config. Initially supports `max_age` (default 100, `0` = always inject).
+- `anchor-options`: The `rubato:anchor` block accepts a top-level `options` array of `{name, setting}` objects for rubato-level config. Initially supports `max_age` (default 100, `0` = always inject).
 - `on-change-injection`: Rubato injects only changed or stale plugin outputs per turn, rather than the full state block every turn.
 
 ### Modified Capabilities
