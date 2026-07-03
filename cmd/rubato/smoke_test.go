@@ -97,6 +97,12 @@ func TestSmokeRoundTrip(t *testing.T) {
 	if !bytes.Contains(log, []byte("branch:")) {
 		t.Errorf("git branch data not found in rubato log — git_status plugin output may be empty\nrubato output:\n%s", rubatoLog.String())
 	}
+	if !bytes.Contains(log, []byte("[go_test]")) {
+		t.Errorf("[go_test] section not found in rubato log — go_test plugin may not have executed\nrubato output:\n%s", rubatoLog.String())
+	}
+	if !bytes.Contains(log, []byte("tests:")) {
+		t.Errorf("go test status not found in rubato log — go_test plugin output may be empty\nrubato output:\n%s", rubatoLog.String())
+	}
 }
 
 // startRubato starts the test binary as a rubato subprocess on smokeRubatoPort,

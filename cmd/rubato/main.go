@@ -20,7 +20,7 @@ func main() {
 	log.Printf("Starting Rubato with %s", cfg)
 
 	// Wire plugin registry and injector.
-	registry := plugin.NewRegistry(plugin.NewGitStatus())
+	registry := plugin.NewRegistry(plugin.NewGitStatus(), plugin.NewGoTest())
 	injector := mutate.NewInjector(registry)
 
 	// Create the proxy handler
