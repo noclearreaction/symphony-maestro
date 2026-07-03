@@ -10,8 +10,12 @@
 - [ ] 1.8 Test: top-level options absent returns MaxAge 100.
 - [ ] 1.9 Test: top-level `max_age` 0 returns MaxAge 0.
 - [ ] 1.10 Test: unknown option names are preserved without error.
-- [ ] 1.11 Update `mutate` package to extract plugin names and per-plugin options from `[]PluginDescriptor` instead of `block.Plugins []string` + `block.Args`.
-- [ ] 1.12 Update all existing `rubato:anchor` blocks in smoke fixtures, specs, and README examples to the new format.
+- [ ] 1.11 Update `Plugin` interface: change `Execute(ctx, args map[string]any)` to `Execute(ctx, options []anchor.Option) (string, error)`.
+- [ ] 1.12 Update `git_status` and `go_test` plugin implementations to accept `[]anchor.Option`; add helper to extract a named option's setting (with type coercion for JSON float64).
+- [ ] 1.13 Update `Registry.Execute` signature to pass `[]anchor.Option` per plugin.
+- [ ] 1.14 Update all plugin tests for the new Execute signature.
+- [ ] 1.15 Update `mutate` package to extract per-plugin options from descriptors and pass `[]anchor.Option` to Execute.
+- [ ] 1.16 Update all existing `rubato:anchor` blocks in smoke fixtures, specs, and README examples to the new format.
 
 ## 2. Backward State Scan
 
