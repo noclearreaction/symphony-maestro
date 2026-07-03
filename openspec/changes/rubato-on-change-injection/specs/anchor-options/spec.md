@@ -48,16 +48,3 @@ The anchor package SHALL expose a `MaxAge() int` method on `Block` that scans `O
 #### Scenario: max_age zero means always inject
 - **WHEN** `options` contains `{"name":"max_age","setting":0}`
 - **THEN** `MaxAge()` SHALL return 0
-
-
-#### Scenario: max_age present
-- **WHEN** `parameters[0]["max_age"]` is a positive integer
-- **THEN** `MaxAge()` SHALL return that value
-
-#### Scenario: max_age absent
-- **WHEN** the `parameters` array is absent or empty
-- **THEN** `MaxAge()` SHALL return 100
-
-#### Scenario: max_age zero means always inject
-- **WHEN** `parameters[0]["max_age"]` is 0
-- **THEN** `MaxAge()` SHALL return 0, and the caller SHALL treat this as always-inject
