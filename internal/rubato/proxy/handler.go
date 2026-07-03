@@ -56,7 +56,6 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		h.respondBadRequest(w, "invalid JSON in request body")
 		return
 	}
-	log.Printf("request body: %s", body)
 
 	// Apply plugin injection when configured.
 	if h.injector != nil {
@@ -67,7 +66,7 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		body = mutated
-		log.Printf("injected request body: %s", body)
+		log.Printf("rubato: injection applied")
 	}
 
 	// Forward to upstream

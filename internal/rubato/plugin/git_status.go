@@ -10,6 +10,10 @@ import (
 	"github.com/noclearreaction/symphony-maestro/internal/rubato/anchor"
 )
 
+// gitTimeout is the fixed timeout for all git subprocess calls.
+// It is intentionally short: git status on a local repo should complete in
+// milliseconds. A 5-second cap prevents slow network filesystems from
+// blocking the proxy indefinitely.
 const gitTimeout = 5 * time.Second
 
 // GitStatus implements the git_status plugin.

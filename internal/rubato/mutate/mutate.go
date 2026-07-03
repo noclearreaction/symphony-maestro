@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 
@@ -75,20 +76,24 @@ func (inj *Injector) Apply(ctx context.Context, body []byte) ([]byte, error) {
 		return nil, err // malformed anchor — caller rejects
 	}
 	if block == nil {
+		log.Printf("rubato: no anchor in system message; pass-through")
 		return body, nil // no anchor — pass through unchanged
 	}
 
-	// Execute declared plugins.
-	outputs, err := inj.registry.Execute(ctx, block.Plugins)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract plugin names in declaration order for building state/guidance blocks.
+	// Extract plugin names early for logging.
 	names := make([]string, len(block.Plugins))
 	for i, d := range block.Plugins {
 		names[i] = d.Plugin
 	}
+	log.Printf("rubato: anchor detected plugins=%v max_age=%d", names, block.MaxAge())
+
+	// Execute declared plugins.
+	outputs, err := inj.registry.Execute(ctx, block.Plugins)
+	if err != nil {
+		log.Printf("rubato: plugin execution failed: %v", err)
+		return nil, err
+	}
+	log.Printf("rubato: plugins executed successfully count=%d", len(outputs))
 
 	// Need at least 2 messages: messages[0] (system) and messages[-1] (user turn).
 	last := len(msgs) - 1
@@ -109,6 +114,12 @@ func (inj *Injector) Apply(ctx context.Context, body []byte) ([]byte, error) {
 				injectNames = append(injectNames, name)
 			}
 		}
+	}
+
+	if len(injectNames) == 0 {
+		log.Printf("rubato: all plugins stable; no state block injected")
+	} else {
+		log.Printf("rubato: injecting plugins=%v stable=%v", injectNames, stableNames(names, injectNames))
 	}
 
 	// Mutate messages[0]: inject guidance when absent (idempotent).
@@ -211,6 +222,21 @@ func pluginDesc(name string) string {
 	default:
 		return "runtime plugin output"
 	}
+}
+
+// stableNames returns the elements of all that are not in inject.
+func stableNames(all, inject []string) []string {
+	injectSet := make(map[string]struct{}, len(inject))
+	for _, n := range inject {
+		injectSet[n] = struct{}{}
+	}
+	var stable []string
+	for _, n := range all {
+		if _, found := injectSet[n]; !found {
+			stable = append(stable, n)
+		}
+	}
+	return stable
 }
 
 // textFrom extracts combined plain text from a content field.

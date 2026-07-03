@@ -14,8 +14,14 @@ import (
 )
 
 const (
+	// goTestDefaultTimeout is the default timeout for go test runs when
+	// no timeout_seconds option is provided in the anchor descriptor.
 	goTestDefaultTimeout = 60 * time.Second
-	goTestMaxFailLines   = 20
+	// goTestMaxTimeout caps the timeout regardless of the timeout_seconds option
+	// to prevent excessively long plugin execution blocking the proxy.
+	goTestMaxTimeout = 600 * time.Second // hard cap: 10 minutes
+	// goTestMaxFailLines caps per-test output in the failure report.
+	goTestMaxFailLines = 20
 )
 
 // GoTest implements the go_test plugin.
@@ -37,6 +43,9 @@ func (g *GoTest) Execute(ctx context.Context, options []anchor.Option) (string, 
 	timeout := goTestDefaultTimeout
 	if v := anchor.IntOption(options, "timeout_seconds", 0); v > 0 {
 		timeout = time.Duration(v) * time.Second
+		if timeout > goTestMaxTimeout {
+			timeout = goTestMaxTimeout
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

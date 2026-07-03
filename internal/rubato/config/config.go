@@ -16,7 +16,12 @@ type Config struct {
 }
 
 // Load reads configuration from environment variables.
-// Defaults to sensible values if not provided.
+// Defaults:
+//   - RUBATO_UPSTREAM_URL: http://localhost:8000
+//   - RUBATO_LISTEN_ADDR:  :8080
+//   - OPENROUTER_API_KEY:  (empty — upstream requests will be unauthenticated)
+//
+// Invalid or missing required fields are caught by Validate.
 func Load() *Config {
 	upstream := os.Getenv("RUBATO_UPSTREAM_URL")
 	if upstream == "" {
