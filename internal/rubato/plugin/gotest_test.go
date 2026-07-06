@@ -240,4 +240,3 @@ func TestDefaultPass(t *testing.T) {}
 		t.Errorf("expected output to start with 'status: ', got:\n%s", out)
 	}
 }
-

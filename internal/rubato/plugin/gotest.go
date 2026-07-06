@@ -173,7 +173,7 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 			} else {
 				pkgFailed = true
 			}
-		// skip: skipped tests do not contribute to ran/passed/failed.
+			// skip: skipped tests do not contribute to ran/passed/failed.
 		}
 	}
 
@@ -269,4 +269,3 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 	sb.WriteString("\n")
 	return sb.String(), nil
 }
-
