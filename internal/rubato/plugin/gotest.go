@@ -97,7 +97,7 @@ func runGoTest(ctx context.Context, dir string) (string, error) {
 				msg = err.Error()
 			}
 			indented := "  " + strings.ReplaceAll(msg, "\n", "\n  ")
-			return "status: error\n" + indented, nil
+			return "status: error\n" + indented + "\n", nil
 		}
 		// Non-zero exit with output — test failures or build errors; parse below.
 	}
@@ -214,6 +214,7 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 			sb.WriteString("\n  ")
 			sb.WriteString(l)
 		}
+		sb.WriteString("\n")
 		return sb.String(), nil
 	}
 
@@ -265,6 +266,7 @@ func parseGoTestOutput(raw []byte, execErr error) (string, error) {
 		}
 	}
 
+	sb.WriteString("\n")
 	return sb.String(), nil
 }
 
