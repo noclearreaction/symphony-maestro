@@ -45,7 +45,7 @@ func gitStatus(ctx context.Context, dir string) (string, error) {
 
 	// Bare repositories have no working tree — report as explicit state.
 	if out, _ := gitOut(ctx, dir, "rev-parse", "--is-bare-repository"); strings.TrimSpace(out) == "true" {
-		return "state: bare", nil
+		return "state: bare\n", nil
 	}
 
 	// Branch or detached-HEAD state.
@@ -69,7 +69,7 @@ func gitStatus(ctx context.Context, dir string) (string, error) {
 	staged, unstaged, untracked := porcelainCounts(ctx, dir)
 	sb.WriteString(fmt.Sprintf("staged: %d\n", staged))
 	sb.WriteString(fmt.Sprintf("unstaged: %d\n", unstaged))
-	sb.WriteString(fmt.Sprintf("untracked: %d", untracked))
+	sb.WriteString(fmt.Sprintf("untracked: %d\n", untracked))
 
 	return sb.String(), nil
 }

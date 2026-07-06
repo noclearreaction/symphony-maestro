@@ -231,7 +231,7 @@ func TestGitStatus_BareRepo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if out != "state: bare" {
+	if out != "state: bare\n" {
 		t.Errorf("expected 'state: bare', got %q", out)
 	}
 }
