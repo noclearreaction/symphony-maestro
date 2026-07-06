@@ -2,6 +2,7 @@ package plugin_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 )
 
 // makeModule creates a temporary Go module directory with the given (filename, content) pairs.
+// Parent directories are created as needed to support sub-package paths.
 func makeModule(t *testing.T, files ...string) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -20,7 +22,11 @@ func makeModule(t *testing.T, files ...string) string {
 		t.Fatal(err)
 	}
 	for i := 0; i+1 < len(files); i += 2 {
-		if err := os.WriteFile(filepath.Join(dir, files[i]), []byte(files[i+1]), 0o644); err != nil {
+		fullPath := filepath.Join(dir, files[i])
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(files[i+1]), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -39,11 +45,14 @@ func TestAlwaysPass(t *testing.T) {}
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "tests: pass") {
-		t.Errorf("expected 'tests: pass' in output:\n%s", out)
+	if !strings.HasPrefix(out, "status: pass") {
+		t.Errorf("expected 'status: pass' prefix:\n%s", out)
 	}
-	if !strings.Contains(out, "ran:") {
-		t.Errorf("expected 'ran:' count in output:\n%s", out)
+	if !strings.Contains(out, "passed:") {
+		t.Errorf("expected 'passed:' in output:\n%s", out)
+	}
+	if !strings.Contains(out, "failed: 0") {
+		t.Errorf("expected 'failed: 0' in output:\n%s", out)
 	}
 }
 
@@ -59,14 +68,20 @@ func TestAlwaysFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "tests: fail") {
-		t.Errorf("expected 'tests: fail' in output:\n%s", out)
+	if !strings.HasPrefix(out, "status: fail") {
+		t.Errorf("expected 'status: fail' prefix:\n%s", out)
 	}
-	if !strings.Contains(out, "TestAlwaysFail") {
-		t.Errorf("expected failure test name in output:\n%s", out)
+	if !strings.Contains(out, "test failures:") {
+		t.Errorf("expected 'test failures:' section:\n%s", out)
+	}
+	if !strings.Contains(out, "FAIL TestAlwaysFail") {
+		t.Errorf("expected 'FAIL TestAlwaysFail' in output:\n%s", out)
 	}
 	if !strings.Contains(out, "intentional failure message") {
 		t.Errorf("expected failure message in output:\n%s", out)
+	}
+	if strings.Contains(out, "=== RUN") {
+		t.Errorf("framework line '=== RUN' should be stripped:\n%s", out)
 	}
 }
 
@@ -93,8 +108,8 @@ func TestSlow(t *testing.T) {
 	}
 }
 
-func TestGoTest_Truncation(t *testing.T) {
-	// Write a test that emits 25 log lines then fails — exceeds the 20-line cap.
+func TestGoTest_VerboseFail(t *testing.T) {
+	// Write a test that emits 25 log lines then fails — all must appear (no truncation).
 	src := `package foo_test
 import "testing"
 func TestVerboseFail(t *testing.T) {
@@ -110,19 +125,77 @@ func TestVerboseFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out, "tests: fail") {
-		t.Fatalf("expected 'tests: fail':\n%s", out)
+	if !strings.Contains(out, "status: fail") {
+		t.Fatalf("expected 'status: fail':\n%s", out)
 	}
-	if !strings.Contains(out, "output truncated") {
-		t.Errorf("expected truncation note in output:\n%s", out)
+	// All 25 verbose lines must be present — output is never truncated.
+	for i := 1; i <= 25; i++ {
+		want := fmt.Sprintf("verbose output line %d", i)
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in output (no truncation):\n%s", want, out)
+		}
 	}
-	// The first collected output line is "=== RUN   TestVerboseFail", so the 20
-	// slots hold: RUN line + verbose lines 1-19. Line 20 must be truncated.
-	if !strings.Contains(out, "verbose output line 19") {
-		t.Errorf("expected line 19 to be present (last before truncation), got:\n%s", out)
+	if !strings.Contains(out, "failure after verbose output") {
+		t.Errorf("expected failure message in output:\n%s", out)
 	}
-	if strings.Contains(out, "verbose output line 20") {
-		t.Errorf("expected line 20 to be truncated, but found it in output:\n%s", out)
+	if strings.Contains(out, "=== RUN") {
+		t.Errorf("framework line '=== RUN' should be stripped:\n%s", out)
+	}
+}
+
+func TestGoTest_BuildError(t *testing.T) {
+	dir := makeModule(t, "impl_test.go", `package foo_test
+import "testing"
+func TestUsesUndefined(t *testing.T) {
+	_ = UndefinedFunc()
+}
+`)
+	p := plugin.NewGoTest()
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
+	if err != nil {
+		t.Fatalf("unexpected hard error (build errors should surface as status: fail): %v", err)
+	}
+	if !strings.HasPrefix(out, "status: fail") {
+		t.Errorf("expected 'status: fail' prefix:\n%s", out)
+	}
+	if !strings.Contains(out, "build errors:") {
+		t.Errorf("expected 'build errors:' section:\n%s", out)
+	}
+	if !strings.Contains(out, "undefined: UndefinedFunc") {
+		t.Errorf("expected 'undefined: UndefinedFunc' in build errors:\n%s", out)
+	}
+	if !strings.Contains(out, "passed: 0") {
+		t.Errorf("expected 'passed: 0':\n%s", out)
+	}
+}
+
+func TestGoTest_Mixed(t *testing.T) {
+	// pkgood has passing tests; pkgbroken has a build error.
+	dir := makeModule(t,
+		"pkgood/good_test.go", `package pkgood_test
+import "testing"
+func TestGood(t *testing.T) {}
+`,
+		"pkgbroken/broken.go", `package pkgbroken
+func Oops() { undefinedThing() }
+`,
+	)
+	p := plugin.NewGoTest()
+	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
+	if err != nil {
+		t.Fatalf("unexpected hard error: %v", err)
+	}
+	if !strings.HasPrefix(out, "status: fail") {
+		t.Errorf("expected 'status: fail' prefix:\n%s", out)
+	}
+	if !strings.Contains(out, "build errors:") {
+		t.Errorf("expected 'build errors:' section:\n%s", out)
+	}
+	if !strings.Contains(out, "undefined: undefinedThing") {
+		t.Errorf("expected build error detail:\n%s", out)
+	}
+	if !strings.Contains(out, "passed: 1") {
+		t.Errorf("expected passing test counted (passed: 1):\n%s", out)
 	}
 }
 
@@ -135,10 +208,10 @@ func TestGoTest_NonModule(t *testing.T) {
 	p := plugin.NewGoTest()
 	out, err := p.Execute(context.Background(), []anchor.Option{{Name: "working_dir", Setting: dir}})
 	if err != nil {
-		t.Fatalf("unexpected hard error (should surface as tests: error): %v", err)
+		t.Fatalf("unexpected hard error (should surface as status: error): %v", err)
 	}
-	if !strings.HasPrefix(out, "tests: error") {
-		t.Errorf("expected output to start with 'tests: error', got:\n%s", out)
+	if !strings.HasPrefix(out, "status: error") {
+		t.Errorf("expected output to start with 'status: error', got:\n%s", out)
 	}
 }
 
@@ -163,8 +236,8 @@ func TestDefaultPass(t *testing.T) {}
 	if err != nil {
 		t.Fatalf("unexpected error with default CWD: %v", err)
 	}
-	if !strings.HasPrefix(out, "tests: ") {
-		t.Errorf("expected output to start with 'tests: ', got:\n%s", out)
+	if !strings.HasPrefix(out, "status: ") {
+		t.Errorf("expected output to start with 'status: ', got:\n%s", out)
 	}
 }
 
