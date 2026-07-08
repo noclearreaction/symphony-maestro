@@ -1,0 +1,62 @@
+# All runtime stages are supplied as named contexts by the bake file.
+# ARG declarations before FROM are global — used only in FROM instructions.
+ARG UBUNTU_VERSION
+FROM go-runtime AS go-stage
+FROM deno-runtime AS deno-stage
+FROM task-binary AS task-stage
+FROM node-apps AS node-stage
+
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-${UBUNTU_VERSION}
+
+ARG GO_VERSION
+ARG DENO_VERSION
+
+# --- Go ---
+COPY --from=go-stage /srv/files/go${GO_VERSION} /opt/go${GO_VERSION}
+RUN update-alternatives --install /usr/local/bin/go go /opt/go${GO_VERSION}/bin/go 100 \
+        --slave /usr/local/bin/gofmt gofmt /opt/go${GO_VERSION}/bin/gofmt
+ENV GOROOT=/opt/go${GO_VERSION} \
+    GOPATH=/home/vscode/go \
+    GOBIN=/home/vscode/.local/bin
+
+# --- Deno ---
+COPY --from=deno-stage /srv/files/deno-${DENO_VERSION} /opt/deno-${DENO_VERSION}
+RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERSION}/bin/deno 100
+
+# --- Task ---
+COPY --from=task-stage /srv/files/task /usr/local/bin/task
+
+# --- Node tools mount point and PATH ---
+ENV PATH=/workspace/bin:/opt/node/node_modules/.bin:$PATH
+COPY --from=node-stage /home/node/dist/ /opt/node/
+COPY --from=node-stage /usr/local/bin/node /usr/local/bin/node
+
+# --- SSH agent profile script ---
+COPY ssh-agent.sh /etc/profile.d/ssh-agent.sh
+RUN echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.bashrc \
+ && echo "source /etc/profile.d/ssh-agent.sh" >> /home/vscode/.zshrc
+
+# --- VS Code server directories ---
+RUN mkdir -p \
+    /home/vscode/.local/bin \
+    /home/vscode/.ssh \
+    /home/vscode/.vscode-server/extensions \
+    /home/vscode/.vscode-server/data/User \
+ && chown -R vscode:vscode /home/vscode/.local /home/vscode/.ssh /home/vscode/.vscode-server \
+ && chmod 700 /home/vscode/.ssh
+
+# --- XDG and pager ---
+ENV XDG_CONFIG_HOME=/home/vscode/.config \
+    XDG_DATA_HOME=/home/vscode/.local/share \
+    XDG_CACHE_HOME=/home/vscode/.cache \
+    XDG_STATE_HOME=/home/vscode/.local/state \
+    DOCKER_DEFAULT_PLATFORM=linux/amd64 \
+    PAGER=less \
+    TASK_TEMP_DIR=/tmp/task
+
+# --- task -g global Taskfile ---
+RUN ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /home/vscode/Taskfile.yaml \
+ && ln -s /workspace/.devcontainer/resources/Taskfile-global.yaml /root/Taskfile.yaml
+
+# --- Build tracking ---
+RUN date +%s > /container_build_id

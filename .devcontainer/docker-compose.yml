@@ -1,26 +1,27 @@
 # =============================================================================
-# VERSION CONFIGURATION — UPDATE THESE TO UPGRADE TOOLS
-# Renovate manages this file via the dockerfile datasource.
+# Runner layer — references pre-built images only; no build definitions here.
+# Images are built by: docker buildx bake -f versions.hcl -f docker-bake.hcl
+# Project name and image tags are scoped by COMPOSE_PROJECT_NAME from .env.
 # =============================================================================
-x-versions: &versions
-  args:
-    # renovate: datasource=golang-version depName=go
-    GO_VERSION: "1.26.4"
-    # renovate: datasource=github-releases depName=denoland/deno
-    DENO_VERSION: "2.8.2"
-    # renovate: datasource=github-releases depName=go-task/task
-    TASK_VERSION: "3.51.1"
-
-x-runtime: &runtime
-  context: .
-  dockerfile: Dockerfile
 
 services:
-  symphony-studio:
-    build:
-      <<: [*runtime, *versions]
-      target: final
-    image: symphony-studio
+  devcontainer-runtime:
+    image: devcontainer:${COMPOSE_PROJECT_NAME}
+    platform: linux/amd64
     command: sleep infinity
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
     volumes:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
+      - symphony-ssh:/home/vscode/.ssh
+
+  node-apps:
+    image: node-apps:${COMPOSE_PROJECT_NAME}
+    platform: linux/amd64
+    command: "true"
+
+volumes:
+  symphony-ssh:
+    name: symphony-ssh
+  node-modules:
+  corepack-cache:

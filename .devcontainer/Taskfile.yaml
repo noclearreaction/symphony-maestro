@@ -2,6 +2,7 @@
 # Devcontainer health checks and utility tasks.
 # Included by the root Taskfile.yaml under the devcontainer: namespace.
 version: "3"
+silent: true
 
 tasks:
   doctor:

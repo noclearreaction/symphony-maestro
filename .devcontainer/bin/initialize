@@ -1,0 +1,14 @@
+#!/bin/sh
+# .devcontainer/bin/initialize — runs on the host before the container is created via initializeCommand
+# This script is executed (not sourced), so it runs in its own process.
+set -e
+
+cd .devcontainer
+
+# Load project identity from .env so COMPOSE_PROJECT_NAME is available. 
+set -a
+. ./.env
+set +a
+
+# Build all devcontainer images, scoped to this project.
+exec docker buildx bake -f versions.hcl -f docker-bake.hcl

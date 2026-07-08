@@ -1,6 +1,34 @@
+.*
+!**/.gitignore
+!.gitattributes
+!.devcontainer
+!.taskfiles
+!**/.gitkeep
+
 .symphony/
+.task/
 node_modules/
 .DS_Store
 .env
+!.devcontainer/.env
 logs/
 .devcontainer/devcontainer-lock.json
+
+# Go binaries and artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+*.test
+*.out
+vendor/
+dist/
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

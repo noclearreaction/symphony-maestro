@@ -1,0 +1,12 @@
+# node-builder is supplied as a named context by the bake file
+FROM node-builder
+
+COPY node/pnpm-workspace.yaml /home/node/pnpm-workspace.yaml
+COPY node/package.json /home/node/package.json
+COPY node/pnpm-lock.yaml* /home/node/
+
+RUN --mount=type=cache,id=symphony-node-cache,target=/home/node/.cache/,uid=1000,gid=1000,sharing=locked \
+    --mount=type=cache,id=symphony-node-module-cache,target=/home/node/node_modules/,uid=1000,gid=1000,sharing=locked \
+    [ -f pnpm-lock.yaml ] && export ARGS="$ARGS --frozen-lockfile" ; \
+    pnpm install $ARGS; \
+    pnpm --filter=. --prod deploy dist

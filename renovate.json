@@ -2,21 +2,36 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "automerge": false,
   "ignoreUnstable": true,
+  "minimumReleaseAge": "1 day",
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Update ARG version pins in .devcontainer/Dockerfile",
-      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "description": "Update version pins in .devcontainer/versions.hcl",
+      "managerFilePatterns": ["/(^|/)versions\\.hcl$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>.+?)\\nARG \\S+=(?<currentValue>\\S+)"
+        "\\s*#\\s*renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>.+?)\\n\\s*[A-Za-z0-9_]+\\s*=\\s*[\"']?(?<currentValue>[^\\s\"']+)[\"']?"
       ]
     }
   ],
   "packageRules": [
     {
-      "matchFileNames": [".devcontainer/Dockerfile"],
+      "matchManagers": ["dockerfile"],
+      "enabled": false
+    },
+    {
+      "matchFileNames": [".devcontainer/versions.hcl"],
       "groupName": "devcontainer tools",
       "automerge": false
+    },
+    {
+      "matchDepNames": ["ubuntu"],
+      "ignoreUnstable": true,
+      "allowedVersions": "/^\\d+\\.04$/",
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d{2})$"
+    },
+    {
+      "matchDepNames": ["debian"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)-slim$"
     }
   ]
 }

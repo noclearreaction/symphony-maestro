@@ -1,0 +1,10 @@
+# download-base is supplied as a named context by the bake file
+FROM download-base
+
+ARG TASK_VERSION
+RUN curl -fL \
+        -o /tmp/task.tar.gz \
+        -- "https://github.com/go-task/task/releases/download/v${TASK_VERSION}/task_linux_amd64.tar.gz" \
+ && tar -xzf /tmp/task.tar.gz -C /srv/files task \
+ && rm /tmp/task.tar.gz \
+ && chmod +x /srv/files/task

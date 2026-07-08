@@ -1,0 +1,32 @@
+#!/bin/sh
+# .devcontainer/bin/post-start — runs on every container start via postStartCommand
+# This script is executed (not sourced), so it runs in its own process.
+set -e
+
+# Keep post-start fast: run only local tool checks.
+task devcontainer:doctor
+
+# Rubato lifecycle is managed via task namespace.
+task rubato:autostart
+
+# Optional: run dependency update checks when explicitly requested.
+# This can be slow due to network/API calls.
+if [ "${POSTSTART_CHECK_VERSIONS:-0}" = "1" ]; then
+	task devcontainer:versions
+fi
+
+# ---------------------------------------------------------------------------
+# Future hooks (add here when needed):
+# ---------------------------------------------------------------------------
+
+# Git hooks setup (when tools/hooks/ is added to this repo):
+# task hooks:install
+
+# ---------------------------------------------------------------------------
+# MCP sidecar stubs (add docker run invocations here when sidecars are needed):
+# ---------------------------------------------------------------------------
+
+# Example:
+# docker run -d --rm --name mcp-git \
+#   -v /var/run/docker.sock:/var/run/docker.sock \
+#   ghcr.io/org/mcp-git:latest

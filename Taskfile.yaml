@@ -1,13 +1,78 @@
 # Taskfile.yaml — root task runner for symphony-maestro
 version: "3"
+silent: true
+
+vars:
+  # Resolved once per invocation via gh CLI. Empty string if gh is not authed.
+  GITHUB_TOKEN:
+    sh: gh auth token 2>/dev/null || true
 
 includes:
   devcontainer:
-    taskfile: .devcontainer/Taskfile.yaml
-    dir: "."
+    taskfile: .taskfiles/Taskfile-devcontainer.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  node:
+    taskfile: .taskfiles/Taskfile-node.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  go:
+    taskfile: .taskfiles/Taskfile-go.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  rubato:
+    taskfile: .taskfiles/Taskfile-rubato.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  deno:
+    taskfile: .taskfiles/Taskfile-deno.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  task:
+    taskfile: .taskfiles/Taskfile-task.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  gh:
+    taskfile: .taskfiles/Taskfile-gh.yaml
+    dir: "{{.TASKFILE_DIR}}"
+  docker:
+    taskfile: .taskfiles/Taskfile-docker.yaml
+    dir: "{{.TASKFILE_DIR}}"
 
 tasks:
-  health:
-    desc: "Alias for devcontainer:doctor — check all tools are wired correctly"
+  usage:
+    desc: "Show available tasks"
+    aliases: [default, help]
+    summary: |
+      Usage: task [<namespace>:]<task> [-- <args>]
+
+      Top-level:
+        health      Alias for devcontainer:status
+
+      Namespaces:
+        devcontainer    Container health checks and utilities
+        node            Node package and image management
+        go              Go toolchain health
+        rubato          Rubato proxy lifecycle and logs
+        deno            Deno health
+        task            Task runner health
+        gh              GitHub CLI health
+        docker          Docker health
+
+      Run 'task <namespace>:usage' for namespace-scoped help.
+      Run 'task --summary <task>' for detailed usage of a specific task.
     cmds:
-      - task: devcontainer:doctor
+      - task --list
+
+  list:
+    desc: "List all available tasks"
+    summary: |
+      Usage: task -g list
+
+      Prints all available tasks across all namespaces.
+    cmds:
+      - task --list
+
+  health:
+    desc: "Alias for devcontainer:status — full container health report"
+    summary: |
+      Usage: task health
+
+      Runs devcontainer:status. Checks all required tools and reports
+      dependency versions.
+    cmds:
+      - task: devcontainer:status

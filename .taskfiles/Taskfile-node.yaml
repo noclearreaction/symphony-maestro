@@ -1,0 +1,302 @@
+# .taskfiles/Taskfile-node.yaml
+# Node package management tasks — dependencies managed via jq, built into image via Docker.
+# See .devcontainer/node/package.json for the managed package list.
+# Use task node:package:* and task node:trust:* — do not edit the files directly.
+version: "3"
+silent: true
+
+vars:
+  # Valid npm package name — must start and end with a word char; allows ._- in middle
+  RE_PKG_NAME: "^@?\\w([\\w._-]*\\w)?(/\\w([\\w._-]*\\w)?)?$"
+  # Strict semver: major.minor.patch with optional pre-release/build metadata
+  RE_SEMVER: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+][^\\s]+)?$"
+
+tasks:
+  usage:
+    desc: "Show node tasks"
+    aliases: [default, help]
+    summary: |
+      Usage: task -g node:<task> [-- <args>]
+
+      Image lifecycle:
+        build              Build the node-apps image via bake
+        install            Copy built tools into /opt/node  [requires write access]
+
+      Package management:
+        package:add        Add or update a dependency       -- <name>@<version>
+        package:rm         Remove a dependency              -- <name>
+        package:update     Update a dependency version      -- <name>@<version>
+        package:list       List current dependencies
+        package:view       Query npm registry for a package -- <name>
+        package:set-manager  Set the pnpm version           -- <version>
+
+      Build trust:
+        trust:add          Allow build scripts for a package  -- <name>
+        trust:rm           Remove build script trust          -- <name>
+        trust:list         List trusted packages
+
+      Run 'task -g --summary node:<task>' for detailed usage of a specific task.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
+  list:
+    desc: "List node tasks"
+    summary: |
+      Usage: task -g node:list
+
+      Prints all tasks defined in the node Taskfile.
+    cmds:
+      - task --list --taskfile {{.TASKFILE}}
+
+  build:
+    desc: >-
+      Build the node-apps image via bake
+    summary: |
+      Usage: task -g node:build
+
+      Builds the node-apps Docker image using docker buildx bake. Skipped
+      automatically when Dockerfiles, bake files, versions, or package
+      manifests are unchanged (Task source checksum).
+
+      Automatically invoked by node:install via deps.
+    dir: .devcontainer
+    sources:
+      - versions.hcl
+      - docker-bake.hcl
+      - docker/Dockerfile.node-apps
+      - docker/Dockerfile.node-builder
+      - node/package.json
+      - node/pnpm-workspace.yaml
+    cmds:
+      - docker buildx bake -f versions.hcl -f docker-bake.hcl node-apps
+
+  install:
+    desc: >-
+      Copy node tools from built image into /opt/node (no rebuild)
+    summary: |
+      Usage: sudo task -g node:install
+
+      Copies compiled node tools from the built image into /opt/node.
+      Requires write access to /opt/node — run with sudo or as root.
+
+      Automatically builds the image first via deps: [build].
+    deps: [build]
+    preconditions:
+      - sh: test -w /opt/node
+        msg: >-
+          /opt/node is not writable — run with sufficient privileges
+    vars:
+      CONTAINER_ID:
+        sh: docker create symphony-studio-node-apps
+    cmds:
+      - docker cp {{.CONTAINER_ID}}:/home/node/dist/. /opt/node/
+      - docker rm {{.CONTAINER_ID}}
+
+  package:add:
+    desc: >-
+      Add or update a package: task node:package:add -- <name>@<version>
+    summary: |
+      Usage: task -g node:package:add -- <name>@<version>
+
+      Adds or updates a dependency in .devcontainer/node/package.json.
+      Supports scoped packages: task -g node:package:add -- @scope/name@1.0.0
+
+      Does not rebuild the image — run node:build + node:install after.
+    dir: .devcontainer/node
+    vars:
+      # Split on \b@ — fires only on the version separator @, not the scope @
+      # Produces exactly 2 parts for valid input; 1 part when version is missing
+      NAME: >-
+        {{regexFind .RE_PKG_NAME (index (regexSplit "\\b@" .CLI_ARGS -1) 0)}}
+      VERSION: >-
+        {{if gt (regexSplit "\\b@" .CLI_ARGS -1 | len) 1}}{{regexFind .RE_SEMVER (index (regexSplit "\\b@" .CLI_ARGS -1) 1)}}{{end}}
+    preconditions:
+      - sh: >-
+          test {{regexSplit "\\b@" .CLI_ARGS -1 | len}} -eq 2
+        msg: >-
+          argument must be <name>@<version>, e.g. typescript@5.8.3
+      - sh: test -n {{.NAME | quote}}
+        msg: >-
+          name must be a valid package name, e.g. typescript or @scope/name
+      - sh: test -n {{.VERSION | quote}}
+        msg: >-
+          version must be a semver string, e.g. 5.8.3
+      - sh: >-
+          jq --arg name {{.NAME | quote}}
+          --arg version {{.VERSION | quote}}
+          '.dependencies[$name] = $version'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
+    cmds:
+      - mv /tmp/package.json.tmp package.json
+      - >-
+        echo added: {{.NAME | quote}}@{{.VERSION | quote}}
+
+  package:rm:
+    aliases: [package:remove]
+    desc: >-
+      Remove a package: task node:package:rm -- <name>
+    summary: |
+      Usage: task -g node:package:rm -- <name>
+
+      Removes a dependency from .devcontainer/node/package.json.
+
+      Does not rebuild the image — run node:build + node:install after.
+    dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
+    preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
+      - sh: >-
+          jq --arg name {{.PKG | quote}}
+          'del(.dependencies[$name])'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
+    cmds:
+      - mv /tmp/package.json.tmp package.json
+      - >-
+        echo removed: {{.PKG | quote}}
+
+  package:update:
+    desc: >-
+      Update a package version: task node:package:update -- <name>@<version>
+    summary: |
+      Usage: task -g node:package:update -- <name>@<version>
+
+      Alias for node:package:add. Updates the version of an existing
+      dependency in package.json.
+
+      Does not rebuild the image — run node:build + node:install after.
+    cmds:
+      - task: package:add
+        vars: { CLI_ARGS: "{{.CLI_ARGS}}" }
+
+  package:list:
+    aliases: [package:ls]
+    desc: >-
+      List direct dependencies from package.json
+    summary: |
+      Usage: task -g node:package:list
+
+      Prints the dependencies object from .devcontainer/node/package.json.
+    dir: .devcontainer/node
+    cmds:
+      - jq '.dependencies' package.json
+
+  package:view:
+    desc: >-
+      Query npm registry for latest version of a package: task node:package:view -- <name>
+    summary: |
+      Usage: task -g node:package:view -- <name>
+
+      Queries the npm registry via pnpm inside the node-apps container.
+      Useful for checking what version is available before adding a package.
+    dir: .devcontainer
+    vars:
+      PKG: >-
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
+    preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
+    cmds:
+      - docker compose run --rm node-apps pnpm view {{.PKG | quote}} version
+
+  package:set-manager:
+    desc: >-
+      Set the pnpm version: task node:package:set-manager -- <version>
+    summary: |
+      Usage: task -g node:package:set-manager -- <version>
+
+      Sets the packageManager field in package.json to pnpm@<version>.
+      Example: task -g node:package:set-manager -- 10.12.1
+    dir: .devcontainer/node
+    vars:
+      # group 1 = semver string; empty when CLI_ARGS is not semver-like
+      SEMVER: >-
+        {{regexFind .RE_SEMVER .CLI_ARGS}}
+    preconditions:
+      - sh: test -n {{.SEMVER | quote}}
+        msg: >-
+          version must be a semver string, e.g. 10.12.1
+      - sh: >-
+          jq --arg version pnpm@{{.SEMVER | quote}}
+          '.packageManager = $version'
+          package.json > /tmp/package.json.tmp
+        msg: >-
+          jq failed — package.json not updated
+    cmds:
+      - mv /tmp/package.json.tmp package.json
+      - >-
+        echo packageManager set to pnpm@{{.SEMVER | quote}}
+
+  trust:add:
+    desc: >-
+      Allow build scripts for a package: task node:trust:add -- <name>
+    summary: |
+      Usage: task -g node:trust:add -- <name>
+
+      Adds a package to allowBuilds in pnpm-workspace.yaml, permitting
+      its install scripts to run during pnpm install.
+    dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
+    preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
+      - sh: >-
+          jq --arg pkg {{.PKG | quote}}
+          '.allowBuilds[$pkg] = true'
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        msg: >-
+          jq failed — pnpm-workspace.yaml not updated
+    cmds:
+      - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - >-
+        echo trusted: {{.PKG | quote}}
+
+  trust:rm:
+    aliases: [trust:remove]
+    desc: >-
+      Remove build script trust for a package: task node:trust:rm -- <name>
+    summary: |
+      Usage: task -g node:trust:rm -- <name>
+
+      Removes a package from allowBuilds in pnpm-workspace.yaml.
+    dir: .devcontainer/node
+    vars:
+      PKG: >-
+        {{regexFind .RE_PKG_NAME .CLI_ARGS}}
+    preconditions:
+      - sh: test -n {{.PKG | quote}}
+        msg: >-
+          argument must be a valid package name, e.g. typescript or @scope/name
+      - sh: >-
+          jq --arg pkg {{.PKG | quote}}
+          'del(.allowBuilds[$pkg])'
+          pnpm-workspace.yaml > /tmp/pnpm-workspace.yaml.tmp
+        msg: >-
+          jq failed — pnpm-workspace.yaml not updated
+    cmds:
+      - mv /tmp/pnpm-workspace.yaml.tmp pnpm-workspace.yaml
+      - >-
+        echo removed trust: {{.PKG | quote}}
+
+  trust:list:
+    aliases: [trust:ls]
+    desc: >-
+      List trusted packages from pnpm-workspace.yaml
+    summary: |
+      Usage: task -g node:trust:list
+
+      Prints the allowBuilds object from .devcontainer/node/pnpm-workspace.yaml.
+    dir: .devcontainer/node
+    cmds:
+      - jq '.allowBuilds' pnpm-workspace.yaml
