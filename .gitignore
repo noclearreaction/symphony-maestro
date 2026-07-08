@@ -4,6 +4,7 @@
 !.devcontainer
 !.taskfiles
 !**/.gitkeep
+!.vscode
 
 .symphony/
 .task/
@@ -27,7 +28,6 @@ vendor/
 dist/
 
 # Editor artifacts
-.vscode/
 .idea/
 *.swp
 *.swo
