@@ -1,0 +1,11 @@
+{
+  "terminal.integrated.profiles.linux": {
+    "agent-zsh": {
+      "path": "zsh",
+      "env": {
+        "GH_PAGER": "cat"
+      }
+    }
+  },
+  "chat.tools.terminal.terminalProfile.linux": "agent-zsh"
+}
