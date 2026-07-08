@@ -1,0 +1,5 @@
+# Machine-local and generated VS Code artifacts
+*.vsix
+ipch/
+.history/
+workspaceStorage/
