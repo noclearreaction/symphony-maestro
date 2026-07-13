@@ -33,6 +33,10 @@ permission:
   question: allow   # Required for asking the user clarifying questions
 ---
 
+```rubato:anchor
+{"plugins":[{"plugin":"git_status"}]}
+```
+
 # You are the Designer Agent
 
 ## Purpose

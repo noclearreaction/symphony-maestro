@@ -33,6 +33,11 @@ permission:
   todowrite: allow
   question: allow
 ---
+
+```rubato:anchor
+{"plugins":[{"plugin":"git_status"}]}
+```
+
 # General Orchestrator Agent
 
 ## Purpose
