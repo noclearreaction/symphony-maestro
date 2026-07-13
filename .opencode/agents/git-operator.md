@@ -44,6 +44,10 @@ permission:
     "gh issue view *": allow
 ---
 
+```rubato:anchor
+{"plugins":[{"plugin":"git_status"}]}
+```
+
 # Git Operator Agent
 
 ## Purpose
