@@ -108,33 +108,48 @@ maintenance and drift from upstream (tension with vision §6 community alignment
 | Criterion | Opt 1 (granularity) | Opt 2 (custom schema) | Opt 3 (fork) |
 | --- | --- | --- | --- |
 | Community alignment (vision §6) | High | High | Low |
-| Upfront effort | Low | High | Medium |
-| Depends on unverified capability | No | **Yes** (custom schemas) | No |
+| Upfront effort | Low | Medium | Medium |
+| Depends on unverified capability | No | No — **confirmed supported** | No |
 | `apply` still needs work | Wrap | Wrap/replace | Rewrite |
 | Artifact naming clarity | Medium (`tasks.md` overloaded) | High | Medium |
 | Maintenance burden | Low | Low–Medium | High |
 
+> **Update (research):** OpenSpec custom schemas are **first-class and confirmed**
+> (`openspec schema fork/init/validate`, stored in `openspec/schemas/`,
+> version-controlled, per-change selectable). Prior art exists — the
+> `superpowers-bridge` community schema — reviewed in
+> [`superpowers-bridge-review.md`](superpowers-bridge-review.md). This removes the
+> Option 2 blocker and enables the **1 + 2 combination** below.
+
 ## Recommendation
 
-Adopt **Option 1** (granularity bridge). It confirms the Human's hypothesis:
-`tasks.md` at BDD/SDD granularity ("use TDD to implement spec X") bridges the gap
-with the skills as written, keeps us on community tooling, and reduces `apply` from
-"replace" to "wrap." Keep **Option 2** as a later refinement *if* custom schemas
-turn out to be supported and `tasks.md` overloading becomes painful.
+Adopt a **combination of Option 1 and Option 2** (the Human's preferred direction):
+build a custom **`tdd-driven` schema** (Option 2) whose `tasks.md` stays **coarse**
+("use TDD to satisfy spec X") and whose `apply.tracks: tasks.md` while a finer
+**inner loop** drives execution (Option 1). This lets both frameworks work as
+designed — OpenSpec governs *what/when* (artifact lifecycle), the TDD loop governs
+*how* (red-green-refactor) — without forcing either into the other.
+
+Borrow proven *mechanisms* from `superpowers-bridge` (the `apply.requires` ≠
+`apply.tracks` split, PRECHECK evidence gates, evidence-first retrospective/audit)
+but **not** its plan-centric execution — see
+[`superpowers-bridge-review.md`](superpowers-bridge-review.md) for why that risks
+mock TDD.
 
 **Residual gap to resolve regardless of option:** `openspec-apply-change` assumes a
 single agent editing inline and marking done. Our inner loop is multi-agent with
-per-red/green Human approval. The apply behaviour must be adapted so "execute a
-task" means "hand off to the orchestrator," not "edit files directly."
+per-red/green Human approval. The custom schema's `apply.instruction` must hand off
+"execute a task" to the orchestrator, not "edit files directly."
 
 ## Open questions feeding this decision
 
-1. **Does OpenSpec support user-defined schemas?** Determines whether Option 2 is
-   even available. *Needs verification before Option 2 can be chosen.*
+1. ~~**Does OpenSpec support user-defined schemas?**~~ **RESOLVED: yes** —
+   `openspec schema fork/init/validate`, schemas in `openspec/schemas/`. See
+   [`superpowers-bridge-review.md`](superpowers-bridge-review.md).
 2. **Can `tasks.md` item granularity be enforced**, or only conventionally
-   encouraged via schema `rules`?
-3. **Where does the `test-list` live** relative to the change folder so `propose`
-   can scaffold it and `apply` can read it?
+   encouraged via schema `instruction`/`rules`?
+3. **Where does the `test-list` live** relative to the change folder — as a schema
+   `artifact` (so `propose`/`continue` scaffolds it and `apply` reads it)?
 
 ## Consequences (if Option 1 is accepted)
 
