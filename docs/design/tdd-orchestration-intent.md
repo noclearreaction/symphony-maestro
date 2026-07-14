@@ -236,6 +236,10 @@ flowchart TD
   **fanning out sub-agents** for security, quality, style, and refactoring
   opportunities. Motivated by [`vision.md`](../../governance/vision.md) §4
   *Hygiene over Speed* and §3 (narrow sub-agents).
+- **Acceptance validation:** the auditor also attempts to prove the Gherkin DoD is
+  **(a) reasonable** and **(b) fulfilled** — the interim stand-in for executable
+  `godog` acceptance tests, and a lasting reinforcement layer thereafter. See
+  [`acceptance-validation.md`](acceptance-validation.md).
 - **Outputs:** `audit/*.md` findings that may feed refactoring or re-open the loop.
 
 ### 6.6 Refactor agents (code, tests)
@@ -296,6 +300,11 @@ refactor → repeat until the list is empty and the DoD passes.
    `openspec-sync-specs`, `openspec-archive-change`) are directly usable by these
    agents or conflict with the TDD loop — to be reconciled before the agent
    contracts are specified.
+7. **Acceptance validation horizon.** Long-term the Gherkin DoD becomes executable
+   via [`godog`](https://github.com/cucumber/godog); in the interim an AI Auditor
+   proves the spec (a) reasonable and (b) fulfilled. The OpenSpec-scenario →
+   `.feature` bridge and the auditor's independence mechanics are open — see
+   [`acceptance-validation.md`](acceptance-validation.md).
 
 ## 9. References
 
@@ -305,6 +314,7 @@ refactor → repeat until the list is empty and the DoD passes.
 - Steve Freeman & Nat Pryce — *Growing Object-Oriented Software, Guided by Tests* (double-loop TDD): <http://www.growing-object-oriented-software.com/>
 - Dan North — *Introducing BDD*: <https://dannorth.net/introducing-bdd/>
 - Cucumber — *Gherkin Reference* (Given/When/Then): <https://cucumber.io/docs/gherkin/reference/>
+- godog — official Cucumber BDD framework for Go (executable acceptance): <https://github.com/cucumber/godog>
 - Alistair Cockburn — *Walking Skeleton* (c2 wiki summary): <https://wiki.c2.com/?WalkingSkeleton>
 - Robert C. Martin — *The Transformation Priority Premise* (test ordering): <https://blog.cleancoder.com/uncle-bob/2013/05/27/TransformationPriorityAndSorting.html>
 - Martin Fowler — *Refactoring*: <https://refactoring.com/>
