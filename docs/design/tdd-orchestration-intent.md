@@ -8,6 +8,12 @@
 >
 > **Audience:** the Human owner and the agents that will help specify the system.
 
+> **Animating principle:** *Automation should make rigor affordable, not optional.*
+> LLMs lowered the cost of *generating* code, not the cost of *knowing it is
+> correct*; this whole design points cheap labour at the tedium of the old
+> disciplines so that following them is the path of least resistance. See
+> [`strategy/goals.md`](../../strategy/goals.md) §1 *Rigor Made Affordable*.
+
 ## 1. Purpose
 
 Symphony's core is a collaborative, test-driven development loop in which Human
