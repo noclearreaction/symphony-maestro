@@ -35,15 +35,48 @@ always current because they are executed).
 
 ## Interim (and later reinforcement): the AI Auditor
 
-Until step definitions exist, the **Auditor agent** (intent §6.5) stands in. It
-attempts to *prove* two **distinct** properties of the cucumber spec:
+Until step definitions exist, the **Auditor agent** (intent §6.5) stands in. Its
+job is **not to prove the work succeeds — it is to prove the work *fails*.** It
+attacks two **distinct** properties of the cucumber spec, seeking a
+counterexample in each:
 
-- **(a) Reasonable** — the Gherkin is well-formed, internally coherent,
-  non-contradictory, adequately complete, and **testable**. This is a review of the
-  **DoD itself**, independent of any code.
-- **(b) Fulfilled** — the implementation satisfies each scenario, argued with
-  **evidence** (citing specific unit tests, code paths, observed behaviour). This is
-  a review of the **implementation against the DoD**.
+- **(a) Reasonable** — the Auditor tries to show the Gherkin is *un*reasonable:
+  ill-formed, internally contradictory, ambiguous, under-specified, or
+  **untestable**. A single genuine contradiction or gap refutes "reasonable." This
+  is a review of the **DoD itself**, independent of any code.
+- **(b) Fulfilled** — the Auditor tries to show the implementation does *not*
+  satisfy the spec: it hunts a scenario, edge case, or input for which the
+  behaviour diverges, citing **evidence** (a failing/absent test, a code path, an
+  observed behaviour). A single genuine divergence refutes "fulfilled." This is a
+  review of the **implementation against the DoD**.
+
+### The Auditor's stance: prove it *fails*
+
+The Auditor operates by **refutation**, not confirmation. Its success condition is
+**finding a failure** — a counterexample, a contradiction, an unmet scenario, a
+coverage gap. This is a direct application of two long-standing results:
+
+- **Popper (falsifiability):** there is a logical asymmetry between verification
+  and refutation — no finite amount of confirming evidence verifies a universal
+  claim, but *a single counter-instance refutes it*
+  ([SEP: Karl Popper](https://plato.stanford.edu/entries/popper/); *Conjectures and
+  Refutations*, 1963). "It works" is not establishable; "it fails here" is.
+- **Dijkstra:** *"Program testing can be used to show the presence of bugs, but
+  never to show their absence"* (EWD249, *Notes on Structured Programming*, 1970 —
+  [E.W. Dijkstra Archive](https://www.cs.utexas.edu/users/EWD/ewd02xx/EWD249.PDF)).
+
+Consequences for the verdict:
+
+- A **PASS is never "proven correct."** It is *"sustained refutation attempts found
+  no failure (yet)"* — provisional corroboration, not verification. It carries the
+  record of *what was attacked and how hard*, so the pass is legible and
+  re-testable.
+- The Auditor's **evidence is its refutation attempts**, not confirmations: the
+  scenarios probed, edge cases constructed, inputs fuzzed, contradictions searched
+  for. An audit that lists no serious attack is not a pass — it is an empty test.
+- This is the structural antidote to confirmation theatre: **an agent whose job is
+  to break the work cannot rubber-stamp it.** A clean pass must be *earned* against
+  a documented battery of break-attempts.
 
 ### Why the Auditor is *reinforcement*, not just a stopgap
 
@@ -69,22 +102,25 @@ passing. That judgment stays with the Auditor (and, finally, the Human —
 
 An AI Auditor asserting "fulfilled" risks a failure analogous to the **mock-TDD**
 concern (see [`superpowers-bridge-review.md`](superpowers-bridge-review.md)): an
-eager auditor that rubber-stamps. Per vision §3, judgment is a *fallback* for where
-automation does not yet exist; the interim (b) verdict is exactly that fallback, to
-be superseded by godog. Mitigations:
+eager auditor that rubber-stamps. The primary guard is the **refutation stance**
+above — an auditor that succeeds only by *finding failure* cannot pass by
+confirmation. Per vision §3, judgment is a *fallback* for where automation does not
+yet exist; the interim (b) verdict is exactly that fallback, to be superseded by
+godog. Reinforcing mitigations:
 
 1. **Independent context.** The Auditor must not review work from the implementer's
    context ([`AGENTS.md`](../../AGENTS.md): *an agent should not review its own work
-   from the same context*). It runs on artifacts + evidence only.
-2. **Evidence-first.** Every "fulfilled" claim cites a concrete test name / commit /
-   observed behaviour — never prose assertion. (Borrowed from `superpowers-bridge`'s
-   evidence-first retrospective.)
-3. **Falsifiable stance.** The Auditor must be able — and expected — to return
-   **"NOT fulfilled"** or **"spec unreasonable"** and route back to Discovery via the
-   escape hatch (intent §2, §6.1). A verdict with no possible failure mode is
-   theatre.
-4. **Provisional interim verdicts.** An interim (b) "fulfilled" is flagged as
-   *judgment-based* until a godog scenario backs it.
+   from the same context*). It runs on artifacts + evidence only — otherwise it
+   inherits the implementer's blind spots and cannot find their failures.
+2. **Evidence-is-attempts.** Every verdict cites the **refutation attempts made**
+   (scenarios probed, edge cases, inputs) and their outcomes — never a bare
+   "it works." (Aligned with `superpowers-bridge`'s evidence-first retrospective.)
+3. **Reachable failure verdict.** The Auditor must be able — and expected — to
+   return **"NOT fulfilled"** or **"spec unreasonable"** and route back to Discovery
+   via the escape hatch (intent §2, §6.1). A verdict with no reachable failure mode
+   is theatre.
+4. **Provisional PASS.** An interim "no failure found" is provisional (Popperian
+   corroboration), flagged *judgment-based* until a godog scenario backs it.
 5. **Human is final authority** (constitution §1, §4).
 
 ## Where it plugs into the loop
@@ -118,6 +154,8 @@ be superseded by godog. Mitigations:
 - [Cucumber — Gherkin Reference](https://cucumber.io/docs/gherkin/reference/)
 - [Cucumber — BDD](https://cucumber.io/docs/bdd/)
 - [Dan North — Introducing BDD](https://dannorth.net/introducing-bdd/)
+- [Karl Popper — falsifiability (SEP)](https://plato.stanford.edu/entries/popper/); *Conjectures and Refutations* (1963)
+- [Edsger W. Dijkstra — EWD249, *Notes on Structured Programming* (1970)](https://www.cs.utexas.edu/users/EWD/ewd02xx/EWD249.PDF) ("testing shows the presence, not the absence of bugs")
 - Local: [`tdd-orchestration-intent.md`](tdd-orchestration-intent.md) §4, §6.5;
   [`superpowers-bridge-review.md`](superpowers-bridge-review.md) (evidence-first,
   mock-TDD risk); [`governance/vision.md`](../../governance/vision.md) §3–§4;

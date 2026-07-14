@@ -236,9 +236,13 @@ flowchart TD
   **fanning out sub-agents** for security, quality, style, and refactoring
   opportunities. Motivated by [`vision.md`](../../governance/vision.md) §4
   *Hygiene over Speed* and §3 (narrow sub-agents).
-- **Acceptance validation:** the auditor also attempts to prove the Gherkin DoD is
-  **(a) reasonable** and **(b) fulfilled** — the interim stand-in for executable
-  `godog` acceptance tests, and a lasting reinforcement layer thereafter. See
+- **Acceptance validation (refutation stance):** the auditor's job is **not to
+  prove the work succeeds but to prove it *fails*** — to attack the Gherkin DoD,
+  seeking to show it **(a) unreasonable** or **(b) not fulfilled**. A PASS is only
+  the *failure to refute* after genuine attack, never "proven correct" (Popper;
+  Dijkstra: *testing shows the presence, not the absence of bugs*). This is the
+  interim stand-in for executable `godog` acceptance tests, and a lasting
+  reinforcement layer thereafter. See
   [`acceptance-validation.md`](acceptance-validation.md).
 - **Outputs:** `audit/*.md` findings that may feed refactoring or re-open the loop.
 
