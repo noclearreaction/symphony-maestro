@@ -6,8 +6,11 @@ set -e
 # Keep post-start fast: run only local tool checks.
 task devcontainer:doctor
 
-# Rubato lifecycle is managed via task namespace.
-task rubato:autostart
+# Rubato is not started here. The backgrounded process did not survive
+# post-start's process teardown: the task reported success, wrote an empty log
+# and left nothing listening. It now runs as the mistral-rubato compose service,
+# started by runServices in devcontainer.json and supervised by compose.
+# devcontainer:doctor above verifies it is reachable.
 
 # Optional: run dependency update checks when explicitly requested.
 # This can be slow due to network/API calls.
