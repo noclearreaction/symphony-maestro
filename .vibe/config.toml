@@ -1,0 +1,53 @@
+# Project-local Mistral Vibe configuration.
+#
+# Overrides ~/.vibe/config.toml. Only read when this folder is trusted and Vibe
+# is launched from the repository root (or with --workdir). Any setting here can
+# also be overridden per-shell with a VIBE_-prefixed env var, e.g.
+# VIBE_ACTIVE_MODEL=local.
+#
+# Keys are commented out where the built-in default is already what we want —
+# uncomment to diverge. See .vibe/README.md for the directory layout.
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+# Leave unset to follow the server-routed recommended model rather than pinning
+# a specific alias. Individual agents can still pin their own via active_model
+# in .vibe/agents/<name>.toml (reviewer.toml does this).
+# active_model = "mistral-medium-3.5"
+
+# ---------------------------------------------------------------------------
+# Agents
+# ---------------------------------------------------------------------------
+# Agent used when --agent is not passed. Valid: "ask", "plan", "accept-edits",
+# "auto-approve", or any profile in .vibe/agents/ or ~/.vibe/agents/.
+# Subagents (e.g. "explore") are rejected.
+default_agent = "accept-edits"
+
+# Additional agent search paths — the cleanest way to mount shared or team-wide
+# agents without writing into $VIBE_HOME.
+# agent_paths = ["/path/to/shared/agents"]
+
+# enabled_agents = ["ask", "plan"]
+# disabled_agents = ["auto-approve"]
+# installed_agents = ["lean"]        # opt-in builtins
+
+# ---------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------
+# Matchers accept exact names, globs ("bash*"), or regex with a "re:" prefix.
+# tool_paths = ["/path/to/custom/tools"]
+# enabled_tools = ["bash", "read_file", "grep"]
+# disabled_tools = ["web_fetch"]
+
+# Commands the agent may run without prompting. Note that `find` still prompts
+# when it carries -exec/-execdir/-ok/-okdir, allowlist or not.
+# [tools.bash]
+# allowlist = ["git", "task", "go", "deno", "node"]
+
+# ---------------------------------------------------------------------------
+# Skills
+# ---------------------------------------------------------------------------
+# skill_paths = ["/path/to/custom/skills"]
+# enabled_skills = ["vibe", "custom-*"]
+# disabled_skills = ["experimental-*"]

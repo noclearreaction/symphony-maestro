@@ -1,0 +1,33 @@
+# Agent type: "agent" (user-facing) or "subagent" (delegation-only)
+agent_type = "agent"
+
+system_prompt_id = "reviewer"
+active_model = "mistral-medium-3.5"
+
+# Friendly name shown in UI
+display_name = "Reviewer"
+
+# Description
+description = "Code review specialist agent"
+
+# Safety level: "safe", "neutral", "destructive", or "yolo"
+# An invalid value silently drops this profile — the agent will report as "not found".
+# safety = "safe"
+
+# Tool controls
+# Explicitly enable specific tools
+# enabled_tools = ["read_file", "grep"]
+
+# Disable tools this agent shouldn't use
+# disabled_tools = ["edit", "write_file"]
+
+# Per-tool permissions (overrides global settings)
+# [tools.bash]
+# "ask", "always", or "never"
+# permission = "never"
+
+# [tools.read_file]
+# permission = "always"
+
+# [tools.grep]
+# permission = "always"

@@ -3,6 +3,7 @@
 !.gitattributes
 !.devcontainer
 !.taskfiles
+!.vibe
 !**/.gitkeep
 !.vscode
 
