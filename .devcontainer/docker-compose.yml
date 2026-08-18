@@ -15,6 +15,11 @@ services:
       - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:cached
       - symphony-ssh:/home/vscode/.ssh
       - mistral-vibe:/home/vscode/.vibe
+      # Claude Code state: session transcripts, prompt history, memory,
+      # credentials. Without this it lives in the container's writable layer
+      # and is lost on every rebuild. CLAUDE_CONFIG_DIR in devcontainer.json
+      # pulls ~/.claude.json in here too, so the whole state is on one volume.
+      - claude-code:/home/vscode/.claude
 
   # Rubato instance dedicated to Mistral upstream (Vibe). The existing rubato
   # on :8080 serves opencode against OpenRouter; upstream is a single env var,
@@ -53,5 +58,7 @@ volumes:
     name: symphony-ssh
   mistral-vibe:
     name: mistral-vibe
+  claude-code:
+    name: claude-code
   node-modules:
   corepack-cache:

@@ -27,7 +27,8 @@
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
     "OPENAI_BASE_URL": "http://127.0.0.1:8080/v1",
-    "OPENAI_API_KEY": "rubato-local"
+    "OPENAI_API_KEY": "rubato-local",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
   },
   "shutdownAction": "stopCompose",
   "customizations": {
