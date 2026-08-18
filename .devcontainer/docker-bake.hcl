@@ -83,6 +83,18 @@ target "task-binary" {
   }
 }
 
+target "vibe-runtime" {
+  context    = "."
+  dockerfile = "docker/Dockerfile.vibe-runtime"
+  platforms  = [PLATFORM]
+  contexts = {
+    download-base = "target:download-base"
+  }
+  args = {
+    VIBE_VERSION = VERSIONS.vibe
+  }
+}
+
 target "node-apps" {
   context    = "."
   dockerfile = "docker/Dockerfile.node-apps"
@@ -120,11 +132,13 @@ target "devcontainer" {
     deno-runtime = "target:deno-runtime"
     task-binary  = "target:task-binary"
     node-apps    = "target:node-apps"
+    vibe-runtime = "target:vibe-runtime"
   }
   args = {
     UBUNTU_VERSION = VERSIONS.ubuntu
     GO_VERSION     = VERSIONS.go
     DENO_VERSION   = VERSIONS.deno
+    VIBE_VERSION   = VERSIONS.vibe
   }
   tags = ["devcontainer:${PROJECT}"]
 }
