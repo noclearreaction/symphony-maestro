@@ -1,0 +1,58 @@
+# check=skip=InvalidDefaultArgInFrom
+# Rubato proxy image.
+#
+# Built from repository source rather than from the devcontainer image. Rubato
+# is a standalone service that will likely move to its own repo, and it should
+# not inherit the devcontainer's full toolchain.
+#
+# This target's bake context is the repository root, not .devcontainer/,
+# because the Go sources live outside it.
+ARG GO_VERSION
+ARG DEBIAN_VERSION
+
+FROM go-runtime AS go-stage
+
+FROM golang:${GO_VERSION}-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+COPY cmd/rubato ./cmd/rubato
+COPY internal/rubato ./internal/rubato
+RUN CGO_ENABLED=0 go build -trimpath -o /out/rubato ./cmd/rubato
+
+FROM debian:${DEBIAN_VERSION}
+ARG GO_VERSION
+
+# git: the git_status plugin shells out to git against the mounted workspace.
+# openssh-client: needed once ahead/behind consults the upstream.
+# ca-certificates: HTTPS to the model API upstream.
+# passwd: debian-slim ships no useradd/groupadd.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        git \
+        openssh-client \
+        ca-certificates \
+        passwd \
+ && rm -rf /var/lib/apt/lists/*
+
+# Go toolchain — required only by the go_test plugin, which runs `go test` in
+# the mounted workspace. Copied from the same go-runtime stage the devcontainer
+# uses so test results match. Remove this block if go_test is retired.
+COPY --from=go-stage /srv/files/go${GO_VERSION} /opt/go${GO_VERSION}
+ENV GOROOT=/opt/go${GO_VERSION} \
+    GOPATH=/home/vscode/go \
+    GOCACHE=/home/vscode/.cache/go-build \
+    PATH=/opt/go${GO_VERSION}/bin:$PATH
+
+# uid/gid 1000 matches the devcontainer's vscode user, so the bind-mounted
+# workspace and the shared ssh volume keep usable ownership.
+RUN groupadd --gid 1000 vscode \
+ && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode \
+ && mkdir -p /home/vscode/.ssh /home/vscode/go /home/vscode/.cache/go-build \
+ && chown -R vscode:vscode /home/vscode \
+ && chmod 700 /home/vscode/.ssh
+
+COPY --from=build /out/rubato /usr/local/bin/rubato
+
+USER vscode
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/rubato"]

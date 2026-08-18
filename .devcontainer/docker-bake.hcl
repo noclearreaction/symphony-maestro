@@ -6,15 +6,19 @@
 #
 # Versions are defined in versions.hcl. Load both files together:
 #
-#   docker buildx bake -f .devcontainer/versions.hcl -f .devcontainer/docker-bake.hcl
-#   docker buildx bake -f .devcontainer/versions.hcl -f .devcontainer/docker-bake.hcl --print
+#   docker buildx bake --allow=fs.read=.. -f versions.hcl -f docker-bake.hcl
+#   docker buildx bake --allow=fs.read=.. -f versions.hcl -f docker-bake.hcl --print
+#
+# --allow=fs.read=.. is required by the rubato-runtime target, whose context is
+# the repository root rather than .devcontainer/. Run from .devcontainer/.
 # =============================================================================
 
 group "default" {
   targets = [
-    "devcontainer", 
-    "node-apps", 
-    "renovate"
+    "devcontainer",
+    "node-apps",
+    "renovate",
+    "rubato-runtime"
   ]
 }
 
@@ -103,6 +107,29 @@ target "node-apps" {
     node-builder = "target:node-builder"
   }
   tags = ["node-apps:${PROJECT}"]
+}
+
+# ---------------------------------------------------------------------------
+# Rubato — standalone proxy, built from repo source
+#
+# Context is the repository root, unlike every other target, because the Go
+# sources live outside .devcontainer/. Deliberately does not build on the
+# devcontainer image: rubato is a separate service and should not inherit the
+# full development toolchain.
+# ---------------------------------------------------------------------------
+
+target "rubato-runtime" {
+  context    = ".."
+  dockerfile = ".devcontainer/docker/Dockerfile.rubato-runtime"
+  platforms  = [PLATFORM]
+  contexts = {
+    go-runtime = "target:go-runtime"
+  }
+  args = {
+    GO_VERSION     = VERSIONS.go
+    DEBIAN_VERSION = VERSIONS.debian
+  }
+  tags = ["rubato:${PROJECT}"]
 }
 
 # ---------------------------------------------------------------------------

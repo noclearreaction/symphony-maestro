@@ -16,6 +16,33 @@ services:
       - symphony-ssh:/home/vscode/.ssh
       - mistral-vibe:/home/vscode/.vibe
 
+  # Rubato instance dedicated to Mistral upstream (Vibe). The existing rubato
+  # on :8080 serves opencode against OpenRouter; upstream is a single env var,
+  # so a second instance is required rather than a second route.
+  # Plugins shell out to git/go against the repo, so this needs the same
+  # workspace mount at the same path and working_dir.
+  mistral-rubato:
+    image: rubato:${COMPOSE_PROJECT_NAME}
+    platform: linux/amd64
+    user: vscode
+    working_dir: /workspace
+    environment:
+      RUBATO_LISTEN_ADDR: ":8081"
+      RUBATO_UPSTREAM_URL: https://api.mistral.ai
+    volumes:
+      # Read-only: the proxy only inspects the repo, it never writes to it.
+      - ${LOCAL_WORKSPACE_FOLDER:-..}:/workspace:ro
+      # Read-only so git_status can reach the upstream for ahead/behind counts.
+      # Note this places the private key in a network-reachable proxy container.
+      - symphony-ssh:/home/vscode/.ssh:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   node-apps:
     image: node-apps:${COMPOSE_PROJECT_NAME}
     platform: linux/amd64

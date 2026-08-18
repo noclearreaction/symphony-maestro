@@ -3,7 +3,7 @@
   "initializeCommand": ".devcontainer/bin/initialize",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer-runtime",
-  "runServices": ["devcontainer-runtime"],
+  "runServices": ["devcontainer-runtime", "mistral-rubato"],
   "workspaceFolder": "/workspace",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:1": {
