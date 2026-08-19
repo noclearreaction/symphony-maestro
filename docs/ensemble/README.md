@@ -274,9 +274,10 @@ every session.
 So there are two kinds of attachment, and only one of them is a state.
 
 **Owning attachment** is interactive: the human takes the session and drives it.
-A player is *live* when `Working` or `Attached`, and a live player does not accept
-work — `assign` is refused rather than queued behind the human. Available from
-`Idle`, `AwaitingReview` and `Faulted`, and held until the human detaches.
+A player is *live* when `Working` or `Attached`, and a live player does not take
+work off the queue. The assignment is not rejected — it waits, and starts when
+the human detaches. Available from `Idle`, `AwaitingReview` and `Faulted`, and
+held until then.
 
 **Observing** is read-only and takes nothing. It streams the same
 `session/update` notifications the driver sees, so it works in any state
@@ -292,10 +293,10 @@ owning kind.
 a first-class move rather than something approximated by pasting diffs into the
 principal.
 
-Later, the conflict becomes a choice rather than a refusal: show queued
-assignments in the TUI and let the human **pull** one into the session they are
-already in. Same exclusivity, with the handoff made deliberate instead of
-rejected.
+Later, the wait becomes a choice: show the player's queued assignments in the TUI
+and let the human **pull** one into the session they are already in, rather than
+detaching and letting the scheduler start it. Same exclusivity — one owner
+throughout — with the handoff made deliberate instead of merely timed.
 
 ### Completion
 
@@ -358,15 +359,19 @@ stateDiagram-v2
 
   note right of Attached
     Live: a human owns the session.
-    assign() is refused, not queued.
+    Queued work waits, it is not refused.
   end note
 ```
 
 ### Assigning is not running
 
-`assign` puts work on a queue. Ensemble runs it when a worker is free, and the
-number of workers is **operator configuration, not a tool parameter** — nothing
-a principal calls can widen it.
+`assign` puts work on a queue. A queued assignment starts when **two** things are
+true: a worker is free, and its player is not live — neither `Working` nor held
+`Attached` by a human. Until then it waits. `assign` does not fail for either
+reason.
+
+The number of workers is **operator configuration, not a tool parameter** —
+nothing a principal calls can widen it.
 
 **Workers have no relationship to players.** They are a pool of execution slots
 shared across every section: ten players and one worker is a perfectly ordinary
@@ -505,7 +510,7 @@ classDiagram
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `assign(assignments[])` | no | `Player[]` | Queue work for named players. Fails per-player if the player is not `Idle` — including when a human holds it `Attached` — but never for capacity. |
+| `assign(assignments[])` | no | `Player[]` | Queue work for named players. Does not fail for capacity or for a busy player — queued work waits for both. |
 | `assign_sync(assignments[], timeout)` | yes | `Result[]` | Assign and wait in a single turn — the reason it exists. |
 | `wait(players?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps timeout, returns `pending` rather than hanging. |
 | `status(players?)` | no | `Status[]` | Cheap poll. Omit `players` for the whole roster. |
