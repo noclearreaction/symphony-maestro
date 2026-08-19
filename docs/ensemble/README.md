@@ -1,5 +1,15 @@
 # Ensemble
 
+> **Status: PROVISIONAL — not ratified, not agreed, nothing built.** A first pass
+> written in one sitting, and it shows: the substrate is undecided, the tool
+> surface is unimplemented and untested against a real principal, and several
+> conclusions here reversed at least once while being written. Treat every
+> specific — tool names, states, the policy choice — as a proposal to argue with,
+> not a decision to build from.
+>
+> What is firmer than the rest are the [ground rules](#1-ground-rules), because
+> they were verified against the shipped binary rather than reasoned about.
+
 Design plan. Two frameworks sit between a principal and the section of players it
 drives: an **orchestration layer** that schedules work and collects results, and
 a **policy layer** that hands out privileges the players cannot exceed.

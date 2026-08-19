@@ -9,7 +9,14 @@
 
 Not controlled by any config key. It is a function of how Vibe was invoked, and
 there is no flag to suppress it in programmatic mode or add it in interactive
-mode.
+mode. `_run_programmatic_mode()` hardcodes `headless=True`, and the same path
+also strips `ask_user_question` and `exit_plan_mode` from the tool list — so a
+`-p` session cannot ask even if it ignores the instruction.
+
+**This is a property of the CLI, not of Vibe.** `headless` is a field on
+`SessionOptions`, and the ACP front-end (`vibe/acp/agent.py`) omits it, so it
+defaults to `False`. Verified on a live ACP session: no `# Headless Mode`
+section, and a system prompt 384 chars shorter than the same work under `-p`.
 
 A `-p` session's system prompt is therefore 385 chars larger than the same
 session run interactively.

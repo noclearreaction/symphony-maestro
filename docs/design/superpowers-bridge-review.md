@@ -1,6 +1,7 @@
 # Review: `superpowers-bridge` OpenSpec Schema & Superpowers TDD
 
-> **Status:** Review notes. Informs
+> **Status:** PROVISIONAL review notes — a reading of external prior art, not a
+> decision. Informs
 > [`tdd-openspec-reconciliation.md`](tdd-openspec-reconciliation.md).
 > **Verdict:** *Borrow the mechanisms, reject the execution philosophy.* The schema
 > is strong prior art that **validates Option 2** (custom schemas work and are

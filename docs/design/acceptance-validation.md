@@ -1,6 +1,6 @@
 # Design Note: Acceptance (DoD) Validation Strategy
 
-> **Status:** Design intent. Extends
+> **Status:** PROVISIONAL design intent — not ratified. Extends
 > [`tdd-orchestration-intent.md`](tdd-orchestration-intent.md) §4 (outer loop /
 > DoD) and §6.5 (Auditor). Captures how the Gherkin acceptance suite is *validated*
 > across two horizons.

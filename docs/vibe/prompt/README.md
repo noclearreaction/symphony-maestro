@@ -1,5 +1,11 @@
 # How Vibe builds its system prompt
 
+> **Status:** Observational, not provisional — these are measurements of a
+> shipped binary rather than proposals. But they are **pinned to Vibe 2.24.1**
+> and will drift: every fragment, gate and character count below is what that
+> version does, and an upgrade can change any of it without notice. Re-measure
+> before relying on a number.
+
 Vibe sends the model a **single system message**, built by concatenating one
 replaceable base prompt with a series of appended fragments.
 
