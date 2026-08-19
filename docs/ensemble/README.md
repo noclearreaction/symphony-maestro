@@ -23,7 +23,8 @@ The vocabulary is orchestral throughout, and worth stating once:
 | Term | Is |
 | --- | --- |
 | **Conductor** | You. The only party that can be asked a question. |
-| **Ensemble** | The process hosting every session. Holds one or more sections. |
+| **Ensemble** | The process hosting every session. Holds one or more sections, and a pool of workers that run their assignments. |
+| **Worker** | An execution slot. Runs one assignment at a time; how many exist is operator configuration, unrelated to how many players there are. |
 | **Section** | A working group with its own roster — a build section, a design section. |
 | **Player** | One agent: a role, a durable session, and while working, a worktree. |
 | **Principal** | The lead player of a section, and the interactive session you land in. |
@@ -280,23 +281,64 @@ nothing, which makes hiring cheap enough to do speculatively.
 
 ## 3. Player lifecycle
 
-One state machine per player, not per task. A fixed section means concurrency is
-bounded by the roster rather than by a queue, and a player is either free or it
-is not.
+One state machine per player, not per task. A player is either free, waiting for
+a worker, or working.
 
 ```mermaid
 stateDiagram-v2
   direction LR
   [*] --> Idle: hire(name, role)
-  Idle --> Working: assign()
+  Idle --> Queued: assign()
+  Queued --> Working: a worker frees up
+  Queued --> Idle: cancel()
   Working --> AwaitingReview: player returned
   Working --> Faulted: error · budget exceeded
   Working --> Idle: cancel()
-  AwaitingReview --> Working: resume(message)
+  AwaitingReview --> Queued: resume(message)
   AwaitingReview --> Idle: release()
   Faulted --> Idle: reset()
   Idle --> [*]: dismiss()
 ```
+
+### Assigning is not running
+
+`assign` puts work on a queue. Ensemble runs it when a worker is free, and the
+number of workers is **operator configuration, not a tool parameter** — nothing
+a principal calls can widen it.
+
+**Workers have no relationship to players.** They are a pool of execution slots
+shared across every section: ten players and one worker is a perfectly ordinary
+configuration, and so is the reverse. Roster size answers "who is on the team";
+worker count answers "how much runs at once". The two numbers are unrelated.
+
+That separation is the point. How much compute and spend to have in flight
+belongs to whoever runs Ensemble, and a principal that assigns to six players
+should not thereby start six turns. Nothing about the results changes when work
+is serialised, because players are independent.
+
+`assign` therefore never fails for capacity, and the principal never reasons
+about slots. `status` reports `Queued` so the distinction is visible, and `wait`
+behaves identically either way — it returns when work finishes, not when it
+starts.
+
+#### Later: the queue need not be FIFO
+
+A work item can carry a **priority** and an estimated **cost**, and the queue can
+schedule on them. Not for the first iteration, but the contract should not
+foreclose it.
+
+The prioritisation that pays is anything ending in human interaction. The
+conductor is the scarcest resource in the system, so work that will produce
+something to review should start before work that will not — otherwise a long
+low-value assignment holds a worker while the human sits idle waiting for a
+review that had not been started. Cost estimates enable the same reasoning about
+spend: run several cheap items rather than one expensive one when the expensive
+one is not on the critical path.
+
+Unlike worker count, priority is safe to expose to a principal. **It reorders
+work without widening resource use** — a principal can say what matters most
+among its own assignments, and still cannot cause more to run at once. Worker
+count stays operator configuration for exactly that reason.
 
 `hire` records a member; the Vibe session is created on the first `assign`.
 `reset` discards the session and keeps the name, giving the same player a clean
@@ -396,14 +438,14 @@ classDiagram
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `assign(assignments[])` | no | `Player[]` | Put work to named players. Fails per-player if not `Idle`. |
+| `assign(assignments[])` | no | `Player[]` | Queue work for named players. Fails per-player if not `Idle`, never for capacity. |
 | `assign_sync(assignments[], timeout)` | yes | `Result[]` | Assign and wait in a single turn — the reason it exists. |
 | `wait(players?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps timeout, returns `pending` rather than hanging. |
 | `status(players?)` | no | `Status[]` | Cheap poll. Omit `players` for the whole roster. |
 | `result(player, full?)` | no | `Result` | Summary by default; `full` returns the diff. |
 | `resume(items[])` | no | `Player[]` | `{player, message}` pairs. Continues each session; back to `Working`. |
 | `release(players[])` | no | `void` | Work accepted. Player returns to `Idle`, worktree released. |
-| `cancel(players[])` | no | `void` | Kills the process, keeps the session for inspection. |
+| `cancel(players[])` | no | `void` | Drops a `Queued` assignment, or stops a `Working` one and keeps the session for inspection. |
 
 ### Invariants
 
