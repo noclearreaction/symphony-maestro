@@ -195,6 +195,37 @@ enforcer-in-the-blast-radius problem for that agent without needing containers.
 Vibe has no equivalent, so the trust boundary is not uniform across a mixed
 section. Policy has to assume the weakest member.
 
+### Shape: one backend, several frontends — open
+
+The largest structural question after the substrate. The working assumption is a
+backend daemon with thin, replaceable frontends: a CLI, a TUI, and eventually a
+VS Code extension. Four things make that more than a preference:
+
+**There are two consumer classes, not one.** Principals consume the orchestration
+tool surface over MCP; humans consume roster views, attach, approvals and logs.
+Those want different APIs, and collapsing them into one surface is how a
+tool-shaped API ends up rendering tables for people.
+
+**The backend is already a server.** It has to serve MCP over HTTP to principals
+regardless, so a control API for frontends is an increment on infrastructure that
+must exist anyway — not a new tier.
+
+**State must not live in a frontend.** Rosters, grants and scheduling belong to
+the backend, or the TUI and the CLI become two products that disagree. A frontend
+should be able to crash without losing anything.
+
+**Attach is where the split gets tested**, and it is the one place frontends
+cannot be uniform:
+
+| Frontend | Attach means |
+| --- | --- |
+| CLI | exec `vibe --resume <id>` in the foreground — trivial |
+| TUI | suspend itself and hand over the terminal, or embed a pty — the hard case |
+| VS Code | likely open Vibe's own extension against the session, rather than reimplementing its UI |
+
+So `attach` is a backend-blessed capability — the backend says which session and
+why — with a per-frontend mechanism. Assuming one implementation is the trap.
+
 ### Attaching
 
 Attachment is a view, not a state. The human can drop into any session Ensemble
@@ -535,8 +566,8 @@ not there.
 
 | Stage | Delivers | Proves |
 | --- | --- | --- |
+| 0 | **ACP spike.** A throwaway CLI that speaks ACP to an agent: initialize, open a session, send a prompt, read the stream. Verify it routes through rubato and that custom instructions land via `_meta`. | The substrate, and what the contract actually returns. Everything below is provisional until this runs. |
 | 1 | Host and attach. Ensemble launches, holds one interactive session, and brokers the terminal to it. | The entrypoint. Ensemble is usable before it orchestrates anything. |
-| 2 | Substrate spike. Run one assignment end to end over each candidate — ACP first — and record what the contract returns. | Settles the largest open decision, and fixes the shape of `Result`. |
 | 3 | Roles, `roster`, `hire`, `dismiss`, `reset`. Durable across restart. | A section can be composed and survives Ensemble dying. |
 | 4 | `assign`, `wait`, `result`, with a worktree per player. | Work goes out and comes back, and each player has working state of its own to review. |
 | 5 | `resume`, and attach in `AwaitingReview`. | The review loop — including reviewing with the author rather than about them. |

@@ -9,7 +9,9 @@ The upstream is a single environment variable, so serving two upstreams means ru
 | `mistral-rubato` :8081 | `api.mistral.ai` | Vibe | `mistral-rubato` compose service |
 | :8080 | `openrouter.ai/api` | opencode | **not currently running** — see below |
 
-Only the Mistral instance is containerised. The `:8080` references throughout this document and in `opencode.json` are therefore dangling: nothing listens there, and opencode currently fails to reach a proxy. Retiring or containerising that path is an open decision.
+Only the Mistral instance is containerised. The `:8080` references throughout this document and in `opencode.json` are therefore dangling: nothing listens there, and opencode currently fails to reach a proxy.
+
+This is deliberate and is not waiting on a decision. Opencode is slated for replacement by Vibe under Ensemble, so its proxy path is left unserved rather than maintained. If opencode is needed again before that lands, the fix is a second containerised instance following the `mistral-rubato` pattern; otherwise the service and these `:8080` references retire with it.
 
 ## How opencode routes through Rubato
 
