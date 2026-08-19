@@ -138,10 +138,12 @@ installed `vibe-acp`: a real turn, routed through rubato, with no headless
 fragment and a system prompt of our choosing. Two things it settled that change
 the design below:
 
-- **A player's instructions are fixed when its process spawns.** The protocol
+- **A player's instructions are bound when its process spawns.** The protocol
   offers no way to pick a profile — `vibe/acp/agent.py` builds `SessionOptions`
   without an `agent` parameter — so `VIBE_DEFAULT_AGENT` at spawn is the lever.
-  One process per player, and a player cannot change role mid-session.
+  Since a process lives for one assignment, the binding is per assignment, and
+  keeping a player's role stable across its life is our choice rather than a
+  constraint.
 - **`vibe-acp` does not exit cleanly when the client disconnects**, and it
   reports to Sentry. A supervisor that starts and stops players constantly should
   close the stream and let the agent exit rather than killing it.
@@ -552,7 +554,7 @@ it is only as strong as that player's inability to edit it. Three positions:
 | --- | --- | --- |
 | Hook alone | Advisory. Adequate while players are fallible rather than adversarial. | None beyond the hook. |
 | Hook, denying its own paths | Closes the obvious route. Still one policy bug from disarmed. | Policy must protect itself from version one. |
-| Container per player | Boundary is the kernel's. The hook becomes defence in depth. | A player becomes a container, worktrees become mounts, Ensemble becomes a supervisor of containers. |
+| Container per assignment | Boundary is the kernel's. The hook becomes defence in depth. | Worktrees become mounts and Ensemble becomes a supervisor of containers — but the container lives for one assignment, not for a player's life, so nothing idles. |
 
 This is the fork worth settling before any policy is written, because the third
 changes the deployment model rather than the configuration. It also changes what
@@ -567,12 +569,13 @@ be tried first. The third is buildable — Ensemble sees every session — but a
 that can talk to another section's principal is a section that can task it, and the
 role ceilings say nothing about that.
 
-**What happens to Ensemble's state when Ensemble dies.** Sessions and the roster
-outlive the process, so a restart can reattach names to sessions. The running
-`vibe` processes cannot be reattached. Either Ensemble supervises them properly, or
-in-flight players come back `Faulted` with their worktrees intact for inspection.
-The second is cheaper and honest; it should be a decision rather than a
-consequence.
+**What happens to Ensemble's state when Ensemble dies.** Less than it first
+appears. A session is a transcript on disk and the roster is a file, so both
+outlive any process; durability is close to free. What cannot survive is a turn
+in flight, since the `vibe-acp` process running it dies with its parent. The
+choice is whether Ensemble supervises those or lets in-flight players come back
+`Faulted` with their worktrees intact for inspection. The second is cheaper and
+honest, and should be a decision rather than a consequence.
 
 **Whether an assignment is at-most-once.** A worker that edited files and then
 lost its result channel has still done the work. Since the worktree persists and

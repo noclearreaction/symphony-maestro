@@ -24,16 +24,23 @@ deno task spike --agent reviewer --prompt "..."    # a specific profile
 
 ## Findings
 
-### Instructions are selected per process, not per session
+### Instructions are bound at spawn, and a process is transient
 
 `vibe/acp/agent.py` builds `SessionOptions` without an `agent` parameter, so the
 protocol offers no way to choose a profile. Configuration is the only lever, and
 `VIBE_`-prefixed environment variables override it — so a player's instructions
-are fixed when its process is spawned.
+are fixed for the life of the `vibe-acp` process.
 
-That suits Ensemble: one `vibe-acp` process per player, `VIBE_DEFAULT_AGENT` set
-from the player's role. It also means a player cannot change role mid-session,
-which is a constraint worth designing around rather than discovering later.
+That life is short. A session is a transcript on disk and needs nothing running;
+a process is required only while a turn executes. Spawn, `session/new` or
+`session/load`, prompt, read to `stopReason`, exit. Idle players cost nothing,
+and a section of six does not mean six resident bundles.
+
+So the binding is **per assignment**, not per player. Because the system prompt
+is supplied per invocation and never stored in the transcript, a later
+`session/load` could run the same transcript under a different profile. Role
+stability across a player's life is a design choice, not a constraint the
+substrate imposes.
 
 Measured, same trivial prompt both times:
 
