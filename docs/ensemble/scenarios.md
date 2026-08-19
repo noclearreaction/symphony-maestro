@@ -1,0 +1,204 @@
+# Ensemble — Scenario Walkthroughs
+
+> Companion to [`README.md`](README.md). Role-played walkthroughs that illustrate
+> the *intended* texture. **Illustrative, not normative** — a shared story of
+> shape, not a specification.
+>
+> They exist because a story catches confusion a diagram hides. Scenario B is the
+> one that exposed a conflation of *persona* with *part*, and it is written out
+> here so the same mistake cannot be made twice.
+
+Throughout: **you** are outside the metaphor. A **part** is a unit of work and the
+only thing carrying context. A **persona** is a named configuration that can play
+several parts at once. A **chair** is an execution slot. The **principal** is the
+part you land in.
+
+Configuration for all scenarios: personas `developer` (max 3 concurrent),
+`auditor` (1), `tester` (2). Chairs: 2.
+
+---
+
+## Scenario A — Happy path: one feature, start to complete
+
+**Context:** *"Add rate limiting to the public API."*
+
+1. **You → principal:** "Add rate limiting to the public API. Get it reviewed
+   before you tell me it's done."
+
+2. **Principal** calls `parts()` — its section is empty — then decides the shape
+   of the work itself. It calls:
+
+   ```
+   start([
+     { persona: "developer", brief: "Add a token-bucket rate limiter to the public API…" },
+     { persona: "tester",    brief: "Write table tests for the limiter's boundary behaviour…" },
+   ])
+   → [ part rate-limit-impl : Queued,
+       part rate-limit-tests : Queued ]
+   ```
+
+   Both are `Queued`, not running. The principal's turn ends here; it is free.
+
+3. **Ensemble** has two chairs, so both parts start. Each gets a worktree of its
+   own — `change/rate-limit-impl` and `change/rate-limit-tests` — and each spawns a
+   process with `VIBE_DEFAULT_AGENT` set from its persona, and a grant minted for
+   this turn.
+
+4. **You**, curious, run `ensemble tail rate-limit-impl` and watch it work. This
+   takes nothing from anyone: observing is read-only, the part keeps playing, and
+   the developer never knows you were there.
+
+5. **rate-limit-impl** finishes its turn and returns. Its part moves to
+   `AwaitingReview`. The chair is free, and nothing else is queued, so it idles.
+
+6. **Principal**, on its next turn, calls `wait(until: "any")` and gets
+   `{ done: ["rate-limit-impl"] }`, then `result("rate-limit-impl")` — a summary
+   and a list of touched files, not a diff. It reads the summary and is not
+   satisfied: the limiter is per-process, and the brief implied per-cluster.
+
+7. **Principal** calls:
+
+   ```
+   resume([{ part: "rate-limit-impl", message: "This is per-process. The API runs
+             three replicas; the bucket needs to be shared. Reconsider…" }])
+   ```
+
+   The part goes back to `Queued`, and when a chair frees it continues **the same
+   transcript** — the developer still has everything it wrote, and the correction
+   lands in context rather than as a fresh briefing.
+
+8. Second turn returns. This time the principal is satisfied, and `rate-limit-tests`
+   has come back too. It calls `start([{ persona: "auditor", brief: "Review the
+   rate limiter against…" }])` — a new part, with no memory of either of the
+   others. It gets what it needs from the worktrees and the specs, not from
+   anyone's recollection.
+
+9. **Auditor** returns clean. **Principal** calls
+   `complete(["rate-limit-impl", "rate-limit-tests", "rate-limit-review"])`.
+   Three transcripts are now final, three worktrees released.
+
+10. **Principal → you:** "Rate limiting is implemented, tested and reviewed.
+    Here's what changed and what the auditor flagged as follow-up."
+
+**What the story shows:** starting is not running; parts, not people, carry the
+work; review happens by resuming the transcript that produced the thing; and
+completion is the point where the record closes.
+
+---
+
+## Scenario B — Amnesia: the one that caught the confusion
+
+**Context:** two features in flight, one developer persona. This is the scenario
+that killed the idea of named colleagues.
+
+1. **Part `feature-x`** is played to completion by the developer persona. The
+   work is done; the transcript is final.
+
+2. **Part `feature-y`** starts, same persona. It begins from **a fresh context**.
+   It has never heard of feature X — not because we withheld anything, but because
+   there is nothing to withhold. A transcript is the whole of what an agent knows.
+
+3. Feature Y is half done when review feedback arrives on **feature X**. The
+   principal calls `resume([{ part: "feature-x", message: "…" }])`.
+
+4. A chair picks it up and **loads feature X's transcript**. In that turn the
+   agent recalls everything about X and knows nothing whatever about Y — no
+   contamination in either direction, because they were never the same
+   conversation.
+
+5. Later, Y is resumed and continues exactly where it left off.
+
+**The trap this sprang.** An earlier draft had *"developer-a"* as a named colleague
+with a session and accumulated context. That model cannot tell this story. Ask it
+"which session is developer-a in?" and it has no answer, because the honest answer
+is *two, alternately, remembering only one at a time* — which is not a person, it
+is a **chair playing whichever part it is handed**.
+
+And if the chair holds nothing between parts, there is no reason a second
+developer could not have played feature Y. `Paul` and `Mary` are the same
+configuration, so they are the same thing wearing two labels. What is scarce is
+chairs; what is distinct is parts; what is named is personas.
+
+**Corollary — you attach to a part, not to a person.** "Talk to Paul" is not a
+well-formed request: Paul is a configuration, and there may be three of him
+sounding at once. "Open feature Y" is well formed, because a part is a specific
+conversation with a specific history. If you are in feature X's part, nothing
+stops another chair playing feature Y at the same time — exclusivity is per part.
+
+---
+
+## Scenario C — More work than chairs
+
+**Context:** two chairs, five parts. Nothing about the results changes; only the
+wall clock does.
+
+1. **Principal** calls `start` with five briefs. All five come back `Queued`.
+   `start` does not fail, warn, or make the principal reason about capacity.
+
+2. Two begin playing. Three wait.
+
+3. **You** call `ensemble status` and see three `Queued`, two `Playing`. The
+   distinction is visible without being the principal's problem.
+
+4. As each finishes, the next starts. The principal, which is calling
+   `wait(until: "all")` between other work, sees results arrive over a longer
+   period than it would with five chairs — and produces exactly the same outcome,
+   because the parts never needed each other.
+
+**What the story shows:** chairs bound spend and rate-limit exposure, not
+correctness. The principal expresses *what should happen*; the operator decides
+*how much happens at once*. Neither can overrule the other, which is the point.
+
+---
+
+## Scenario D — Reviewing with the part that did the work
+
+**Context:** the principal's summary of a change is not enough for you.
+
+1. **Principal** reports that `auth-refactor` is awaiting review, with a summary
+   you find unconvincing — it claims a migration is unnecessary and you doubt it.
+
+2. **You** run `ensemble attach auth-refactor`. The part is in `AwaitingReview`,
+   so this is allowed, and you land in the transcript with everything the
+   developer saw.
+
+3. You ask it directly: *"Why do you think existing rows don't need migrating?"*
+   It answers from the context that produced the claim. You disagree, explain, and
+   it revises in front of you.
+
+4. While you are attached, the principal queues more work for that part. It is not
+   rejected — it **waits**, because you own the part until you detach.
+
+5. You detach. The queued work starts.
+
+**What the story shows:** the review conversation happens with the work, not about
+it. And ownership is exclusive without being obstructive: the scheduler does not
+fight you for the transcript, it queues behind you.
+
+---
+
+## Scenario E — Policy holds
+
+**Context:** a developer part decides to be helpful.
+
+1. **Part `auth-refactor`** finishes its change, and reasons that pushing the
+   branch would be useful.
+
+2. It calls `bash "git push origin change/auth-refactor"`.
+
+3. The **`pre_tool` hook** fires before any permission prompt. It verifies the
+   grant Ensemble minted for this turn, evaluates the call against the
+   `developer` persona's ceiling, and denies: *"grant excludes git push"*.
+
+4. The model **sees the denial as a tool error with a reason**, so it does not
+   silently retry or work around it. It notes in its summary that it would have
+   pushed and could not.
+
+5. **Principal** relays that upward rather than acting on it, because pushing is
+   not in its ceiling either.
+
+**What the story shows:** the ceiling is enforced where the call happens, not
+where the intention is formed, and a denial is information rather than a dead end.
+Note what the story does *not* show: a part rewriting the hook that stopped it.
+That it cannot is an assumption, not yet a fact — see
+[the trust boundary](README.md#design-considerations).
