@@ -1,15 +1,21 @@
 # .taskfiles/Taskfile-rubato.yaml
 # Rubato proxy lifecycle tasks.
+#
+# Rubato runs as the mistral-rubato compose service, not as a local process.
+# The backgrounded process did not survive post-start's teardown, so lifecycle
+# is delegated to docker compose, which supervises it via restart: unless-stopped.
 version: "3"
 silent: true
 
 vars:
-  RUBATO_BIN: /home/vscode/.local/bin/rubato
-  RUBATO_LOG: /tmp/rubato.log
-  RUBATO_UPSTREAM_URL: https://openrouter.ai/api
-  RUBATO_LISTEN_ADDR: ":8080"
-  RUBATO_PORT:
-    sh: echo "{{.RUBATO_LISTEN_ADDR}}" | sed 's/^://'
+  # Absolute so the tasks work from any directory. Compose takes the project
+  # directory from the compose file's location, so .devcontainer/.env is loaded
+  # and COMPOSE_PROJECT_NAME scopes the container and image names.
+  COMPOSE_FILE: /workspace/.devcontainer/docker-compose.yml
+  RUBATO_SERVICE: mistral-rubato
+  # Address on the compose network. The port is not published to the host, so
+  # this only resolves from a container attached to that network.
+  MISTRAL_RUBATO_URL: http://mistral-rubato:8081
 
 tasks:
   usage:
@@ -19,13 +25,18 @@ tasks:
       Usage: task rubato:<task>
 
       Tasks:
-        build      Build Rubato binary only
-        start      Start Rubato proxy in background
-        stop       Stop Rubato proxy process on configured port
-        restart    Restart Rubato proxy
-        status     Show listener/PID for Rubato port
-        logs       Tail Rubato log output
-        autostart  Start only when not already listening
+        doctor     Verify the proxy is reachable
+        start      Start the proxy service
+        stop       Stop the proxy service
+        restart    Restart the proxy service
+        status     Show service state and health
+        logs       Show service logs
+        autostart  Start only if not already running
+
+      Every task acts on the mistral-rubato compose service. There is no build
+      task: the service image is built on the host by docker buildx bake, and
+      running the proxy or a plugin by hand is a `go run` away — see
+      cmd/rubato/README.md.
 
       Run 'task --summary rubato:<task>' for detailed usage.
     cmds:
@@ -40,70 +51,100 @@ tasks:
     cmds:
       - task --list --taskfile {{.TASKFILE}}
 
-  build:
-    desc: "Build Rubato binary (cmd/rubato only)"
-    method: checksum
-    sources:
-      - cmd/rubato/**/*.go
-      - internal/rubato/**/*.go
-      - go.mod
-    generates:
-      - "{{.RUBATO_BIN}}"
+  doctor:
+    desc: "Verify the Rubato proxy is reachable"
+    summary: |
+      Usage: task rubato:doctor
+
+      Checks that the mistral-rubato service answers on the compose network.
+      Proves DNS resolution, TCP connect and the HTTP listener in one request.
+
+      Any HTTP status counts as healthy. Rubato only proxies chat completions,
+      so a bare GET is answered locally with 404 and never reaches the upstream
+      API — the check therefore costs nothing and needs no credentials.
+
+      Retries briefly, because devcontainer:doctor can run before the service
+      has finished starting.
+
+      Exits non-zero if unreachable. No output on success.
     cmds:
-      - task: :go:build
-        vars:
-          TARGET: ./cmd/rubato
-          OUTPUT: "{{.RUBATO_BIN}}"
+      - curl -s -o /dev/null --max-time 5 --retry 3 --retry-connrefused --retry-delay 1 {{.MISTRAL_RUBATO_URL}}/
 
   start:
-    desc: "Start Rubato in background"
-    dir: /workspace
-    dotenv: [.env]
-    deps:
-      - build
-    env:
-      RUBATO_UPSTREAM_URL: "{{.RUBATO_UPSTREAM_URL}}"
-      RUBATO_LISTEN_ADDR: "{{.RUBATO_LISTEN_ADDR}}"
-    if: '! lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    desc: "Start the Rubato proxy service"
+    summary: |
+      Usage: task rubato:start
+
+      Starts the mistral-rubato service, creating the container only if it does
+      not exist. Idempotent: an already running service is left alone.
+
+      --no-recreate is essential, not cosmetic. VS Code creates these containers
+      from the base compose file plus two generated override files, so a plain
+      `up -d` from this taskfile sees different config and recreates the
+      container, churning it every time the two take turns. The devcontainer
+      owns container creation; these tasks only start, stop and inspect.
+
+      Consequently this does not apply an edited docker-compose.yml. Rebuild or
+      reopen the devcontainer for that.
+
+      Requires the rubato image to exist. It is built on the host by
+      .devcontainer/bin/initialize; rebuild it with:
+        docker buildx bake --allow=fs.read=.. -f versions.hcl -f docker-bake.hcl
     cmds:
-      - |
-        nohup {{.RUBATO_BIN}} >{{.RUBATO_LOG}} 2>&1 &
-        echo "Rubato started on {{.RUBATO_LISTEN_ADDR}} (log: {{.RUBATO_LOG}})"
+      - docker compose -f {{.COMPOSE_FILE}} up -d --no-recreate {{.RUBATO_SERVICE}}
 
   autostart:
     desc: "Start Rubato only if not already running"
-    if: '! lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    summary: |
+      Usage: task rubato:autostart
+
+      Retained as a distinct entry point for callers that want start-if-needed
+      semantics. compose up is already idempotent, so this is exactly start.
     cmds:
       - task: start
 
   stop:
-    desc: "Stop Rubato listener"
-    if: 'lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    desc: "Stop the Rubato proxy service"
+    summary: |
+      Usage: task rubato:stop
+
+      Stops the container but keeps it, so restart and logs still work. The
+      explicit stop also defeats restart: unless-stopped, so it stays down until
+      started again.
     cmds:
-      - |
-        pids=$(lsof -tiTCP:{{.RUBATO_PORT}} -sTCP:LISTEN 2>/dev/null || true)
-        if [ -z "$pids" ]; then
-          echo "No listener found on {{.RUBATO_LISTEN_ADDR}}"
-          exit 0
-        fi
-        /bin/kill $pids
-        echo "Stopped listener(s) on {{.RUBATO_LISTEN_ADDR}}: $pids"
+      - docker compose -f {{.COMPOSE_FILE}} stop {{.RUBATO_SERVICE}}
 
   restart:
-    desc: "Restart Rubato"
+    desc: "Restart the Rubato proxy service"
+    summary: |
+      Usage: task rubato:restart
+
+      Restarts the existing container. Like every task here it never recreates,
+      so it picks up neither an edited docker-compose.yml nor a rebuilt image.
+      Rebuild or reopen the devcontainer for that.
     cmds:
-      - task: stop
-      - task: start
+      - docker compose -f {{.COMPOSE_FILE}} restart {{.RUBATO_SERVICE}}
 
   status:
-    desc: "Show Rubato listener status"
-    if: 'lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P >/dev/null 2>&1'
+    desc: "Show Rubato service state and health"
+    summary: |
+      Usage: task rubato:status
+
+      Shows the container state and healthcheck result. --all is passed so a
+      stopped service still reports, rather than printing a bare header.
     cmds:
-      - lsof -iTCP:{{.RUBATO_PORT}} -sTCP:LISTEN -n -P
+      - docker compose -f {{.COMPOSE_FILE}} ps --all {{.RUBATO_SERVICE}}
 
   logs:
-    desc: "Tail Rubato logs"
-    sources:
-      - "{{.RUBATO_LOG}}"
+    desc: "Show Rubato service logs"
+    summary: |
+      Usage: task rubato:logs [-- <docker compose logs args>]
+
+      Shows the last {{.TAIL}} log lines. Extra arguments are passed through:
+        task rubato:logs -- --follow
+        task rubato:logs -- --since 10m
+    vars:
+      TAIL: '{{.TAIL | default "100"}}'
     cmds:
-      - tail -n 100 {{.RUBATO_LOG}}
+      - docker compose -f {{.COMPOSE_FILE}} logs --tail {{.TAIL}} {{.CLI_ARGS}} {{.RUBATO_SERVICE}}
+

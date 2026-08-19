@@ -1,0 +1,68 @@
+# Project-local Vibe hooks. Separate file from config.toml — no flag needed,
+# dropping this file in place is enough. Only loaded when the folder is trusted.
+#
+# Load order: .vibe/hooks.toml first, then ~/.vibe/hooks.toml. A duplicate
+# `name` across the two is a config issue and the project entry wins. Invalid
+# TOML or missing required fields surface as TUI warnings and the offending
+# hook is skipped.
+#
+# Required on every hook: name (unique in this file), type, command.
+# Types:
+#   post_agent  once per turn, after the agent finishes responding
+#   pre_tool    per tool call, before the permission prompt
+#   post_tool   per tool call, only if the tool body actually ran
+#
+# A hook receives a JSON event on stdin and replies via exit code + stdout:
+#   exit 0, empty stdout        -> pass through
+#   exit 0, JSON object         -> {"decision":"allow"|"deny","reason":...}
+#   anything else / non-zero    -> failure path, fails OPEN with a UI warning
+# Add strict = true on a tool hook to escalate failures to deny instead.
+# stderr is diagnostics only; Vibe never parses it for control.
+
+# No hooks are active. Uncomment an example below, or add your own.
+#
+# Hook firing was verified against this file: a post_agent hook received the
+# documented JSON event on stdin with hook_event_name, session_id, cwd and
+# transcript_path. The wiring works; only the definitions are absent.
+
+# ---------------------------------------------------------------------------
+# Examples — uncomment and adapt.
+# ---------------------------------------------------------------------------
+
+# Gate a tool before it runs. `match` is an fnmatch glob by default
+# ("bash", "read_*", case-insensitive) or a regex when prefixed with "re:".
+# Deny by printing {"decision":"deny","reason":"..."} — the reason is returned
+# to the model as the tool error. Don't prefix the reason with the hook name;
+# the UI already wraps it as: Tool 'X' was denied by hook 'Y': {reason}
+#
+# [[hooks]]
+# name = "guard-bash"
+# type = "pre_tool"
+# match = "bash"
+# strict = true
+# timeout = 10.0
+# command = "./scripts/guard-bash.sh"
+
+# Append context to a tool result the model sees. For post_tool, use
+# hook_specific_output.additional_context; decision:"deny" replaces the output
+# text instead of blocking (the call already ran).
+#
+# [[hooks]]
+# name = "annotate-edits"
+# type = "post_tool"
+# match = "re:(edit|write_file)"
+# command = "./scripts/annotate-edits.sh"
+
+# Run checks after each turn. decision:"deny" here injects the reason back as a
+# retry user message, capped at 3 retries per hook per user turn — useful for
+# "tests failed, fix them" loops, but it will spend tokens.
+#
+# [[hooks]]
+# name = "lint"
+# type = "post_agent"
+# timeout = 120.0
+# command = "task lint"
+# description = "Run the repo linter after each turn"
+
+# Subagents all route through the `task` tool — match = "task" and read
+# tool_input.agent to discriminate by subagent.

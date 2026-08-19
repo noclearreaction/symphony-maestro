@@ -1,0 +1,12 @@
+# download-base is supplied as a named context by the bake file
+FROM download-base
+
+# Upstream ships the CLI as a self-contained PyInstaller bundle (vibe + _internal/),
+# zip only — the .tar.gz assets exist for vibe-acp, not the CLI.
+ARG VIBE_VERSION
+RUN curl -fL \
+        -o /tmp/vibe.zip \
+        -- "https://github.com/mistralai/mistral-vibe/releases/download/v${VIBE_VERSION}/vibe-linux-x86_64-${VIBE_VERSION}.zip" \
+ && unzip -q /tmp/vibe.zip -d /srv/files/vibe-${VIBE_VERSION} \
+ && rm /tmp/vibe.zip \
+ && chmod +x /srv/files/vibe-${VIBE_VERSION}/vibe

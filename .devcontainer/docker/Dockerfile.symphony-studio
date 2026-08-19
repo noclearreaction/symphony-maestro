@@ -5,11 +5,13 @@ FROM go-runtime AS go-stage
 FROM deno-runtime AS deno-stage
 FROM task-binary AS task-stage
 FROM node-apps AS node-stage
+FROM vibe-runtime AS vibe-stage
 
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-${UBUNTU_VERSION}
 
 ARG GO_VERSION
 ARG DENO_VERSION
+ARG VIBE_VERSION
 
 # --- Go ---
 COPY --from=go-stage /srv/files/go${GO_VERSION} /opt/go${GO_VERSION}
@@ -25,6 +27,10 @@ RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERS
 
 # --- Task ---
 COPY --from=task-stage /srv/files/task /usr/local/bin/task
+
+# --- Mistral Vibe ---
+COPY --from=vibe-stage /srv/files/vibe-${VIBE_VERSION} /opt/vibe-${VIBE_VERSION}
+RUN update-alternatives --install /usr/local/bin/vibe vibe /opt/vibe-${VIBE_VERSION}/vibe 100
 
 # --- Node tools mount point and PATH ---
 ENV PATH=/workspace/bin:/opt/node/node_modules/.bin:$PATH

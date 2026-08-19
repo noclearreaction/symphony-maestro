@@ -5,6 +5,7 @@ This document tracks the overarching goals, boundaries, and vision for Symphony 
 ## 1. Vision & Core Philosophy
 * **Human Ownership**: The human remains the sole owner of intent, tradeoffs, approval, and final decisions. AI agents propose and execute; they do not govern.
 * **Artifact-Driven Coordination**: Agents communicate across boundaries using versioned, readable artifacts (OpenSpec, Gherkin, Markdown, test evidence) rather than hidden instructions or chat histories.
+* **Rigor Made Affordable**: Automation should make rigor *affordable*, not *optional*. LLMs lowered the cost of generating code, not the cost of knowing it is correct — so we point cheap labour at the tedium of the old disciplines (test-first, refutation, spec-first, review, evidence-gathering) to make following them the path of least resistance, never a way to skip them. AI does not let us bypass understanding-as-ownership; it lets us finally afford it. (Sharpens `governance/vision.md` §3 *Automation over Intelligence*.)
 
 ## 2. Active Strategic Goals (Bootstrap Phase)
 * **Goal 1: Establish Advisory Continuity**

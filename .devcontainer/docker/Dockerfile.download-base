@@ -9,6 +9,7 @@ RUN --mount=type=cache,id=apt-cache-bookworm,target=/var/cache/apt,sharing=locke
         curl \
         ca-certificates \
         tar \
-        xz-utils
+        xz-utils \
+        unzip
 
 WORKDIR /srv/files

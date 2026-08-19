@@ -19,5 +19,7 @@ variable "VERSIONS" {
     node = "24.16.0"
     # renovate: datasource=github-releases depName=renovatebot/renovate
     renovate = "43.220.0"
+    # renovate: datasource=github-releases depName=mistralai/mistral-vibe
+    vibe = "2.24.1"
   }
 }

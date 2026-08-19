@@ -11,4 +11,6 @@ set -a
 set +a
 
 # Build all devcontainer images, scoped to this project.
-exec docker buildx bake -f versions.hcl -f docker-bake.hcl
+# --allow=fs.read=.. is required by the rubato-runtime target, whose build
+# context is the repository root rather than .devcontainer/.
+exec docker buildx bake --allow=fs.read=.. -f versions.hcl -f docker-bake.hcl

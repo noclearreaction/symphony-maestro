@@ -3,7 +3,7 @@
   "initializeCommand": ".devcontainer/bin/initialize",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer-runtime",
-  "runServices": ["devcontainer-runtime"],
+  "runServices": ["devcontainer-runtime", "mistral-rubato"],
   "workspaceFolder": "/workspace",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:1": {
@@ -27,7 +27,8 @@
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
     "OPENAI_BASE_URL": "http://127.0.0.1:8080/v1",
-    "OPENAI_API_KEY": "rubato-local"
+    "OPENAI_API_KEY": "rubato-local",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
   },
   "shutdownAction": "stopCompose",
   "customizations": {

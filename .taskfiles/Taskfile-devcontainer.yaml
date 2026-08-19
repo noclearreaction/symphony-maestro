@@ -37,6 +37,9 @@ tasks:
       Silently checks each required tool is present and functional:
         go, deno, task, gh, docker
 
+      Then checks the services the devcontainer depends on:
+        rubato (containerised proxy on the compose network)
+
       Exits non-zero on first failure. No output on success.
       Run devcontainer:status for a full verbose report.
     cmds:
@@ -45,6 +48,7 @@ tasks:
       - task: :task:doctor
       - task: :gh:doctor
       - task: :docker:doctor
+      - task: :rubato:doctor
       - echo "All tools OK"
 
   status:
