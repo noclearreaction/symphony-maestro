@@ -8,6 +8,25 @@
 >
 > **Audience:** the Human owner and the agents that will help specify the system.
 
+> **Where this stands (2026-08-19).** No OpenSpec change has been derived yet, and
+> that is the accurate state rather than an omission — derivation waits on the
+> reconciliation decision below. Since this document was written the thread has
+> produced four companions ([§10](#10-companion-documents)) and closed two of its
+> own open questions.
+>
+> | | Status |
+> | --- | --- |
+> | §8(6) OpenSpec framework skills | **Blocked on Human decision** — [`tdd-openspec-reconciliation.md`](tdd-openspec-reconciliation.md) presents the options; §5's "`tasks.md` = execution ledger" wording is superseded there |
+> | §8(7) Acceptance validation | Addressed — [`acceptance-validation.md`](acceptance-validation.md) |
+> | §8(1)(2)(3)(4)(5) | Still open |
+> | §6 agent execution mechanics | Needs its own design — see below |
+>
+> §6 assumes agents can be spawned and supervised. Building that against Mistral
+> Vibe showed it cannot be done inside a session: delegation is capped at one
+> level, so hierarchy needs an external process. That design is
+> [`docs/ensemble/README.md`](../ensemble/README.md), and it is a prerequisite for
+> the agent contracts here, not a parallel effort.
+
 > **Animating principle:** *Automation should make rigor affordable, not optional.*
 > LLMs lowered the cost of *generating* code, not the cost of *knowing it is
 > correct*; this whole design points cheap labour at the tedium of the old
@@ -343,3 +362,13 @@ refactor → repeat until the list is empty and the DoD passes.
 ## 10. Companion documents
 - [`tdd-orchestration-scenarios.md`](tdd-orchestration-scenarios.md) — role-played,
   natural-language walkthroughs (happy path, escape-hatch, human-override).
+- [`tdd-openspec-reconciliation.md`](tdd-openspec-reconciliation.md) — decision
+  record for §8(6). **Open, awaiting Human decision.** Revises §5's `tasks.md`
+  framing.
+- [`acceptance-validation.md`](acceptance-validation.md) — how the Gherkin DoD is
+  validated across two horizons (AI auditor now, `godog` later). Closes §8(7).
+- [`superpowers-bridge-review.md`](superpowers-bridge-review.md) — prior-art review
+  informing the reconciliation. *Borrow the mechanisms, reject the execution
+  philosophy.*
+- [`../ensemble/README.md`](../ensemble/README.md) — the orchestration and policy
+  layer §6's agents run on. Prerequisite for specifying the agent contracts.
