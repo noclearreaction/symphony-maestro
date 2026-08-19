@@ -327,13 +327,18 @@ A work item can carry a **priority** and an estimated **cost**, and the queue ca
 schedule on them. Not for the first iteration, but the contract should not
 foreclose it.
 
-The prioritisation that pays is anything ending in human interaction. The
-conductor is the scarcest resource in the system, so work that will produce
-something to review should start before work that will not — otherwise a long
-low-value assignment holds a worker while the human sits idle waiting for a
-review that had not been started. Cost estimates enable the same reasoning about
-spend: run several cheap items rather than one expensive one when the expensive
-one is not on the critical path.
+Priority pays only when **partial results are actionable**. If a principal needs
+all five outputs before it can proceed, ordering them gains nothing: completion
+is set by the slowest item and only throughput matters. Where it does pay is when
+finishing one item unblocks someone while the rest run on — most obviously when
+that item ends in a review, since a long low-value assignment holding a worker
+leaves the conductor idle waiting for a review that was never started.
+
+So the signal worth scheduling on is not "will this end in human interaction" but
+**"will finishing this unblock anyone"** — which the principal knows and the
+scheduler cannot infer. Cost estimates support the same reasoning about spend:
+run several cheap items ahead of one expensive one when the expensive one is not
+on the critical path.
 
 Unlike worker count, priority is safe to expose to a principal. **It reorders
 work without widening resource use** — a principal can say what matters most
