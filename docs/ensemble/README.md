@@ -467,14 +467,24 @@ to building something bespoke.
 - **Delegation** — how a grant from the human reaches a player, narrowed on the way.
 - **Decision** — whether *this* tool call, with these arguments, is permitted.
 
-| Candidate | Kind | Go support | Verdict | Notes |
+Ensemble is written in TypeScript on Deno, so the relevant question is what runs
+there — not what has a Go binding. That reopens Biscuit, which an earlier draft
+deferred on the strength of `biscuit-go` trailing the spec; the WASM build wraps
+the reference Rust implementation, so no such lag exists.
+
+| Candidate | Kind | Deno support | Standing | Notes |
 | --- | --- | --- | --- | --- |
-| **[Cedar](https://github.com/cedar-policy/cedar-go)** | decision engine | `cedar-go` 1.0, official | **pick** | Authored by StrongDM, adopted into the `cedar-policy` org. Fast, analyzable, designed for embedding. No delegation semantics. |
-| **[OPA / Rego](https://www.openpolicyagent.org/)** | decision engine | Go-native, embeddable | alt | More expressive than Cedar and CNCF-governed. Heavier, and Rego is a language the section must learn. |
-| **[Biscuit](https://www.biscuitsec.org/)** | capability token | `biscuit-go` lags: v1/v2 while Rust and Java are on v3.x | later | Conceptually the closest fit — offline attenuation, Datalog checks, one-way narrowing. The Go lag is the risk. |
+| **[Cedar](https://www.cedarpolicy.com/)** | decision engine | `@cedar-policy/cedar-wasm` 4.12.0, official — loads under Deno, verified | **live option** | Fast, analyzable, designed for embedding. Exposes `isAuthorized` directly. No delegation semantics, so it needs a companion grant format. |
+| **[Biscuit](https://www.biscuitsec.org/)** | capability token **and** Datalog policy | `@biscuit-auth/biscuit-wasm` 0.6.0, official — npm last published 2025-09-26, repo pushed 2026-07-13 | **live option** | Would collapse delegation and decision into one mechanism: the token carries its own checks. Datalog is a language to learn, and the npm publishing gap wants explaining. |
+| **[OPA / Rego](https://www.openpolicyagent.org/)** | decision engine | `@open-policy-agent/opa-wasm` | alt | More expressive, CNCF-governed. Heavier, and Rego is another language to learn. |
 | **Macaroons** | capability token | bindings only | no | Biscuit's simpler ancestor. Weaker policy expression, and HMAC verification wants a shared secret. |
-| **[UCAN](https://github.com/ucan-wg/spec)** | capability token | `go-ucan` | no | Right delegation model, but drags in DIDs and known token bloat for no benefit we would use. |
-| **Casbin** | policy library | Go-native | no | Model-driven RBAC/ABAC. Awkward for rich per-call attributes like a command line or a file path. |
+| **[UCAN](https://github.com/ucan-wg/spec)** | capability token | — | no | Right delegation model, but drags in DIDs and known token bloat for no benefit we would use. |
+| **Casbin** | policy library | — | no | Model-driven RBAC/ABAC. Awkward for rich per-call attributes like a command line or a file path. |
+
+**Cedar and Biscuit are both open, and the choice is deliberately deferred** until
+the spike has exercised one of them against a real tool call. The trade is one
+mechanism against two: Biscuit carries policy inside the token, Cedar needs a
+separate signed grant beside it.
 
 ### The load-bearing observation
 
@@ -483,17 +493,21 @@ issuer**. Here Ensemble *is* the issuer, and the principal is talking to it over
 MCP at the exact moment it assigns work. So Ensemble mints a narrowed, short-lived
 grant per assignment and no attenuation format is needed at all.
 
-That removes Biscuit from the critical path. It becomes relevant only if a player
-must delegate onward without Ensemble in the loop — which Vibe's depth-1 limit
-makes rare, since a player's own subagents run in-process under its grant.
+That weakens the case for Biscuit's headline feature, but does not settle the
+choice: attenuation is one of the things Biscuit does, and carrying policy inside
+the token is the other. A player's own subagents run in-process under its grant,
+so onward delegation stays rare either way.
 
-### Recommendation
+### Where this stands
 
-| Concern | Choice | Why |
-| --- | --- | --- |
-| Decision | **Cedar**, via `cedar-go` | Evaluated in-process. Policies are data, versioned in the repo, testable without a running fleet. |
-| Delegation | **Signed grant** | Ed25519 over a scope document, minted per assignment, minutes-long TTL. A standard primitive, not a bespoke protocol. |
-| Deferred | **Biscuit** | Adopt if players ever delegate without Ensemble, and if `biscuit-go` has reached v3 by then. |
+| Concern | Standing |
+| --- | --- |
+| Decision | **Cedar or Biscuit** — both live, evaluation deferred to the spike |
+| Delegation | A **signed grant** (Ed25519 over a scope document, short TTL) if Cedar wins; the **token itself** if Biscuit does |
+
+The deferral is deliberate. Both are credible on paper, and the thing that will
+actually separate them is writing one real policy — deny `git push` for a role
+scoped to a worktree — and seeing which expresses it more legibly.
 
 ## 7. Enforcement
 

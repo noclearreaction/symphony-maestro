@@ -10,3 +10,16 @@ RUN curl -fL \
  && unzip -q /tmp/vibe.zip -d /srv/files/vibe-${VIBE_VERSION} \
  && rm /tmp/vibe.zip \
  && chmod +x /srv/files/vibe-${VIBE_VERSION}/vibe
+
+# vibe-acp — the Agent Client Protocol front-end, same release, separate asset.
+# Ensemble drives players over ACP rather than the CLI, so this is the binary
+# that matters for orchestration; the CLI above stays for interactive use.
+# Installed here rather than reached for inside the VS Code extension directory,
+# whose path carries the extension's own version and lives on a volume.
+RUN curl -fL \
+        -o /tmp/vibe-acp.tar.gz \
+        -- "https://github.com/mistralai/mistral-vibe/releases/download/v${VIBE_VERSION}/vibe-acp-linux-x86_64-${VIBE_VERSION}.tar.gz" \
+ && mkdir -p /srv/files/vibe-acp-${VIBE_VERSION} \
+ && tar -xzf /tmp/vibe-acp.tar.gz -C /srv/files/vibe-acp-${VIBE_VERSION} --strip-components=1 \
+ && rm /tmp/vibe-acp.tar.gz \
+ && chmod +x /srv/files/vibe-acp-${VIBE_VERSION}/vibe-acp

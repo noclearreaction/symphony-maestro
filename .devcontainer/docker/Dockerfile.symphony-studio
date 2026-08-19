@@ -29,8 +29,14 @@ RUN update-alternatives --install /usr/local/bin/deno deno /opt/deno-${DENO_VERS
 COPY --from=task-stage /srv/files/task /usr/local/bin/task
 
 # --- Mistral Vibe ---
+# Two binaries from one release: the CLI for interactive use, and vibe-acp, the
+# Agent Client Protocol front-end that Ensemble drives players over. Both are
+# self-contained PyInstaller bundles and share $VIBE_HOME, so they authenticate
+# and resolve configuration identically.
 COPY --from=vibe-stage /srv/files/vibe-${VIBE_VERSION} /opt/vibe-${VIBE_VERSION}
 RUN update-alternatives --install /usr/local/bin/vibe vibe /opt/vibe-${VIBE_VERSION}/vibe 100
+COPY --from=vibe-stage /srv/files/vibe-acp-${VIBE_VERSION} /opt/vibe-acp-${VIBE_VERSION}
+RUN update-alternatives --install /usr/local/bin/vibe-acp vibe-acp /opt/vibe-acp-${VIBE_VERSION}/vibe-acp 100
 
 # --- Node tools mount point and PATH ---
 ENV PATH=/workspace/bin:/opt/node/node_modules/.bin:$PATH
