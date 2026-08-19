@@ -133,9 +133,20 @@ the protocol is not Mistral's. It is a published standard with an agent registry
 which makes the risk "Mistral's implementation drifts", not "the contract is
 someone's private internals".
 
-Remaining unknowns are worth a spike before committing: whether a long-lived
-session survives a client reconnect, and what happens to a turn in flight when
-the client goes away.
+[`spikes/acp`](../../spikes/acp/) has since driven it end to end against the
+installed `vibe-acp`: a real turn, routed through rubato, with no headless
+fragment and a system prompt of our choosing. Two things it settled that change
+the design below:
+
+- **A player's instructions are fixed when its process spawns.** The protocol
+  offers no way to pick a profile — `vibe/acp/agent.py` builds `SessionOptions`
+  without an `agent` parameter — so `VIBE_DEFAULT_AGENT` at spawn is the lever.
+  One process per player, and a player cannot change role mid-session.
+- **`vibe-acp` does not exit cleanly when the client disconnects**, and it
+  reports to Sentry. A supervisor that starts and stops players constantly should
+  close the stream and let the agent exit rather than killing it.
+
+Still unverified: `session/load`, which is what tier 2's resume depends on.
 
 ### One protocol, many agents
 
