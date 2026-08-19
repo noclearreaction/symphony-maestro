@@ -240,16 +240,69 @@ cannot be uniform:
 So `attach` is a backend-blessed capability — the backend says which session and
 why — with a per-frontend mechanism. Assuming one implementation is the trap.
 
-### Attaching
+#### CLI first
 
-Attachment is a view, not a state. The human can drop into any session Ensemble
-hosts — but only when that player is not mid-assignment, since a working player's
-session is already being driven. So attachment is available in `Idle`,
-`AwaitingReview` and `Faulted`.
+Not because it is cheapest, though it is. Because it validates the control API
+without UI work confounding the question: if the CLI can drive the fleet, the API
+is complete. It also stays useful permanently as the scripting and debugging
+surface, and it makes owning attachment trivial to prove — `exec vibe --resume
+<id>` is the whole implementation.
 
-`AwaitingReview` is the interesting one: it makes "review the work with the
-author" a first-class move rather than a thing you approximate by pasting diffs
-into the principal.
+The trap is that a CLI naturally polls and exits, and a poll-shaped CLI bakes a
+poll-shaped API. The TUI wants a live view, which is a subscription. So the first
+CLI must include the `tail`-shaped observer, because that is the smallest thing
+forcing a real event stream into the API — after which the TUI is a rendering
+problem rather than an API redesign.
+
+The TUI is the eventual daily driver, since a conductor watches and reviews more
+than it issues one-shot commands. VS Code comes last and may be smaller than it
+sounds: Vibe's own extension already provides the session UI, so Ensemble's part
+could be a roster panel that launches an attach rather than a reimplementation.
+
+### Attaching, and one owner per session
+
+**A session has exactly one owner at a time.** Either Ensemble is driving it on a
+scheduled assignment, or a human is driving it interactively. Never both.
+
+The reason is not concurrency safety, it is meaning. Two writers on one transcript
+break both parties: the scheduler gets back a conversation containing turns it
+never sent, and the human finds their session doing things they did not ask for.
+Neither can reason about a conversation it only partly authored. It is the same
+argument that stops Ensemble typing into the principal's terminal, generalised to
+every session.
+
+So there are two kinds of attachment, and only one of them is a state.
+
+**Owning attachment** is interactive: the human takes the session and drives it.
+A player is *live* when `Working` or `Attached`, and a live player does not accept
+work — `assign` is refused rather than queued behind the human. Available from
+`Idle`, `AwaitingReview` and `Faulted`, and held until the human detaches.
+
+**Observing** is read-only and takes nothing. It streams the same
+`session/update` notifications the driver sees, so it works in any state
+including mid-assignment, and any number of observers can watch at once. In the
+CLI it is a `tail`-shaped command; in the TUI it is what the roster view is made
+of.
+
+That the two are separate is what lets you watch a player work without stopping
+it — the obvious thing to want, and impossible if attachment only came in the
+owning kind.
+
+`AwaitingReview` is the valuable case: it makes "review the work with its author"
+a first-class move rather than something approximated by pasting diffs into the
+principal.
+
+Later, the conflict becomes a choice rather than a refusal: show queued
+assignments in the TUI and let the human **pull** one into the session they are
+already in. Same exclusivity, with the handoff made deliberate instead of
+rejected.
+
+### Completion
+
+A session is **complete** when no further feedback is expected — every task being
+waited on has finished, and nothing will happen on that transcript again.
+Completion is terminal, which is what makes it useful: it is the point at which
+the record is final, the worktree can be judged, and the player is free.
 
 ### Roles are declared, members are hired
 
@@ -295,9 +348,18 @@ stateDiagram-v2
   Working --> Faulted: error · budget exceeded
   Working --> Idle: cancel()
   AwaitingReview --> Queued: resume(message)
-  AwaitingReview --> Idle: release()
+  AwaitingReview --> Idle: release() · complete
   Faulted --> Idle: reset()
+  Idle --> Attached: attach()
+  AwaitingReview --> Attached: attach()
+  Faulted --> Attached: attach()
+  Attached --> Idle: detach()
   Idle --> [*]: dismiss()
+
+  note right of Attached
+    Live: a human owns the session.
+    assign() is refused, not queued.
+  end note
 ```
 
 ### Assigning is not running
@@ -443,7 +505,7 @@ classDiagram
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `assign(assignments[])` | no | `Player[]` | Queue work for named players. Fails per-player if not `Idle`, never for capacity. |
+| `assign(assignments[])` | no | `Player[]` | Queue work for named players. Fails per-player if the player is not `Idle` — including when a human holds it `Attached` — but never for capacity. |
 | `assign_sync(assignments[], timeout)` | yes | `Result[]` | Assign and wait in a single turn — the reason it exists. |
 | `wait(players?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps timeout, returns `pending` rather than hanging. |
 | `status(players?)` | no | `Status[]` | Cheap poll. Omit `players` for the whole roster. |
@@ -641,11 +703,12 @@ not there.
 
 | Stage | Delivers | Proves |
 | --- | --- | --- |
-| 0 | **ACP spike.** A throwaway CLI that speaks ACP to an agent: initialize, open a session, send a prompt, read the stream. Verify it routes through rubato and that custom instructions land via `_meta`. | The substrate, and what the contract actually returns. Everything below is provisional until this runs. |
-| 1 | Host and attach. Ensemble launches, holds one interactive session, and brokers the terminal to it. | The entrypoint. Ensemble is usable before it orchestrates anything. |
+| 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). Speak ACP to `vibe-acp`: initialize, open a session, prompt, read the stream. | Done. A real turn, routed through rubato, no headless fragment, instructions ours via `VIBE_DEFAULT_AGENT`. |
+| 1 | `session/load` on the spike. | Resume works over ACP — the assumption every review round depends on. |
+| 2 | Backend plus CLI: host a session, own-attach to it, and `tail` it. | The entrypoint, and an event stream in the control API before anything is built on it. |
 | 3 | Roles, `roster`, `hire`, `dismiss`, `reset`. Durable across restart. | A section can be composed and survives Ensemble dying. |
-| 4 | `assign`, `wait`, `result`, with a worktree per player. | Work goes out and comes back, and each player has working state of its own to review. |
-| 5 | `resume`, and attach in `AwaitingReview`. | The review loop — including reviewing with the author rather than about them. |
-| 6 | Grants and the Cedar hook. | A player is provably unable to exceed its role's ceiling. |
+| 4 | `assign`, `wait`, `result`, the queue, and a worktree per player. | Work goes out and comes back, bounded by workers rather than by roster size. |
+| 5 | `resume`, and owning attach in `AwaitingReview`. | The review loop — including reviewing with the author rather than about them. |
+| 6 | Grants and the policy hook. | A player is provably unable to exceed its role's ceiling. |
 | 7 | A second section. | Sections are a first-class boundary, not a rename of roster. |
 
