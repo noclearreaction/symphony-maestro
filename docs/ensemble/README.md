@@ -474,6 +474,40 @@ Composing rather than hand-writing matters because these are invariants. A
 persona that forgets the git snippet does not fail visibly; it just tries to
 commit, gets denied, and burns a turn learning what it should have been told.
 
+### Channels: who reads and writes where
+
+Context isolation is a design property, not a side effect — a developer part must
+not see an auditor's reasoning, and personas are only interchangeable because
+nothing leaks between parts. Artefacts are how that gets broken, so every space
+needs a declared writer and declared readers.
+
+| Space | Writer | Readers | Notes |
+| --- | --- | --- | --- |
+| Part worktree | the part | Ensemble, to commit and merge; a human attached or observing | Not readable by another part |
+| Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
+| Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
+| Part outbox — summary, proposed commit message, artefact list | the part | Ensemble, then the principal | One-way, out |
+| Change branch | Ensemble, by merging | any part of that change, as its base; a human | The only inter-part channel |
+| Change artefacts — proposal, design, the `tasks.md` ledger | the principal, in the parent worktree | parts, read-only | Parts do not coordinate through the ledger |
+| `main` | the human, by merging a PR | everyone | |
+
+**No space is writable by two parts.** The rule that follows is the useful one:
+**a part's work becomes visible to other parts only by merging.** Until then it is
+private. That makes the merge the publication point — visibility follows
+integration, and integration is reviewed. An auditor reading a developer's work
+reads the change branch, not the developer's tree.
+
+A human can read anything. That is not a hidden channel; it is the point.
+
+**One thing to verify.** Scratchpad writes skip the permission prompt, and
+[`docs/vibe/prompt/08-scratchpad.md`](../vibe/prompt/08-scratchpad.md) records
+that the exemption survives disabling the fragment — suppressing it only stops
+telling the model about a facility it still has. Whether it also bypasses a
+`pre_tool` hook is a different question and the answer matters: hooks are
+documented as firing *before* the permission prompt, which suggests policy still
+sees the call. If that turns out to be wrong, the scratchpad is a hole in every
+ceiling and needs closing rather than documenting.
+
 ### Subagents are Vibe's, not Ensemble's
 
 A part or a principal may spawn subagents, and **Ensemble neither sees nor
