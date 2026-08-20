@@ -412,25 +412,44 @@ consequence follows from the logical structure of the work rather than driving i
 Independent work gets separate worktrees, runs concurrently, and pays at merge if
 it turns out to overlap.
 
-### Git is Ensemble's, not a part's
+### Who owns git
 
-Creating the worktree, naming the branch, attempting the merge and reverting on
-failure are **Ensemble's**. They are mechanical, they must be deterministic, and
-nothing about them benefits from being model-mediated. A part edits files inside
-its worktree and nothing else.
+Not one answer — the two levels have different owners, because one is mechanical
+and the other is judgment.
 
-So **no persona needs git**, and a ceiling can deny it outright. That is worth
-stating because it removes a whole agent: the `git-operator` of
-[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §6 existed
-to keep git commands away from other agents, and once git is infrastructure rather
-than work, there is nothing for it to do.
+| Level | Owner | Why |
+| --- | --- | --- |
+| Part worktrees, commits, merge into the change branch, revert on failure | **Ensemble** | Mechanical, must be deterministic, triggered by `accept`. Ensemble created those trees. |
+| The change branch, the PR, its title and body, when it is ready | **The principal** | Authored content and judgment — and the principal is already sitting in the parent worktree. |
 
-The one boundary is **committing**. Mechanically it is Ensemble's, but a commit
-message is content, and this repository cares about it — see
-[`bin/commit-lint.ts`](../../bin/commit-lint.ts). The split that respects both:
-the part proposes the message as part of its result, Ensemble makes the commit and
-validates it. A part that proposes an unlintable message gets told, in the same
-way it gets told about a conflict.
+So **a part never touches git**, and its persona's ceiling can deny it outright.
+The principal's cannot: it needs branch and PR operations, and it should not get
+them through a tool wrapping `gh pr create`. Real git flows vary, and a principal
+with git and judgment adapts where a principal with `open_pr(title, body)` is
+stuck with whatever we imagined.
+
+The boundary that matters is `main`, and it is better protected by **remote branch
+protection** than by withholding git. The constitution's gate is that the human
+decides what reaches `main`; branch protection enforces that regardless of what
+any agent attempts, which is a stronger guarantee than a ceiling we wrote.
+
+Committing a part's work is Ensemble's, but the message is content and this
+repository cares about it — see [`bin/commit-lint.ts`](../../bin/commit-lint.ts).
+So the part proposes the message in its result, and Ensemble commits and
+validates. An unlintable message comes back the same way a conflict does.
+
+### Subagents are Vibe's, not Ensemble's
+
+A part or a principal may spawn subagents, and **Ensemble neither sees nor
+controls them**. Vibe spawns them in-process at depth 1, inheriting the working
+directory, so a subagent is always in the same worktree as whatever spawned it.
+
+That is a useful property rather than a gap. Isolation holds for free — a part's
+subagents cannot escape its worktree — and it gives the `git-operator` of
+[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §6 a better
+home than it had. Not an Ensemble concept, just a subagent the principal spawns
+when it wants commit-message discipline or PR-body drafting done by something with
+narrow instructions. It costs Ensemble nothing, because Vibe handles all of it.
 
 ### Two levels of git
 
@@ -450,9 +469,10 @@ The change is not a new concept — it is **the OpenSpec change already named in
 already uses. One identity, three manifestations: a folder of artefacts, a branch,
 and the parts working it.
 
-Ensemble owns both levels of plumbing: create the change branch, create part
-branches, merge parts, open the PR, set its body from the change's proposal. What
-it does **not** do is merge the PR. That is the human's, and it is where
+The principal works in the **parent worktree** — the change branch itself — which
+is why change-level git is its own rather than Ensemble's. Ensemble creates part
+worktrees *from* that branch and merges back into it. Neither merges the PR: that
+is the human's, and it is where
 [`governance/constitution.md`](../../governance/constitution.md) §1 puts the gate —
 agents propose and execute, the human decides what reaches `main`.
 
