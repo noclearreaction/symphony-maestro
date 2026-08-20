@@ -13,8 +13,8 @@ only thing carrying context. A **persona** is a named configuration that can pla
 several parts at once. A **chair** is an execution slot. The **principal** is the
 part you land in.
 
-Configuration for all scenarios: personas `developer` (max 3 concurrent),
-`auditor` (1), `tester` (2). Chairs: 2.
+Configuration for all scenarios: personas `developer`, `auditor` and `tester`,
+all backed by the same credential. Two chairs.
 
 ---
 
@@ -74,15 +74,17 @@ Configuration for all scenarios: personas `developer` (max 3 concurrent),
    anyone's recollection.
 
 9. **Auditor** returns clean. **Principal** calls
-   `complete(["rate-limit-impl", "rate-limit-tests", "rate-limit-review"])`.
-   Three transcripts are now final, three worktrees released.
+   `accept(["rate-limit-impl", "rate-limit-tests", "rate-limit-review"])`.
+   Ensemble commits each part's tree using the message the part proposed,
+   validates it, and merges. All three go clean, so all three are `Merged`.
 
-10. **Principal → you:** "Rate limiting is implemented, tested and reviewed.
-    Here's what changed and what the auditor flagged as follow-up."
+10. **Principal → you:** "Rate limiting is implemented, tested and reviewed and
+    all three branches are merged. Here's what changed and what the auditor
+    flagged as follow-up."
 
 **What the story shows:** starting is not running; parts, not people, carry the
-work; review happens by resuming the transcript that produced the thing; and
-completion is the point where the record closes.
+work; review happens by resuming the transcript that produced the thing; and a
+part is done when its branch merges — not when someone declares satisfaction.
 
 ---
 
@@ -177,7 +179,46 @@ fight you for the transcript, it queues behind you.
 
 ---
 
-## Scenario E — Policy holds
+## Scenario E — A conflict, and what happens to it
+
+**Context:** two parts were judged independent. They weren't quite.
+
+1. **Parts `auth-refactor` and `session-expiry`** were started together, each with
+   its own worktree branched at the moment it was enqueued. Both edit
+   `internal/auth/token.go` — which nobody knew in advance, because that is the
+   nature of the thing.
+
+2. `auth-refactor` finishes first. The principal accepts it, Ensemble commits and
+   merges cleanly. `Merged`.
+
+3. `session-expiry` finishes. The principal accepts it. **Ensemble attempts the
+   merge and it conflicts** in `token.go`.
+
+4. Ensemble does not try to resolve it, and does not hand it to a fresh part.
+   It sends `session-expiry` back through the queue with the moved base:
+
+   > "Your base has moved. `internal/auth/token.go` now looks like this. Re-apply
+   > your change against it."
+
+   The part still has its own transcript — every reason it had for writing what it
+   wrote. It reads the new `token.go`, sees that the refactor moved the expiry
+   check it was extending, and re-applies its change in the new shape.
+
+5. Ensemble merges again. Clean. `Merged`.
+
+**And if it hadn't been:** the part fails, Ensemble reverts the worktree, and
+nothing is left behind — no conflict markers on a branch, no half-integrated
+state, nothing for you to unpick. The principal is told the work was lost and
+decides what to do with that, which is a decision about the change rather than
+about git.
+
+**What the story shows:** the conflict goes to whoever caused it, because that is
+the only party still holding the intent. Failure is clean. And the price of having
+run two changes at once is visible as work, not hidden as a chore.
+
+---
+
+## Scenario F — Policy holds
 
 **Context:** a developer part decides to be helpful.
 

@@ -31,7 +31,8 @@ outside the metaphor and own it.
 | --- | --- |
 | **Maestro** | The framework. Directs the ensemble. |
 | **Ensemble** | This layer: the sections, their parts, and the chairs that play them. |
-| **Section** | A working group — a build section, a design section — with a principal. |
+| **Section** | A long-lived working group — a build section, a design section — with a principal. Works through changes over time. |
+| **Change** | The unit that becomes a pull request: an OpenSpec change, its `change/<name>` branch, and the parts working it. |
 | **Persona** | A named configuration: which ACP agent, which profile, what authority ceiling, how many may sound at once. `developer`, or `Paul`. |
 | **Part** | A unit of work, and the only thing that carries context: a transcript, a worktree, a lifecycle, a completion. |
 | **Chair** | An execution slot. Plays one part at a time. |
@@ -286,18 +287,22 @@ stateDiagram-v2
   direction LR
   [*] --> Queued: start(persona, brief)
   Queued --> Playing: a chair frees up
-  Queued --> Cancelled: cancel()
+  Queued --> Reverted: cancel()
   Playing --> AwaitingReview: turn returned
   Playing --> Faulted: error · budget exceeded
-  Playing --> Cancelled: cancel()
+  Playing --> Reverted: cancel()
   AwaitingReview --> Queued: resume(message)
-  AwaitingReview --> Complete: complete()
+  AwaitingReview --> Merging: accept()
   AwaitingReview --> Attached: attach()
   Faulted --> Attached: attach()
   Faulted --> Queued: resume(message)
+  Faulted --> Reverted: give up
   Attached --> AwaitingReview: detach()
-  Complete --> [*]
-  Cancelled --> [*]
+  Merging --> Merged: clean
+  Merging --> Queued: conflict — re-apply against the moved base
+  Merging --> Reverted: cannot re-apply
+  Merged --> [*]
+  Reverted --> [*]
 
   note right of Attached
     Live: a human owns the part.
@@ -305,63 +310,159 @@ stateDiagram-v2
   end note
 ```
 
-**Completion is terminal.** A part is complete when no further feedback is
-expected — everything waited on has finished and nothing will happen on that
-transcript again. That is what makes it useful: the record is final, the worktree
-can be judged, and the chair is free.
+### Merged or reverted
+
+**A part is done when its branch is merged.** Those are the only two ends, and
+both are clean.
+
+Merge is attempted **once**, at the end of the work — not per turn. Turns run
+until the orchestrator accepts the part, and that judgment is about quality and
+completeness. Any change at all is enough to proceed to a merge, **including a
+partial one**: a part that made a coherent dent and merged has succeeded, and
+whether the original problem is fully solved is answered by enqueuing more work,
+not at the integration boundary.
+
+Merge only happens clean. A conflict is **a signal to the part that caused it** —
+it goes back through the queue with the moved base and re-applies its own change:
+
+> "Your base has moved. `internal/auth/token.go` now looks like this. Re-apply
+> your change against it."
+
+That is what a developer does when a rebase turns ugly, and it beats handing the
+conflict to a fresh part: the part that formed the intent is still there with its
+reasoning intact, where a resolver would have to infer two intents from diffs.
+
+If it cannot re-apply, the part **fails and its worktree is reverted**. Failure is
+therefore clean — nothing half-integrated, nothing for a human to unpick, no tree
+left behind. The change either landed or never existed.
+
+Ordering falls out of completion order: first to merge wins, second re-applies.
+
+Three tiers, in cost order — avoid by sharing a worktree, re-apply, or escalate to
+a human when a part cannot re-apply its own change, since a second attempt will
+not fix that.
+
+> **Unverified.** Whether an agent reliably re-applies its intent against a moved
+> base is an empirical question. If it does not, the answer collapses to the first
+> tier: share more worktrees, run less concurrently, and pay in wall-clock rather
+> than in integration.
 
 `resume` is deliberately general. Rejected output is one reason; a follow-up
-question, new information, or a change of direction are others. There is no
-separate `reject` verb — rejection is a resume whose message says what was wrong.
-Resuming continues the existing transcript rather than starting a new one:
-cheaper, since cached input bills at a tenth of fresh, and correct, since the
-context that produced the work is still there.
+question, new information, a conflict to re-apply, or a change of direction are
+others. There is no separate `reject` verb — rejection is a resume whose message
+says what was wrong. Resuming continues the existing transcript rather than
+starting a new one: cheaper, since cached input bills at a tenth of fresh, and
+correct, since the context that produced the work is still there.
 
 `Faulted` is not retried automatically. A part that ran out of budget mid-edit
 has left a worktree a human should see.
 
 ### Starting is not playing
 
-`start` puts a part on the queue. It begins playing when **two** things are true:
-a chair is free, and the part is not live — neither `Playing` nor held `Attached`.
-Until then it waits, and `start` fails for neither reason.
+`start` puts a part on the queue. It begins playing when a chair is free and the
+part is not live — neither `Playing` nor held `Attached`. Until then it waits, and
+`start` fails for neither reason.
 
-Two caps, both operator configuration and neither reachable from a tool:
+**The queue only ever holds ready work.** Sequencing is the orchestrator's
+judgment, not a mechanism: it does not enqueue "write the code" and "write the
+test" together and leave a scheduler to work out the order — it enqueues the code
+once the test exists. There is no dependency graph to evaluate, and termination is
+structural rather than hoped for, because the work set is finite and nothing enters
+the queue before it can run.
 
-- **Chairs** — how much sounds at once overall, bounding total spend and
-  rate-limit exposure.
-- **Per-persona concurrency** — how many parts one persona may play at once, so a
-  single persona cannot monopolise the chairs.
+**A part's worktree is created at enqueue, not at selection.** That is the moment
+the intended base state is known — the test exists, at *this* commit. Defer
+creation to selection and the part branches from whatever HEAD has since become,
+which is not what was decided.
 
-Chairs have no relationship to parts. Ten parts and one chair is an ordinary
-configuration, and so is the reverse. How much compute and spend to have in flight
-belongs to whoever runs Ensemble; a principal that starts six parts should not
-thereby start six turns. Nothing about the results changes when work is
-serialised, because parts are independent.
+### What bounds concurrency
 
-The bound exists for tokens, spend and provider rate limits — not CPU. A chair
-spends nearly all its time waiting on a model API, so sizing it like a CPU-bound
-pool would be a category error.
+Three configured constraints, each traceable to a real cause, all operator
+configuration and none reachable from a tool:
 
-#### Later: the queue need not be FIFO
+| Constraint | Because |
+| --- | --- |
+| **Chairs** | Total spend and rate-limit exposure |
+| **Per-credential concurrency** | The provider actually limits this — per account, not per persona |
+| **Section reservation, then share** | One section must not stall another; reserve a minimum, share the surplus so idle sections do not waste chairs |
 
-Work can carry a **priority** and an estimated **cost**, and the queue can
-schedule on them. Not for the first iteration, but the contract should not
-foreclose it.
+There is deliberately **no per-persona cap**. Two parts playing the same persona
+are identical configuration, so a headcount limit says nothing about why. What it
+would be standing in for is a credential's rate limit, which is where the
+constraint belongs.
 
-Priority pays only when **partial results are actionable**. If a principal needs
-all five outputs before proceeding, ordering gains nothing: completion is set by
-the slowest and only throughput matters. It pays when finishing one item unblocks
-someone while the rest run on.
+Chairs have no relationship to parts. Ten parts and one chair is ordinary, and so
+is the reverse. The bound exists for tokens, spend and provider rate limits — not
+CPU, since a chair spends nearly all its time waiting on a model API. Sizing it
+like a CPU-bound pool would be a category error.
 
-So the signal worth scheduling on is not "will this end in human interaction" but
-**"will finishing this unblock anyone"** — which the principal knows and the
-scheduler cannot infer.
+Beyond configuration, work can also be excluded by contention: parts needing the
+same **mutex** cannot play at once. Mutexes are acquired atomically at dispatch —
+a part gets its whole set or waits holding nothing — so there is no hold-and-wait
+and therefore no deadlock. A mutex is held for the life of the part, not the turn,
+because a worktree that shifts between turns leaves a part re-entering a checkout
+its own transcript no longer matches.
 
-Unlike chair count, priority is safe to expose to a principal: **it reorders work
-without widening resource use.** That is the test for anything added to the tool
-surface later — does it let a principal spend more, or only spend it in a
-different order?
+The commonest mutex is a worktree, and there it is a correctness requirement
+rather than a preference: **dependent work shares a worktree because it needs its
+predecessor's output.** "Write the code" must see the test. Serialisation is what
+"this builds on that" means, not a scheduling choice — and the scheduling
+consequence follows from the logical structure of the work rather than driving it.
+
+Independent work gets separate worktrees, runs concurrently, and pays at merge if
+it turns out to overlap.
+
+### Git is Ensemble's, not a part's
+
+Creating the worktree, naming the branch, attempting the merge and reverting on
+failure are **Ensemble's**. They are mechanical, they must be deterministic, and
+nothing about them benefits from being model-mediated. A part edits files inside
+its worktree and nothing else.
+
+So **no persona needs git**, and a ceiling can deny it outright. That is worth
+stating because it removes a whole agent: the `git-operator` of
+[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §6 existed
+to keep git commands away from other agents, and once git is infrastructure rather
+than work, there is nothing for it to do.
+
+The one boundary is **committing**. Mechanically it is Ensemble's, but a commit
+message is content, and this repository cares about it — see
+[`bin/commit-lint.ts`](../../bin/commit-lint.ts). The split that respects both:
+the part proposes the message as part of its result, Ensemble makes the commit and
+validates it. A part that proposes an unlintable message gets told, in the same
+way it gets told about a conflict.
+
+### Two levels of git
+
+Part branches do not merge into `main`. They merge into a **change** branch, and
+the change is what becomes a pull request.
+
+```
+main
+ └── change/rate-limiting            integration branch for one change
+      ├── part/rate-limit-impl       part branches merge here
+      ├── part/rate-limit-tests
+      └── part/rate-limit-review
+```
+
+The change is not a new concept — it is **the OpenSpec change already named in
+`openspec/changes/<name>/`**, on the `change/<name>` branch this repository
+already uses. One identity, three manifestations: a folder of artefacts, a branch,
+and the parts working it.
+
+Ensemble owns both levels of plumbing: create the change branch, create part
+branches, merge parts, open the PR, set its body from the change's proposal. What
+it does **not** do is merge the PR. That is the human's, and it is where
+[`governance/constitution.md`](../../governance/constitution.md) §1 puts the gate —
+agents propose and execute, the human decides what reaches `main`.
+
+A section is long-lived and works through many changes over time. It **should**
+work them sequentially, one change in flight at a time, because concurrent changes
+in one section is how you get the conflicts of [§3](#merged-or-reverted) without
+the isolation of separate sections to justify them. But that is a **default, not
+an invariant** — expressed as a configured limit on changes in flight, defaulting
+to one. Claiming to know exactly how a git flow always works is how a design
+acquires a rule someone has to fight later.
 
 ## 4. Functional contract
 
@@ -376,7 +477,7 @@ classDiagram
     +string name
     +string acp_agent
     +string profile
-    +int max_concurrent
+    +string credential
     +bool worktree
     +Scope ceiling
   }
@@ -417,8 +518,15 @@ classDiagram
   class Section {
     +string name
     +string principal
+    +int max_changes_in_flight
   }
-  Section "1" --> "0..n" Part
+  class Change {
+    +string name
+    +string branch
+    +string pr_url
+  }
+  Section "1" --> "0..n" Change : normally one
+  Change "1" --> "0..n" Part
   Persona "1" --> "0..n" Part : played as
   Part "1" --> "0..1" Work : queued
   Work --> Grant : minted per turn
@@ -439,7 +547,7 @@ classDiagram
 | `wait(parts?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps the timeout and returns `pending` rather than hanging. |
 | `status(parts?)` | no | `Status[]` | Cheap poll. Omit `parts` for the whole section. |
 | `result(part, full?)` | no | `Result` | Summary by default; `full` returns the diff. |
-| `complete(parts[])` | no | `void` | Terminal. Record final, worktree released. |
+| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble attempts the merge: clean means `Merged`, a conflict sends the part back to re-apply. |
 | `cancel(parts[])` | no | `void` | Drops queued work, or stops a playing turn and keeps the transcript for inspection. |
 
 ### Invariants
@@ -621,6 +729,6 @@ not there.
 | 2 | Backend plus CLI: host a part, own-attach to it, and `tail` it. | The entrypoint, and an event stream in the control API before anything is built on it. |
 | 3 | Personas from configuration; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started and survives Ensemble dying. |
 | 4 | `wait`, `result`, the queue, chairs, and a worktree per part. | Work comes back, bounded by chairs rather than by how much was started. |
-| 5 | `resume`, `complete`, and owning attach in `AwaitingReview`. | The review loop — including reviewing with the part that did the work. |
+| 5 | `resume`, `accept`, the merge and re-apply on conflict, plus owning attach in `AwaitingReview`. | The review loop, and that a part either merges or reverts cleanly. |
 | 6 | Grants and the policy hook. | A part is provably unable to exceed its persona's ceiling. |
 | 7 | A second section. | Sections are a first-class boundary. |
