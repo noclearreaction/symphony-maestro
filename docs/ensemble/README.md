@@ -459,6 +459,9 @@ The snippets divide into two kinds.
 - Git is not yours. You edit files in your worktree; Ensemble commits and merges.
   Propose a commit message with your result.
 - Your worktree is the only tree you touch.
+- Output that belongs to the change goes in-tree and is reviewed. Output that is
+  evidence *about* the work — measurements, logs, a large report — goes to your
+  outbox and is referenced, not committed.
 - End your turn with an outcome. Partial progress is a legitimate result; say what
   you did and what you did not.
 - If handed a re-apply brief, your previous change and the new base are attached.
@@ -486,7 +489,7 @@ needs a declared writer and declared readers.
 | Part worktree | the part | Ensemble, to commit and merge; a human attached or observing | Not readable by another part |
 | Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
-| Part outbox — summary, proposed commit message, artefact list | the part | Ensemble, then the principal | One-way, out |
+| Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output does not pollute the change |
 | Change branch | Ensemble, by merging | any part of that change, as its base; a human | The only inter-part channel |
 | Change artefacts — proposal, design, the `tasks.md` ledger | the principal, in the parent worktree | parts, read-only | Parts do not coordinate through the ledger |
 | `main` | the human, by merging a PR | everyone | |
@@ -498,6 +501,29 @@ integration, and integration is reviewed. An auditor reading a developer's work
 reads the change branch, not the developer's tree.
 
 A human can read anything. That is not a hidden channel; it is the point.
+
+**Not everything a part produces is a code change.** Measurements, logs, a large
+output, a decision writeup — those go to the outbox, and Ensemble references them
+from the result rather than committing them. Some artefacts genuinely belong to
+the change and should be in-tree and reviewed: the `audit/*.md` of
+[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §5 is one.
+Which of the two applies is a judgment a part has to be told how to make, so it is
+one more instruction snippet: *in-tree because it belongs to the change, outbox
+because it is evidence about the work.*
+
+#### What this does not attempt
+
+A part with `bash` can write anywhere its process can reach — the devcontainer
+filesystem included. That is a property of running an agent on a machine, not
+something Ensemble introduced, and no amount of channel design closes it.
+
+What Ensemble owes is **not creating leaks of its own**: no space writable by two
+parts, no artefact arriving without a declared writer, no visibility that skips
+the merge. Closing ambient filesystem access is the [trust
+boundary's](#design-considerations) business — hook, hook denying its own paths,
+or container per turn — and treating careful channel design as a substitute for it
+would be the worse error, because it would look like a guarantee while being a
+convention.
 
 **One thing to verify.** Scratchpad writes skip the permission prompt, and
 [`docs/vibe/prompt/08-scratchpad.md`](../vibe/prompt/08-scratchpad.md) records
