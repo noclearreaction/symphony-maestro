@@ -332,6 +332,12 @@ That is what a developer does when a rebase turns ugly, and it beats handing the
 conflict to a fresh part: the part that formed the intent is still there with its
 reasoning intact, where a resolver would have to infer two intents from diffs.
 
+**Presented as an artefact, not as a git operation.** Ensemble resets the part's
+worktree to the moved base and hands it its own previous diff. No conflict
+markers, no `--theirs`, no git tooling added to the part's ceiling — it edits
+files exactly as it always does, which is the thing it is good at rather than a
+git operation it is bad at.
+
 If it cannot re-apply, the part **fails and its worktree is reverted**. Failure is
 therefore clean — nothing half-integrated, nothing for a human to unpick, no tree
 left behind. The change either landed or never existed.
@@ -437,6 +443,36 @@ Committing a part's work is Ensemble's, but the message is content and this
 repository cares about it — see [`bin/commit-lint.ts`](../../bin/commit-lint.ts).
 So the part proposes the message in its result, and Ensemble commits and
 validates. An unlintable message comes back the same way a conflict does.
+
+### Instruction snippets are part of the deliverable
+
+Every constraint in this document is something an agent has to be **told**, or it
+will do the obvious wrong thing: try to commit, guess rather than report, work
+outside its tree. Ensemble therefore ships a library of composable instruction
+snippets, and a persona prompt is *role-specific content plus Ensemble's
+contract* rather than something hand-written each time.
+
+The snippets divide into two kinds.
+
+**Ensemble's contract** — what the agent must know about the system it is inside:
+
+- Git is not yours. You edit files in your worktree; Ensemble commits and merges.
+  Propose a commit message with your result.
+- Your worktree is the only tree you touch.
+- End your turn with an outcome. Partial progress is a legitimate result; say what
+  you did and what you did not.
+- If handed a re-apply brief, your previous change and the new base are attached.
+  Re-apply the intent, do not attempt to merge.
+
+**What replacing the base prompt costs.** A persona sets `system_prompt_id`,
+which replaces Vibe's bundled base outright, so anything from it that is actually
+load-bearing has to be reintroduced deliberately — the scratchpad rules, OS and
+shell, which subagents exist. See [`docs/vibe/prompt/`](../vibe/prompt/) for what
+each fragment contains and what gating it costs.
+
+Composing rather than hand-writing matters because these are invariants. A
+persona that forgets the git snippet does not fail visibly; it just tries to
+commit, gets denied, and burns a turn learning what it should have been told.
 
 ### Subagents are Vibe's, not Ensemble's
 
@@ -747,7 +783,7 @@ not there.
 | 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). | Done. A real turn, routed through rubato, no headless fragment, instructions ours via `VIBE_DEFAULT_AGENT`. |
 | 1 | `session/load` on the spike. | Resume works over ACP — the assumption every review round depends on. |
 | 2 | Backend plus CLI: host a part, own-attach to it, and `tail` it. | The entrypoint, and an event stream in the control API before anything is built on it. |
-| 3 | Personas from configuration; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started and survives Ensemble dying. |
+| 3 | Personas from configuration, composed from role content plus Ensemble's instruction snippets; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started, told what system it is in, and survives Ensemble dying. |
 | 4 | `wait`, `result`, the queue, chairs, and a worktree per part. | Work comes back, bounded by chairs rather than by how much was started. |
 | 5 | `resume`, `accept`, the merge and re-apply on conflict, plus owning attach in `AwaitingReview`. | The review loop, and that a part either merges or reverts cleanly. |
 | 6 | Grants and the policy hook. | A part is provably unable to exceed its persona's ceiling. |
