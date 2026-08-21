@@ -14,7 +14,7 @@ sequenceDiagram
   Note over O: turn ends
   E->>C: a chair frees up, plays auth-refactor
   C-->>E: stopReason: finished
-  Note over E: commit + merge into the base
+  Note over E: merge the branch into the base
   O->>E: wait(until=any, timeout=60)
   E-->>O: {done: [auth-refactor]}
   O->>E: result(auth-refactor)

@@ -77,6 +77,28 @@ surface — does it let a principal spend more, or only spend it in a different
 order?
 
 
+## Whether finishing should merge at all
+
+Ensemble owns both ends of a part's tree: it creates the worktree and it merges the
+branch when the part finishes. The alternative is to own only the first end — make
+the tree, hand back the branch, and let the caller decide what happens to it.
+
+Claude Code's subagent isolation is that alternative, and it is *more general*: any
+completion policy can be built on top, including this one. What it costs is that
+integration becomes a property of how the caller was prompted rather than of the
+system, so a merge happens when someone remembered to ask for one.
+
+| | Merge on finish | Hand back the branch |
+| --- | --- | --- |
+| Integration is | a mechanism | the caller's to arrange |
+| Suits | a base that is a change branch, parts that are small | flows we have not anticipated |
+| Failure mode | forces a policy on work that wanted a different one | work that lands nowhere, silently |
+
+The pick here is deliberate — a section drives a change to completion, and work
+that merges nowhere is the thing worth designing out. But it is a pick, and the
+general form is a superset. What would settle it is a flow that genuinely wants a
+branch left alone; we do not have one yet.
+
 ## Whether a part can re-apply its own change
 
 A conflict is handed back to the part that caused it, on the assumption it can

@@ -47,8 +47,8 @@ all backed by the same credential. Two chairs.
    takes nothing from anyone: observing is read-only, the part keeps playing, and
    the developer never knows you were there.
 
-5. **rate-limit-impl** stops with the work done. Nobody is asked: Ensemble commits
-   the worktree with the message the part proposed and merges it into
+5. **rate-limit-impl** stops with the work done. Nobody is asked: Ensemble merges
+   its branch — three commits of the developer's own making — into
    `change/rate-limiting`. `Merged`. The chair is free, and nothing else is
    queued, so it idles.
 
@@ -195,7 +195,7 @@ fight you for the transcript, it queues behind you.
    `internal/auth/token.go` — which nobody knew in advance, because that is the
    nature of the thing.
 
-2. `auth-refactor` finishes first. Ensemble commits and merges cleanly. `Merged`.
+2. `auth-refactor` finishes first. Ensemble merges its branch cleanly. `Merged`.
 
 3. `session-expiry` finishes. **Ensemble attempts the merge and it conflicts** in
    `token.go`.

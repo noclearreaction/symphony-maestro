@@ -37,8 +37,8 @@ Ensemble holds. A part carries the name it runs under.
   are decided outside Ensemble.
 - **Parts are durable.** A part is a transcript on disk and a record of state, not
   a process.
-- **Merging is not a tool call.** A part that stops with the work done is committed
-  and merged. One that stopped on a bound is not, and waits for its caller to
+- **Merging is not a tool call.** A part that stops with the work done has its
+  branch merged. One that stopped on a bound does not, and waits for its caller to
   `resume` or `cancel` it.
 
 ## How results reach the principal
@@ -59,11 +59,11 @@ has a declared writer and declared readers.
 
 | Space | Writer | Readers | Notes |
 | --- | --- | --- | --- |
-| Part working tree | the part | Ensemble, to commit and merge; a human attached or observing | No other part is given a route to it |
-| A part's commit | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Immutable, so it cannot shift under a reviewer |
+| Part working tree | the part | Ensemble, to merge; a human attached or observing | No other part is given a route to it |
+| A part's branch | the part, by committing | Ensemble, to merge; a review part, via a checkout Ensemble prepares | A commit cannot shift under a reviewer the way a tree can |
 | Part scratchpad | the part and its subagents | same | Per session, outside the worktree, never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
-| Part outbox — summary, proposed commit message, files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree |
+| Part outbox — summary, evidence, files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree |
 | The base | Ensemble, by merging | any part branched from it; a human | The only inter-part channel |
 | Whatever the principal writes in the base | the principal | parts, read-only | Parts do not coordinate through it |
 

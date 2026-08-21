@@ -141,8 +141,8 @@ produced the work.
 
 `stopReason` says which end a part reached.
 
-**Finished** — the agent stopped because the work was done. Ensemble commits the
-worktree and merges it into the base.
+**Finished** — the agent stopped because the work was done. Ensemble merges the
+part's branch into the base.
 
 - if the merge conflicts, the part is handed the moved base and its own previous
   diff, and re-applies its change — no conflict markers, no git
@@ -191,21 +191,28 @@ since a chair spends most of its time waiting on a model API.
 
 ### Who owns git
 
-| Level | Owner | Because |
-| --- | --- | --- |
-| Part worktrees, commits, merge into the base, revert | **Ensemble** | Mechanical and deterministic, on trees Ensemble created |
-| Anything above the base | **The principal** | Judgment and authored content, and it already works in the base |
+The boundary is which refs, not which verbs. Every part gets git itself.
 
-The principal gets git itself rather than tools wrapping it: git flows vary, and a
-fixed set of verbs would constrain it to whatever we anticipated.
+| Ref | Written by |
+| --- | --- |
+| A part's worktree and branch | **that part**. Ensemble creates it and merges it, and does not reach inside. |
+| The base | **Ensemble**, by merging finished parts, and **the principal**, which works there. The one shared ref, because it is the only inter-part channel. |
+| Anything above the base — remotes, PRs, release refs | **The principal** |
+
+A part commits its own work, as many times as the work has shapes, with whatever
+messages it writes. It needs that to work at all: a checkpoint before a risky
+change and a `reset` to abandon one, `diff` to see what it did, `log` and `blame`
+to read the code. A part that cannot commit cannot back out, and re-applying
+against a moved base means producing its own previous diff.
+
+Anything a part left uncommitted is swept into a final commit so the merge loses
+nothing. That is a safety net, not a claim on the history.
+
+Nobody gets a wrapper. Git flows vary, and a fixed set of verbs would constrain
+each owner to whatever we anticipated.
 
 The hard boundary is a protected ref, outside Ensemble, holding regardless of what
 any agent attempts.
-
-Committing a part's work is Ensemble's, but the message is content: the part
-proposes it in its result and Ensemble commits with it. Whether a message is
-checked against a project's conventions belongs to that project, and a rejection
-returns the same way a conflict does.
 
 ## 4. Flows
 

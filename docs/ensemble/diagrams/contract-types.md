@@ -31,7 +31,6 @@ classDiagram
     +string part
     +StopReason stopped
     +string summary
-    +string commit_message
     +Artifact[] artifacts
     +DiffStat diff
     +float cost_usd
