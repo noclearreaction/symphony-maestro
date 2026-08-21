@@ -28,42 +28,28 @@ beside it:
 | **Ensemble** | This layer: sections, their parts, and the chairs that play them. |
 | **Section** | A long-lived working group with a principal. |
 | **Base** | The git ref a part's worktree is created from and merged into. What it signifies belongs to the project. |
-| **Persona** | An instruction set and which ACP agent runs it. Not a tree, not a permission, not an individual. |
-| **Part** | A unit of work, and the only carrier of context: a transcript, a persona, a tree or none, a lifecycle. |
+| **Persona** | An instruction set and which ACP agent runs it. |
+| **Part** | A unit of work and the carrier of its context: a transcript, a persona, a tree, a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
 | **Principal** | The part a human lands in by default. Orchestrator persona, working in the base. |
 
 ### Everything is a part
 
-Agents have no memory outside a transcript, so context lives in the part. Two
-parts running the same persona are indistinguishable, and there is no individual
-to name or track.
-
-A part carries two properties:
+Context lives in the part: an agent knows its transcript. A part carries two
+properties:
 
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
 | **Tree** | A worktree of its own, the base, a read-only checkout for review, or none |
 
-Whether a human is connected is ephemeral state, not a property — the `Attached`
-of [§3](#lifecycle).
+A human may be attached to a part. That is state, held in the lifecycle
+([§3](#lifecycle)).
 
-The principal is a combination of the same properties:
+The principal is a part with the base as its tree.
 
-| | Developer part | Principal |
-| --- | --- | --- |
-| Git | None | Yes |
-| Tree | A worktree from the base | The base |
-| Ends when | Its tree merges into the base | A human says so |
-
-A principal nobody is attached to is running unattended. That is a state, not a
-mode.
-
-What a part may do follows from its persona and is decided outside Ensemble
-([§5](#5-tool-use-with-no-human-present)). A principal names a persona when it
-starts a part and does not supply permissions, so it cannot grant more than a
-human has sanctioned.
+A part's permissions follow from its persona and are resolved outside Ensemble
+([§5](#5-tool-use-with-no-human-present)).
 
 ## 1. Constraints
 
@@ -103,8 +89,8 @@ Ensemble supplies the session id and the CLI execs the agent against it.
 See [Architecture](diagrams/architecture.md).
 
 Ensemble owns the sections and their parts, the mapping from part to session id,
-the queue, and the routing of permission requests. It does not interpret results,
-judge quality, make plans, or decide policy.
+the queue, and the routing of permission requests. Results, quality, plans and
+policy belong elsewhere.
 
 ### One core, several entry points
 
@@ -122,8 +108,8 @@ The MCP surface serves an agent making tool calls. A human wants different thing
 from the same state: which parts exist, what they are doing, attach, logs. The
 entry points are therefore separate rather than one surface with two audiences.
 
-State stays in the core, so entry points cannot disagree and any of them can crash
-without loss.
+State stays in the core, so entry points agree by construction and are
+disposable.
 
 The core decides whether a part can be attached — it is in an attachable state and
 nobody else owns it — and supplies the session id. Getting a terminal onto that
@@ -131,41 +117,27 @@ session belongs to the entry point.
 
 ## 3. Parts
 
-How a part does its work is its own business. Ensemble bounds where it works and
-what it may do, and does not prescribe method. Anything a part spawns runs inside
-those same bounds: subagents inherit its working directory, and Ensemble neither
-sees nor manages them.
+Ensemble bounds where a part works and what it may do; method is the part's own.
+Anything it spawns runs inside those bounds — subagents inherit its working
+directory.
 
 ### One owner at a time
 
-A part has exactly one owner. Either Ensemble is driving it on scheduled work, or
-a human is driving it. Never both.
+One party drives a part: Ensemble on scheduled work, or a human attached to it.
+A transcript has a single author.
 
-Two writers on one transcript leave the scheduler holding a conversation
-containing turns it never sent, and the human in a session doing things they did
-not ask for. Neither can reason about a conversation it only partly authored.
+**Attaching** gives the part to a human. A live part — `Playing` or `Attached` —
+leaves queued work on the queue until it is free again.
 
-**Owning attachment** gives the part to a human. A part is *live* when `Playing` or
-`Attached`, and a live part does not take work off the queue. Queued work waits and
-starts when the human detaches.
-
-**Observing** is read-only. It streams the same `session/update` notifications the
-driver sees, works in any state including mid-turn, and any number of observers can
-watch at once. In the CLI it is a `tail`-shaped command; in the TUI it is what the
-section view is made of.
-
-Separating the two allows watching work without stopping it.
-
-Later: show a part's queued work in the TUI and let a human pull it into the
-session they are in, rather than detaching and letting the scheduler start it.
-Exclusivity is unchanged; the handoff becomes deliberate rather than timed.
+**Observing** streams the same `session/update` notifications the driver sees, to
+any number of readers, in any state including mid-turn.
 
 ### Lifecycle
 
 See [Part lifecycle](diagrams/part-lifecycle.md).
 
-A transcript is never deleted. `Reverted` concerns the tree: the worktree is
-discarded, the transcript remains.
+Transcripts persist. `Reverted` concerns the tree: the worktree is discarded, the
+transcript remains.
 
 `resume` is the only way work reaches an existing part, whatever the reason —
 rejection, a follow-up, new information, a conflict to re-apply. It continues the
@@ -189,8 +161,8 @@ solved: partial work merges. Merge order follows completion order.
 
 ### Starting is not playing
 
-`start` puts a part on the queue. It begins playing when a chair is free and the
-part is not live. `start` fails for neither reason.
+`start` puts a part on the queue. It begins playing once a chair is free and the
+part is idle.
 
 The queue holds only ready work. Sequencing is the orchestrator's judgment: it
 enqueues "write the code" once the test exists, rather than enqueueing both and
@@ -200,14 +172,12 @@ Dependent work therefore needs no shared tree. A part enqueued after its
 predecessor merged branches from a base that already contains that predecessor's
 output.
 
-A part's worktree is created at enqueue, not at selection. At enqueue the intended
-base state is known. Deferring creation to selection branches from whatever HEAD
+A part's worktree is created at enqueue, when the intended base is known. Deferring creation to selection branches from whatever HEAD
 has since become.
 
 ### What bounds concurrency
 
-Two configured constraints, both operator configuration and neither reachable from
-a tool:
+Two configured constraints, both operator configuration:
 
 | Constraint | Because |
 | --- | --- |
@@ -228,12 +198,11 @@ since a chair spends most of its time waiting on a model API.
 | Part worktrees, commits, merge into the base, revert | **Ensemble** | Mechanical and deterministic, triggered by `accept`, on trees Ensemble created |
 | Anything above the base | **The principal** | Judgment and authored content, and it already works in the base |
 
-A part can be denied git outright, since it never needs it. A principal cannot,
-and should not receive git through tools wrapping it: git flows vary, and a fixed
-set of verbs constrains it to whatever we anticipated.
+The principal gets git itself rather than tools wrapping it: git flows vary, and a
+fixed set of verbs would constrain it to whatever we anticipated.
 
-The hard boundary belongs outside Ensemble. A protected ref holds regardless of
-what any agent attempts.
+The hard boundary is a protected ref, outside Ensemble, holding regardless of what
+any agent attempts.
 
 Committing a part's work is Ensemble's, but the message is content: the part
 proposes it in its result and Ensemble commits with it. Whether a message is
