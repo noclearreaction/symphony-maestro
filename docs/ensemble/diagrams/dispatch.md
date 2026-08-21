@@ -1,7 +1,7 @@
 # Dispatch
 
 A principal starting work, collecting a result, and resuming a part.
-Companion to [README §5](../README.md#5-dispatch-flows).
+Companion to [README §4](../README.md#4-flows).
 
 ```mermaid
 sequenceDiagram
@@ -13,7 +13,8 @@ sequenceDiagram
   E-->>O: [Queued, Queued]
   Note over O: turn ends
   E->>C: a chair frees up, plays auth-refactor
-  C-->>E: returned
+  C-->>E: stopReason: finished
+  Note over E: commit + merge into the base
   O->>E: wait(until=any, timeout=60)
   E-->>O: {done: [auth-refactor]}
   O->>E: result(auth-refactor)

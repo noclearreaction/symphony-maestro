@@ -122,30 +122,40 @@ any number of readers, in any state including mid-turn.
 
 ### Lifecycle
 
-See [Part lifecycle](diagrams/part-lifecycle.md).
+`Queued` while it waits for a chair, `Playing` while an agent works, then one of
+two ends depending on why the agent stopped. See
+[Part lifecycle](diagrams/part-lifecycle.md).
+
+`Playing` spans however many turns the work takes. Ensemble sees the start and the
+stop; what happens between is the agent's.
 
 Transcripts persist. `Reverted` concerns the tree: the worktree is discarded, the
 transcript remains.
 
-`resume` is the only way work reaches an existing part, whatever the reason —
-rejection, a follow-up, new information, a conflict to re-apply. It continues the
-transcript rather than starting one, which is cheaper and keeps the context that
+`resume` is the only way work reaches an existing part, whatever the reason — a
+follow-up, new information, a conflict to re-apply, more turns for a halted part.
+It continues the transcript rather than starting one, which keeps the context that
 produced the work.
-
-`Faulted` is not retried automatically.
 
 ### Merging
 
-When a part is accepted:
+`stopReason` says which end a part reached.
 
-- its worktree is merged into its base
+**Finished** — the agent stopped because the work was done. Ensemble commits the
+worktree and merges it into the base.
+
 - if the merge conflicts, the part is handed the moved base and its own previous
   diff, and re-applies its change — no conflict markers, no git
 - if it cannot re-apply, the worktree is reverted
-- the outbox is kept either way
 
-Acceptance is a judgment about quality, not about whether the original problem is
-solved: partial work merges. Merge order follows completion order.
+**Halted** — the agent stopped because it hit a bound on turns or spend. The
+worktree stays unmerged: a part cut off mid-edit may leave a tree nothing should
+build on. Whoever started the part reads the result and either `resume`s it with
+more, or abandons it and the tree is reverted.
+
+That is the one judgment in the model, and it belongs to the caller.
+
+The outbox is kept either way. Merge order follows completion order.
 
 ### Starting is not playing
 
@@ -183,7 +193,7 @@ since a chair spends most of its time waiting on a model API.
 
 | Level | Owner | Because |
 | --- | --- | --- |
-| Part worktrees, commits, merge into the base, revert | **Ensemble** | Mechanical and deterministic, triggered by `accept`, on trees Ensemble created |
+| Part worktrees, commits, merge into the base, revert | **Ensemble** | Mechanical and deterministic, on trees Ensemble created |
 | Anything above the base | **The principal** | Judgment and authored content, and it already works in the base |
 
 The principal gets git itself rather than tools wrapping it: git flows vary, and a

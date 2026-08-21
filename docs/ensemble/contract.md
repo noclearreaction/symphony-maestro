@@ -3,9 +3,8 @@
 The MCP tool surface Ensemble offers a principal, and the spaces work moves
 through. Companion to [README](README.md).
 
-The MCP tool surface. Calls are batch-shaped: each tool boundary is a potential
-turn, and every turn re-sends the whole context, so instructing five parts costs
-one turn.
+Calls are batch-shaped: each tool boundary is a potential turn, and every turn
+re-sends the whole context, so instructing five parts costs one turn.
 
 See [Contract types](diagrams/contract-types.md).
 
@@ -22,9 +21,8 @@ Ensemble holds. A part carries the name it runs under.
 | `resume(items[])` | no | `Part[]` | `{part, message}`. Queues another turn on an existing transcript. |
 | `wait(parts?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps the timeout and returns `pending`. |
 | `status(parts?)` | no | `Status[]` | Cheap poll. Omit `parts` for the whole section. |
-| `result(part, full?)` | no | `Result` | Summary by default; `full` returns the diff. |
-| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble merges the tree if there is one: clean gives `Merged`, a conflict returns the part to re-apply. |
-| `cancel(parts[])` | no | `void` | Drops queued work, or stops a playing turn. The worktree is reverted; the transcript remains. |
+| `result(part, full?)` | no | `Result` | Summary by default; `full` returns the diff. Carries why the part stopped, which is what a halted part is judged on. |
+| `cancel(parts[])` | no | `void` | Drops queued work, stops a playing part, or abandons a halted one. The worktree is reverted; the transcript remains. |
 
 ## Invariants
 
@@ -39,6 +37,9 @@ Ensemble holds. A part carries the name it runs under.
   are decided outside Ensemble.
 - **Parts are durable.** A part is a transcript on disk and a record of state, not
   a process.
+- **Merging is not a tool call.** A part that stops with the work done is committed
+  and merged. One that stopped on a bound is not, and waits for its caller to
+  `resume` or `cancel` it.
 
 ## How results reach the principal
 
@@ -79,7 +80,7 @@ A human can read anything.
 
 Output that belongs to the work goes in-tree and is reviewed; evidence about the
 work goes to the outbox and is referenced from the result. Which applies is a
-judgment a part is told how to make, and is one of the snippets above.
+judgment a part is told how to make — one of the [snippets](snippets.md).
 
 ### What this does not attempt
 

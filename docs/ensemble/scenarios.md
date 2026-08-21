@@ -47,8 +47,10 @@ all backed by the same credential. Two chairs.
    takes nothing from anyone: observing is read-only, the part keeps playing, and
    the developer never knows you were there.
 
-5. **rate-limit-impl** finishes its turn and returns. Its part moves to
-   `AwaitingReview`. The chair is free, and nothing else is queued, so it idles.
+5. **rate-limit-impl** stops with the work done. Nobody is asked: Ensemble commits
+   the worktree with the message the part proposed and merges it into
+   `change/rate-limiting`. `Merged`. The chair is free, and nothing else is
+   queued, so it idles.
 
 6. **Principal**, on its next turn, calls `wait(until: "any")` and gets
    `{ done: ["rate-limit-impl"] }`, then `result("rate-limit-impl")` — a summary
@@ -66,10 +68,9 @@ all backed by the same credential. Two chairs.
    transcript** — the developer still has everything it wrote, and the correction
    lands in context rather than as a fresh briefing.
 
-8. Second turn returns, and this time the principal is satisfied. It accepts the
-   implementation part, so Ensemble commits it and merges it into
-   `change/rate-limiting`. `rate-limit-tests` has come back too and is accepted
-   the same way.
+8. The second turn finishes, and Ensemble merges again: the fix is a further commit
+   on `change/rate-limiting` rather than a revision of the first. `rate-limit-tests`
+   came back and merged while this was going on.
 
 9. Now the principal wants it reviewed, so it calls
    `start([{ persona: "auditor", brief: "Review the rate limiter against…",
@@ -79,8 +80,8 @@ all backed by the same credential. Two chairs.
    anyone's recollection.
 
 10. **Auditor** returns clean, and its findings go to `openspec/changes/…/audit/`
-    in its own tree — in-tree, because they belong to the work. The principal
-    accepts it and Ensemble merges.
+    in its own tree — in-tree, because they belong to the work. It merges like
+    anything else.
 
 11. **Principal → you:** "Rate limiting is implemented, tested and reviewed, all
     three parts merged into `change/rate-limiting`. Here's what changed and what
@@ -163,12 +164,12 @@ correctness. The principal expresses *what should happen*; the operator decides
 
 **Context:** the principal's summary of a change is not enough for you.
 
-1. **Principal** reports that `auth-refactor` is awaiting review, with a summary
-   you find unconvincing — it claims a migration is unnecessary and you doubt it.
+1. **Principal** reports that `auth-refactor` merged, with a summary you find
+   unconvincing — it claims a migration is unnecessary and you doubt it.
 
-2. **You** run `ensemble attach auth-refactor`. The part is in `AwaitingReview`,
-   so this is allowed, and you land in the transcript with everything the
-   developer saw.
+2. **You** run `ensemble attach auth-refactor`. The part is `Merged` and nothing is
+   driving it, so this is allowed, and you land in the transcript with everything
+   the developer saw.
 
 3. You ask it directly: *"Why do you think existing rows don't need migrating?"*
    It answers from the context that produced the claim. You disagree, explain, and
@@ -194,11 +195,10 @@ fight you for the transcript, it queues behind you.
    `internal/auth/token.go` — which nobody knew in advance, because that is the
    nature of the thing.
 
-2. `auth-refactor` finishes first. The principal accepts it, Ensemble commits and
-   merges cleanly. `Merged`.
+2. `auth-refactor` finishes first. Ensemble commits and merges cleanly. `Merged`.
 
-3. `session-expiry` finishes. The principal accepts it. **Ensemble attempts the
-   merge and it conflicts** in `token.go`.
+3. `session-expiry` finishes. **Ensemble attempts the merge and it conflicts** in
+   `token.go`.
 
 4. Ensemble does not try to resolve it, and does not hand it to a fresh part.
    It sends `session-expiry` back through the queue with the moved base:
@@ -224,7 +224,37 @@ run two changes at once is visible as work, not hidden as a chore.
 
 ---
 
-## Scenario F — Policy holds
+## Scenario F — A bound is reached
+
+**Context:** the principal started a part with a turn bound, and the work was
+bigger than that.
+
+1. **Part `csv-importer`** is started with a bound on turns. It spends them:
+   scaffolding, a first pass at parsing, a test that does not compile yet.
+
+2. The bound hits mid-edit. Ensemble sees a `stopReason` that is not *finished*, so
+   it does **not** merge. `Halted`, worktree intact and unmerged.
+
+3. **Principal** reads the result: three of five files touched, the parser
+   half-written, one test failing. Nothing here would build on the base.
+
+4. It has a choice nobody else can make. It `resume`s with *"keep going, finish the
+   parser and the test"* — and the part continues the same transcript from the same
+   worktree.
+
+5. That turn finishes. Ensemble merges.
+
+**Had the principal read the result and decided the approach was wrong**, it would
+have cancelled instead: the worktree reverted, the transcript kept, and a fresh
+part started with a better brief.
+
+**What the story shows:** running out of turns is not failure and not success, so
+Ensemble does not pick one. It stops, keeps the tree, and hands the caller the only
+judgment in the model — whether this work is worth continuing.
+
+---
+
+## Scenario G — Policy holds
 
 **Context:** a developer part decides to be helpful.
 
@@ -248,4 +278,4 @@ run two changes at once is visible as work, not hidden as a chore.
 the intention is formed, and a denial is information rather than a dead end.
 Note what the story does *not* show: a part rewriting the hook that stopped it.
 That it cannot is an assumption, not yet a fact — see
-[the trust boundary](README.md#design-considerations).
+[the trust boundary](open-questions.md#where-the-trust-boundary-sits).

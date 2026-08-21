@@ -1,7 +1,7 @@
 # Observing and attaching
 
 Observing takes nothing from a running part; attaching takes ownership.
-Companion to [README §5](../README.md#5-dispatch-flows).
+Companion to [README §4](../README.md#4-flows).
 
 ```mermaid
 sequenceDiagram
@@ -15,7 +15,7 @@ sequenceDiagram
   Note over P: still playing
   deactivate E
   H->>E: attach(auth-refactor)
-  Note over E: only from AwaitingReview or Faulted
+  Note over E: only when nothing else is driving the part
   E-->>H: terminal handed over
   Note over E: queued work waits until detach
 ```

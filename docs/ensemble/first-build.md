@@ -38,7 +38,7 @@ Each stage is independently useful, and each is a place to stop.
 | 2 | Core plus CLI: start a part, attach to it, `tail` it. | The entry point, and an event stream in the control API. |
 | 3 | Personas from configuration; `personas`, `parts`, `start`, `status`. | Work can be started and survives a restart. |
 | 4 | `wait`, `result`, the queue, chairs, a worktree per part. | Work returns, bounded by chairs. |
-| 5 | `resume`, `accept`, merge and re-apply on conflict, attach in `AwaitingReview`. | The review loop, and that a part merges or reverts cleanly. |
+| 5 | `resume`, `cancel`, merge on finish, re-apply on conflict, `Halted` on a bound. | The review loop, and that a part merges or reverts cleanly. |
 | 6 | Route permission requests to a decision point, with one plug behind it. | A part can use tools with no human present. |
 | 7 | A second section. | Sections are a first-class boundary. |
 

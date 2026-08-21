@@ -1,6 +1,6 @@
 # Contract types
 
-What Ensemble holds. Companion to [README §4](../README.md#4-functional-contract).
+What Ensemble holds. Companion to [the contract](../contract.md).
 
 ```mermaid
 classDiagram
@@ -29,7 +29,9 @@ classDiagram
   }
   class Result {
     +string part
+    +StopReason stopped
     +string summary
+    +string commit_message
     +Artifact[] artifacts
     +DiffStat diff
     +float cost_usd

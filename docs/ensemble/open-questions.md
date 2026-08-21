@@ -48,8 +48,8 @@ model speaks to that.
 A part is a transcript on disk and a record
 of state, so durability is close to free. A turn in flight does not survive, since
 the process running it dies with its parent. Either Ensemble supervises those or
-they return `Faulted` with worktrees intact. The second is cheaper and should be a
-decision rather than a consequence.
+they come back `Halted` with worktrees intact — the same shape as a turn that hit
+a bound. The second is cheaper and should be a decision rather than a consequence.
 
 ## Whether a turn is at-most-once
 

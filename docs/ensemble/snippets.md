@@ -16,8 +16,8 @@ Ensemble's contract:
 - Your worktree is the only tree you touch.
 - Output belonging to the work goes in-tree and is reviewed. Evidence *about* the
   work — measurements, logs, a report — goes to your outbox and is referenced.
-- End your turn with an outcome. Partial progress is a legitimate result; say what
-  you did and what you did not.
+- Partial progress is a legitimate result. Say what you did and what you did not,
+  rather than guessing to fill the gap.
 - If handed a re-apply brief, your previous change and the new base are attached.
   Re-apply the intent; do not attempt to merge.
 
