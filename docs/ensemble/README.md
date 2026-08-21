@@ -59,7 +59,7 @@ not a mode either — it is a principal nobody is attached to:
 | --- | --- | --- |
 | Git | None | Yes |
 | Tree | A worktree from the base | The base itself |
-| Ends when | Its work merges into the base | A human says so |
+| Ends when | Its output lands | A human says so |
 
 What a part is permitted to do follows from its persona, and is decided outside
 Ensemble — see [§6](#6-tool-use-with-no-human-present). A principal names a
@@ -262,22 +262,22 @@ stateDiagram-v2
   direction LR
   [*] --> Queued: start(persona, brief)
   Queued --> Playing: a chair frees up
-  Queued --> Reverted: cancel()
+  Queued --> Discarded: cancel()
   Playing --> AwaitingReview: turn returned
   Playing --> Faulted: error · budget exceeded
-  Playing --> Reverted: cancel()
+  Playing --> Discarded: cancel()
   AwaitingReview --> Queued: resume(message)
-  AwaitingReview --> Merging: accept()
+  AwaitingReview --> Landing: accept()
   AwaitingReview --> Attached: attach()
   Faulted --> Attached: attach()
   Faulted --> Queued: resume(message)
-  Faulted --> Reverted: give up
+  Faulted --> Discarded: give up
   Attached --> AwaitingReview: detach()
-  Merging --> Merged: clean
-  Merging --> Queued: conflict — re-apply against the moved base
-  Merging --> Reverted: cannot re-apply
-  Merged --> [*]
-  Reverted --> [*]
+  Landing --> Landed: output in place
+  Landing --> Queued: conflict — re-apply against the moved base
+  Landing --> Discarded: cannot re-apply
+  Landed --> [*]
+  Discarded --> [*]
 
   note right of Attached
     Live: a human owns the part.
@@ -285,19 +285,32 @@ stateDiagram-v2
   end note
 ```
 
-### Merged or reverted
+### Landed or discarded
 
-**A part is done when its branch is merged.** Those are the only two ends, and
-both are clean.
+**A part is done when its output is where it belongs.** Those are the only two
+ends, and both are clean.
 
-Merge is attempted **once**, at the end of the work — not per turn. Turns run
-until the orchestrator accepts the part, and that judgment is about quality and
-completeness. Any change at all is enough to proceed to a merge, **including a
-partial one**: a part that made a coherent dent and merged has succeeded, and
-whether the original problem is fully solved is answered by enqueuing more work,
-not at the integration boundary.
+What that means depends on what the part produced:
 
-Merge only happens clean. A conflict is **a signal to the part that caused it** —
+| Produced | Lands by |
+| --- | --- |
+| A tree change | Merging into the base |
+| Outbox artefacts — a report, measurements, logs | Being recorded against the result |
+| Both | Both, or neither |
+| Nothing | It has nothing to land, so it is discarded — and that is information for the principal rather than an error |
+
+Landing is an **event, not a judgment**. Nobody declares satisfaction: either the
+output is where it belongs or it is not.
+
+It is attempted **once**, at the end of the work — not per turn. Turns run until
+the principal accepts the part, and *that* judgment is about quality and
+completeness. Any output at all is enough to attempt landing, **including partial
+work**: a part that made a coherent dent and landed has succeeded, and whether the
+original problem is fully solved is answered by starting more work, not at this
+boundary.
+
+A tree change lands only if it merges clean. A conflict is **a signal to the part
+that caused it** —
 it goes back through the queue with the moved base and re-applies its own change:
 
 > "Your base has moved. `internal/auth/token.go` now looks like this. Re-apply
@@ -313,11 +326,12 @@ markers, no `--theirs`, and no git tooling a part would otherwise need — it ed
 files exactly as it always does, which is the thing it is good at rather than a
 git operation it is bad at.
 
-If it cannot re-apply, the part **fails and its worktree is reverted**. Failure is
-therefore clean — nothing half-integrated, nothing for a human to unpick, no tree
-left behind. The work either landed or never existed.
+If it cannot re-apply, the part is **discarded**: its worktree reverted, its outbox
+artefacts dropped. Failure is therefore clean — nothing half-integrated, nothing
+for a human to unpick, nothing left behind. The work either landed or never
+existed.
 
-Ordering falls out of completion order: first to merge wins, second re-applies.
+Ordering falls out of completion order: first to land wins, second re-applies.
 
 Three tiers, in cost order — avoid by sharing a worktree, re-apply, or escalate to
 a human when a part cannot re-apply its own change, since a second attempt will
@@ -603,7 +617,7 @@ something Ensemble holds. A part carries the name it runs under.
 | `wait(parts?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps the timeout and returns `pending` rather than hanging. |
 | `status(parts?)` | no | `Status[]` | Cheap poll. Omit `parts` for the whole section. |
 | `result(part, full?)` | no | `Result` | Summary by default; `full` returns the diff. |
-| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble attempts the merge: clean means `Merged`, a conflict sends the part back to re-apply. |
+| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble attempts to land it: success means `Landed`, a merge conflict sends the part back to re-apply. |
 | `cancel(parts[])` | no | `void` | Drops queued work, or stops a playing turn and keeps the transcript for inspection. |
 
 ### Invariants

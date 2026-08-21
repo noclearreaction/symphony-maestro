@@ -195,7 +195,7 @@ fight you for the transcript, it queues behind you.
    nature of the thing.
 
 2. `auth-refactor` finishes first. The principal accepts it, Ensemble commits and
-   merges cleanly. `Merged`.
+   merges cleanly. `Landed`.
 
 3. `session-expiry` finishes. The principal accepts it. **Ensemble attempts the
    merge and it conflicts** in `token.go`.
@@ -210,7 +210,7 @@ fight you for the transcript, it queues behind you.
    wrote. It reads the new `token.go`, sees that the refactor moved the expiry
    check it was extending, and re-applies its change in the new shape.
 
-5. Ensemble merges again. Clean. `Merged`.
+5. Ensemble merges again. Clean. `Landed`.
 
 **And if it hadn't been:** the part fails, Ensemble reverts the worktree, and
 nothing is left behind — no conflict markers on a branch, no half-integrated
