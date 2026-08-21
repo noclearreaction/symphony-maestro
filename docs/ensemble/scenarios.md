@@ -8,9 +8,10 @@
 > one that exposed a conflation of *persona* with *part*.
 
 Throughout: **you** are outside the metaphor. A **part** is a unit of work and the
-only thing carrying context. A **persona** is a named configuration that can play
-several parts at once. A **chair** is an execution slot. The **principal** is the
-part you land in.
+only thing carrying context. A **persona** is an instruction set several parts can
+run at once. A **chair** is an execution slot. The **principal** is the part you
+land in. Branch names below are this project's convention, not Ensemble's — to
+Ensemble a base is just a ref.
 
 Configuration for all scenarios: personas `developer`, `auditor` and `tester`,
 all backed by the same credential. Two chairs.
@@ -78,7 +79,7 @@ all backed by the same credential. Two chairs.
    anyone's recollection.
 
 10. **Auditor** returns clean, and its findings go to `openspec/changes/…/audit/`
-    in its own tree — in-tree, because they belong to the change. The principal
+    in its own tree — in-tree, because they belong to the work. The principal
     accepts it and Ensemble merges.
 
 11. **Principal → you:** "Rate limiting is implemented, tested and reviewed, all
@@ -214,7 +215,7 @@ fight you for the transcript, it queues behind you.
 **And if it hadn't been:** the part fails, Ensemble reverts the worktree, and
 nothing is left behind — no conflict markers on a branch, no half-integrated
 state, nothing for you to unpick. The principal is told the work was lost and
-decides what to do with that, which is a decision about the change rather than
+decides what to do with that, which is a decision about the work rather than
 about git.
 
 **What the story shows:** the conflict goes to whoever caused it, because that is

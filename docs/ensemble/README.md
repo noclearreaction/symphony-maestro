@@ -31,13 +31,13 @@ outside the metaphor and own it.
 | --- | --- |
 | **Maestro** | The framework. Directs the ensemble. |
 | **Ensemble** | This layer: the sections, their parts, and the chairs that play them. |
-| **Section** | A long-lived working group — a build section, a design section — with a principal. Works through changes over time. |
-| **Change** | The unit that becomes a pull request: an OpenSpec change, its `change/<name>` branch, and the parts working it. |
+| **Section** | A long-lived working group — a build section, a design section — with a principal. |
+| **Base** | The git ref a part's worktree is created from and merged back into. What it signifies is the project's business, not Ensemble's. |
 | **Persona** | An instruction set, and which ACP agent runs it — `developer`, `auditor`. Nothing more: not a tree, not a permission, not an individual. |
 | **Ceiling** | What a persona's parts may do. Reviewed configuration, bound to a persona by the operator rather than carried by it. |
 | **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, an interactive flag, and a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
-| **Principal** | A part whose properties are: orchestrator persona, works in the change branch, interactive, wide ceiling. Not a separate kind of thing. |
+| **Principal** | A part whose properties are: orchestrator persona, works in the base itself, interactive, wide ceiling. Not a separate kind of thing. |
 
 ### Everything is a part
 
@@ -50,7 +50,7 @@ One kind of thing, carrying four properties:
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
-| **Tree** | Its own branch, the change branch, a read-only checkout of a branch under review, or none |
+| **Tree** | A worktree of its own, the base itself, a read-only checkout for review, or none |
 | **Interactive** | Whether a human is driving it, rather than a brief |
 | **Ceiling** | What it may do — from reviewed configuration, keyed by its persona |
 
@@ -60,13 +60,10 @@ principal unattended overnight"* a flag rather than a new concept:
 
 | | Developer part | Principal |
 | --- | --- | --- |
-| Git | None | Branch and PR operations |
-| Tree | Its own part branch | The change branch |
+| Git | None | Whatever its ceiling allows |
+| Tree | A worktree from the base | The base itself |
 | Interactive | No | Yes |
-| Ends when | Its branch merges into the change branch | Its change branch merges into `main` |
-
-The last row is the same shape one level up, with the human's gate on it — where
-[`governance/constitution.md`](../../governance/constitution.md) puts it.
+| Ends when | Its work merges into the base | A human says so |
 
 **The ceiling is not part of the persona.** A persona is a prompt, a
 ceiling is a policy, and the operator's configuration binds one to the other. That
@@ -97,8 +94,8 @@ It is reached as an MCP server over HTTP for the tool surface, but it does not
 sit *under* a session; it sits around all of them.
 
 The principal is a part like any other, with the properties set out in
-[Everything is a part](#everything-is-a-part): the orchestrator persona, the
-change branch as its tree, interactive, and a wide ceiling. It is scheduled,
+[Everything is a part](#everything-is-a-part): the orchestrator persona, the base
+as its tree, interactive, and a wide ceiling. It is scheduled,
 enforced and tracked by the same machinery as the rest — a wider ceiling is not
 an exemption from having one.
 
@@ -357,7 +354,7 @@ git operation it is bad at.
 
 If it cannot re-apply, the part **fails and its worktree is reverted**. Failure is
 therefore clean — nothing half-integrated, nothing for a human to unpick, no tree
-left behind. The change either landed or never existed.
+left behind. The work either landed or never existed.
 
 Ordering falls out of completion order: first to merge wins, second re-applies.
 
@@ -440,24 +437,22 @@ and the other is judgment.
 
 | Level | Owner | Why |
 | --- | --- | --- |
-| Part worktrees, commits, merge into the change branch, revert on failure | **Ensemble** | Mechanical, must be deterministic, triggered by `accept`. Ensemble created those trees. |
-| The change branch, the PR, its title and body, when it is ready | **The principal** | Authored content and judgment — and the principal is already sitting in the parent worktree. |
+| Part worktrees, commits, merge into the base, revert on failure | **Ensemble** | Mechanical, must be deterministic, triggered by `accept`. Ensemble created those trees. |
+| Anything above the base — where it came from, where it goes next | **The principal** | Judgment and authored content, and the principal is already working in the base. |
 
-So **a part never touches git**, and its persona's ceiling can deny it outright.
-The principal's cannot: it needs branch and PR operations, and it should not get
-them through a tool wrapping `gh pr create`. Real git flows vary, and a principal
-with git and judgment adapts where a principal with `open_pr(title, body)` is
-stuck with whatever we imagined.
+A part's ceiling can deny git outright, since it never needs it. A principal's
+cannot, and it should not get git through tools wrapping it either: git flows
+vary, and a principal with git and judgment adapts where one with a fixed set of
+verbs is stuck with whatever we imagined.
 
-The boundary that matters is `main`, and it is better protected by **remote branch
-protection** than by withholding git. The constitution's gate is that the human
-decides what reaches `main`; branch protection enforces that regardless of what
-any agent attempts, which is a stronger guarantee than a ceiling we wrote.
+Where the hard boundary belongs is **outside Ensemble** — a protected ref, so it
+holds regardless of what any agent attempts. A ceiling we wrote is a weaker
+guarantee than one the remote enforces.
 
-Committing a part's work is Ensemble's, but the message is content and this
-repository cares about it — see [`bin/commit-lint.ts`](../../bin/commit-lint.ts).
-So the part proposes the message in its result, and Ensemble commits and
-validates. An unlintable message comes back the same way a conflict does.
+Committing a part's work is Ensemble's, but the message is content, so the part
+proposes it in its result and Ensemble commits with it. Whether a message is
+checked against a project's conventions is that project's business, and a
+rejection comes back the same way a conflict does.
 
 ### Instruction snippets are part of the deliverable
 
@@ -474,7 +469,7 @@ The snippets divide into two kinds.
 - Git is not yours. You edit files in your worktree; Ensemble commits and merges.
   Propose a commit message with your result.
 - Your worktree is the only tree you touch.
-- Output that belongs to the change goes in-tree and is reviewed. Output that is
+- Output that belongs to the work goes in-tree and is reviewed. Output that is
   evidence *about* the work — measurements, logs, a large report — goes to your
   outbox and is referenced, not committed.
 - End your turn with an outcome. Partial progress is a legitimate result; say what
@@ -505,10 +500,9 @@ needs a declared writer and declared readers.
 | A part's commit | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Immutable, so it cannot shift under a reviewer |
 | Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
-| Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output does not pollute the change |
-| Change branch | Ensemble, by merging | any part of that change, as its base; a human | The only inter-part channel |
-| Change artefacts — proposal, design, the `tasks.md` ledger | the principal, in the parent worktree | parts, read-only | Parts do not coordinate through the ledger |
-| `main` | the human, by merging a PR | everyone | |
+| Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output stays out of the work |
+| The base | Ensemble, by merging | any part branched from it; a human | The only inter-part channel |
+| Whatever the principal writes in the base | the principal | parts, read-only | Parts do not coordinate through it |
 
 **Ensemble gives no space two writers, and hands each part what it needs rather
 than a route to someone else's work.** That enables isolation; it does not enforce
@@ -524,13 +518,11 @@ need a route into anyone's tree.
 A human can read anything.
 
 **Not everything a part produces is a code change.** Measurements, logs, a large
-output, a decision writeup — those go to the outbox, and Ensemble references them
-from the result rather than committing them. Some artefacts genuinely belong to
-the change and should be in-tree and reviewed: the `audit/*.md` of
-[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §5 is one.
-Which of the two applies is a judgment a part has to be told how to make, so it is
-one more instruction snippet: *in-tree because it belongs to the change, outbox
-because it is evidence about the work.*
+output, a decision writeup — those go to the outbox and are referenced from the
+result rather than committed. Other output belongs in the work and should be
+in-tree and reviewed, a written review being the obvious case. Which applies is a
+judgment a part has to be told how to make, so it is one more instruction snippet:
+*in-tree because it belongs to the work, outbox because it is evidence about it.*
 
 #### What this does not attempt
 
@@ -565,35 +557,25 @@ That is a useful property rather than a gap. Isolation holds for free — a part
 subagents cannot escape its worktree — and it gives the `git-operator` of
 [`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §6 a better
 home than it had. Not an Ensemble concept, just a subagent the principal spawns
-when it wants commit-message discipline or PR-body drafting done by something with
-narrow instructions. It costs Ensemble nothing, because Vibe handles all of it.
+when it wants a narrow instruction set for some piece of git or drafting work. It
+costs Ensemble nothing, because the agent handles all of it.
 
-### Two levels of git
+### Ensemble's git surface
 
-**One branch matters: the change branch.** It is the tree the principal works in,
-what parts branch from, what their work merges back into, and what becomes a pull
-request. It is not a new concept — it is the `change/<name>` branch this repository
-already uses, for the OpenSpec change already named in `openspec/changes/<name>/`.
+Two mechanical operations: **create a worktree from a base, and merge the work
+back into it.** A part gets a worktree, publishes by committing, and Ensemble
+merges that commit into the base it came from. Whether Ensemble also points a
+branch at the commit is an implementation convenience, not something the design
+rests on.
 
-Below that there are worktrees and commits, not branches anybody addresses. A part
-gets a worktree; it publishes by committing; Ensemble merges that commit into the
-change branch. Whether Ensemble also points a branch at the commit is an
-implementation convenience — useful when a human wants to poke at it — and nothing
-here depends on it.
+Everything else is the principal's, done with git directly rather than through
+tools wrapping it — and bounded by its ceiling like anything else.
 
-That leaves Ensemble with exactly two mechanical git operations: **create a
-worktree, and merge the work back.** Everything else at the change level is the
-principal's, done with git directly rather than through tools wrapping it. Neither
-merges the PR: that is the human's, which is where
-[`governance/constitution.md`](../../governance/constitution.md) puts the gate.
-
-A section is long-lived and works through many changes over time. It **should**
-work them sequentially, one change in flight at a time, because concurrent changes
-in one section is how you get the conflicts of [§3](#merged-or-reverted) without
-the isolation of separate sections to justify them. But that is a **default, not
-an invariant** — expressed as a configured limit on changes in flight, defaulting
-to one. Claiming to know exactly how a git flow always works is how a design
-acquires a rule someone has to fight later.
+**What the base signifies is not Ensemble's business.** It is a ref. A project may
+use it as a feature branch, a release branch, a trunk, or whatever its workflow
+requires; Ensemble creates worktrees from it and merges into it either way.
+Encoding one git flow here is how a design acquires a rule someone has to fight
+later.
 
 ## 4. Functional contract
 
@@ -604,24 +586,17 @@ parts must cost one turn rather than five.
 ```mermaid
 classDiagram
   direction LR
-  class Persona {
-    +string name
-    +string acp_agent
-    +string instructions
-    +string credential
-  }
-  class Ceiling {
-    +string persona
-    +Scope scope
-  }
   class Part {
     +string id
     +string persona
-    +string change
+    +string base
     +string session_id
     +string tree
     +bool interactive
     +State state
+  }
+  class Chair {
+    +bool occupied
   }
   class Work {
     +string part
@@ -646,21 +621,17 @@ classDiagram
   class Section {
     +string name
     +string principal
-    +int max_changes_in_flight
   }
-  class Change {
-    +string name
-    +string branch
-    +string pr_url
-  }
-  Section "1" --> "0..n" Change : normally one
-  Change "1" --> "0..n" Part
-  Persona "1" --> "0..n" Part : played as
+  Section "1" --> "0..n" Part
   Part "1" --> "0..1" Work : queued
-  Persona "1" --> "1" Ceiling : bound by configuration
+  Part "0..1" --> "0..1" Chair : occupies while Playing
   Part --> Status
   Part --> Result : last
 ```
+
+Persona and ceiling are absent deliberately: both are names resolved out of
+configuration, not things Ensemble holds. A part carries the persona it runs and
+gets a ceiling by lookup.
 
 ### Tool surface
 
