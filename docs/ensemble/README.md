@@ -183,8 +183,9 @@ be uniform:
 | TUI | suspend itself and hand over the terminal, or embed a pty — the hard case |
 | VS Code | likely open the agent's own extension against the session rather than reimplementing it |
 
-So the core says which session may be attached and why; how the terminal gets
-there is each entry point's own problem.
+The core decides whether a part can be attached at all — it is in an attachable
+state, and nobody else owns it — and hands over the session id. Getting a terminal
+onto that session is the entry point's job.
 
 #### CLI first
 
