@@ -30,9 +30,9 @@ outside the metaphor and own it.
 | **Section** | A long-lived working group — a build section, a design section — with a principal. |
 | **Base** | The git ref a part's worktree is created from and merged back into. What it signifies is the project's business, not Ensemble's. |
 | **Persona** | An instruction set, and which ACP agent runs it — `developer`, `auditor`. Nothing more: not a tree, not a permission, not an individual. |
-| **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, an interactive flag, and a lifecycle. |
+| **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, and a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
-| **Principal** | A part whose properties are: orchestrator persona, works in the base itself, interactive. Not a separate kind of thing. |
+| **Principal** | The part a human lands in by default: orchestrator persona, working in the base. Not a separate kind of thing. |
 
 ### Everything is a part
 
@@ -40,23 +40,25 @@ The agents have amnesia: nothing survives a transcript, so context lives entirel
 in the part. Two parts running the same persona are therefore indistinguishable,
 and there is no individual to name or track.
 
-One kind of thing, carrying three properties:
+One kind of thing, carrying two properties:
 
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
 | **Tree** | A worktree of its own, the base itself, a read-only checkout for review, or none |
-| **Interactive** | Whether a human is driving it, rather than a brief |
+
+Whether a human is connected is not a property but **ephemeral state** — the
+`Attached` of [§3](#lifecycle). A part is not interactive by nature; someone is
+attached to it or nobody is, and that changes while it exists.
 
 The principal is a combination of those rather than an exception to them, which
-keeps scheduling, enforcement and the lifecycle uniform and makes *"run a
-principal unattended overnight"* a flag rather than a new concept:
+keeps scheduling, enforcement and the lifecycle uniform. Running one unattended is
+not a mode either — it is a principal nobody is attached to:
 
 | | Developer part | Principal |
 | --- | --- | --- |
 | Git | None | Yes |
 | Tree | A worktree from the base | The base itself |
-| Interactive | No | Yes |
 | Ends when | Its work merges into the base | A human says so |
 
 What a part is permitted to do follows from its persona, and is decided outside
@@ -80,7 +82,7 @@ assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
 | A session is a durable transcript, addressable and resumable. | A part *is* a session. Continuing one is a resume, and durability comes free. |
 | A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing, and a part's persona is fixed for a turn rather than for its life. |
 | Delegation inside a session is one level deep. | Hierarchy cannot live in a session, so orchestration is an external process. |
-| A non-interactive agent cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
+| An agent driven without a human cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
 | Configuration is per agent, not per protocol. | Ensemble needs a small adapter per agent kind — applying instructions differs between them even though driving a session does not. |
 
 One thing the substrate does *not* give us, and it is why ACP rather than a CLI:
@@ -103,8 +105,9 @@ own command, so Ensemble supplies the session id and the CLI execs the agent
 against it.
 
 The principal is a part like any other, with the properties set out in
-[Everything is a part](#everything-is-a-part): the orchestrator persona, the base
-as its tree, and interactive. It is scheduled, enforced and
+[Everything is a part](#everything-is-a-part): the orchestrator persona, and the
+base as its tree. It is the part a human lands in by default, which is a fact
+about the section rather than about the part. It is scheduled, enforced and
 tracked by the same machinery as the rest.
 
 ```mermaid
@@ -113,14 +116,14 @@ flowchart TB
   ENS["<b>Ensemble</b><br/>runs turns · routes decisions"]
 
   subgraph S1["Section · build"]
-    P1["principal<br/>interactive"]
+    P1["principal"]
     A1["part: auth-refactor<br/>persona developer · worktree"]
     A2["part: rate-limit-tests<br/>persona tester · worktree"]
     A3["part: review-auth<br/>persona auditor"]
   end
 
   subgraph S2["Section · design"]
-    P2["principal<br/>interactive"]
+    P2["principal"]
     D1["part: queue-model<br/>persona designer"]
   end
 
@@ -529,7 +532,6 @@ classDiagram
     +string base
     +string session_id
     +string tree
-    +bool interactive
     +State state
   }
   class Chair {
@@ -602,8 +604,8 @@ something Ensemble holds. A part carries the name it runs under.
 
 ### How results reach the principal
 
-Through `wait`, and only through `wait`. A principal is a live interactive
-session, and a live session cannot be driven from outside — so there is no
+Through `wait`, and only through `wait`. While a human is attached to a principal
+it is a live session, and a live session cannot be driven from outside — so there is no
 callback path and no delivery queue. The principal asks; Ensemble answers when it
 has something.
 
@@ -650,8 +652,8 @@ sequenceDiagram
 
 ## 6. Tool use with no human present
 
-**The problem is narrow: a non-interactive part cannot ask, but its tool calls
-still need answering.** ACP raises them as `session/request_permission`, which
+**The problem is narrow: a part with nobody attached cannot ask, but its tool
+calls still need answering.** ACP raises them as `session/request_permission`, which
 arrives at the **client** — Ensemble. Something has to reply, and no human is
 there to.
 
