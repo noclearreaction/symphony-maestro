@@ -705,7 +705,36 @@ result channel has still done the work. Since the worktree persists and the
 transcript is resumable, recovery is inspection rather than replay — an argument
 for worktrees arriving early.
 
-## 7. Build order
+## 7. Choices for the first build
+
+The design above is deliberately unspecific about agents, plugs and frontends.
+The first build is not — it has to pick something. These are **picks, not
+commitments**: each is the cheapest thing that exercises the design, and each is
+expected to be replaced.
+
+| Concern | First build | Why this one |
+| --- | --- | --- |
+| ACP agent | **Vibe**, via `vibe-acp` | Already installed, already routed through rubato, and funded by a subscription we hold rather than per-token. Verified end to end in [`spikes/acp`](../../spikes/acp/). |
+| Policy plug | **Something trivial** — a static allow/deny list from configuration | Proves the decision point is wired without deciding anything about policy. An engine can replace it behind the same interface. |
+| Frontend | **CLI**, including the `tail`-shaped observer | Validates the control API without UI work confounding it, and forces an event stream in early. |
+| Language | **TypeScript on Deno** | The ACP SDK is first-class there, and it matches what the repository already runs. |
+| Sections | **One** | A second section is what proves the boundary, and proving it is not the first thing worth knowing. |
+
+### Not in the first build
+
+Listed because leaving them out is a decision, not an oversight:
+
+- **Containers per turn.** The trust boundary stays where ACP puts it, which
+  bounds permission but not reach. Acceptable while the parts are ours.
+- **Priority, budgets, section reservation.** The queue is FIFO over ready work
+  with a chair count. Everything else is scheduling we have no evidence we need.
+- **Mutexes.** Nothing declares one yet, and the case for them rests on sharing a
+  worktree, which the channel rules do not permit.
+- **TUI and VS Code.** The CLI has to prove the API first.
+- **Anything about a second agent vendor.** The adapter seam is in the design so
+  that adding one is not a rewrite, not so that we add one now.
+
+## 8. Build order
 
 Each stage is independently useful, and each is a place to stop if the value is
 not there.
