@@ -131,6 +131,11 @@ session belongs to the entry point.
 
 ## 3. Parts
 
+How a part does its work is its own business. Ensemble bounds where it works and
+what it may do, and does not prescribe method. Anything a part spawns runs inside
+those same bounds: subagents inherit its working directory, and Ensemble neither
+sees nor manages them.
+
 ### One owner at a time
 
 A part has exactly one owner. Either Ensemble is driving it on scheduled work, or
@@ -254,16 +259,6 @@ Committing a part's work is Ensemble's, but the message is content: the part
 proposes it in its result and Ensemble commits with it. Whether a message is
 checked against a project's conventions belongs to that project, and a rejection
 returns the same way a conflict does.
-
-### Subagents belong to the agent
-
-A part or a principal may spawn subagents, and Ensemble neither sees nor controls
-them. They run in-process, inheriting the working directory, so a subagent is
-always in the same tree as whatever spawned it.
-
-That bounds them usefully: a part's subagents cannot leave its worktree. It also
-gives narrow-instruction work — commit-message drafting, for instance — a home
-that costs Ensemble nothing.
 
 ## 4. Flows
 
