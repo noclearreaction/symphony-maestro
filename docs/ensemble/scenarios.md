@@ -234,18 +234,18 @@ run two changes at once is visible as work, not hidden as a chore.
 2. It calls `bash "git push origin change/auth-refactor"`.
 
 3. There is no human to ask, so the request reaches **Ensemble**, which routes it
-   to the decision point. Whatever is plugged in there refuses — the `developer`
-   ceiling has no git in it — and the denial comes back with its reason.
+   to the decision point. Whatever is plugged in there refuses — a developer part
+   has no business pushing — and the denial comes back with its reason.
 
 4. The model **sees the denial as a tool error with a reason**, so it does not
    silently retry or work around it. It notes in its summary that it would have
    pushed and could not.
 
-5. **Principal** relays that upward rather than acting on it, because pushing is
-   not in its ceiling either.
+5. **Principal** relays that upward rather than acting on it, since pushing is not
+   its call to make either.
 
-**What the story shows:** the ceiling is enforced where the call happens, not
-where the intention is formed, and a denial is information rather than a dead end.
+**What the story shows:** permission is decided where the call happens, not where
+the intention is formed, and a denial is information rather than a dead end.
 Note what the story does *not* show: a part rewriting the hook that stopped it.
 That it cannot is an assumption, not yet a fact — see
 [the trust boundary](README.md#design-considerations).

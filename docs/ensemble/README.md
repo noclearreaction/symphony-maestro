@@ -30,10 +30,9 @@ outside the metaphor and own it.
 | **Section** | A long-lived working group — a build section, a design section — with a principal. |
 | **Base** | The git ref a part's worktree is created from and merged back into. What it signifies is the project's business, not Ensemble's. |
 | **Persona** | An instruction set, and which ACP agent runs it — `developer`, `auditor`. Nothing more: not a tree, not a permission, not an individual. |
-| **Ceiling** | What a persona's parts may do. Reviewed configuration, bound to a persona by the operator rather than carried by it. |
 | **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, an interactive flag, and a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
-| **Principal** | A part whose properties are: orchestrator persona, works in the base itself, interactive, wide ceiling. Not a separate kind of thing. |
+| **Principal** | A part whose properties are: orchestrator persona, works in the base itself, interactive. Not a separate kind of thing. |
 
 ### Everything is a part
 
@@ -41,14 +40,13 @@ The agents have amnesia: nothing survives a transcript, so context lives entirel
 in the part. Two parts running the same persona are therefore indistinguishable,
 and there is no individual to name or track.
 
-One kind of thing, carrying four properties:
+One kind of thing, carrying three properties:
 
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
 | **Tree** | A worktree of its own, the base itself, a read-only checkout for review, or none |
 | **Interactive** | Whether a human is driving it, rather than a brief |
-| **Ceiling** | What it may do — from reviewed configuration, keyed by its persona |
 
 The principal is a combination of those rather than an exception to them, which
 keeps scheduling, enforcement and the lifecycle uniform and makes *"run a
@@ -56,15 +54,15 @@ principal unattended overnight"* a flag rather than a new concept:
 
 | | Developer part | Principal |
 | --- | --- | --- |
-| Git | None | Whatever its ceiling allows |
+| Git | None | Yes |
 | Tree | A worktree from the base | The base itself |
 | Interactive | No | Yes |
 | Ends when | Its work merges into the base | A human says so |
 
-**The ceiling is not part of the persona.** A persona is a prompt, a
-ceiling is a policy, and the operator's configuration binds one to the other. That
-separation is what stops a principal handing a part more authority than a human
-sanctioned.
+What a part is permitted to do follows from its persona, and is decided outside
+Ensemble — see [§6](#6-tool-use-with-no-human-present). A principal names a
+persona when it starts a part; it does not supply the permissions, so it cannot
+hand out more than a human sanctioned.
 
 ## 1. Constraints
 
@@ -106,7 +104,7 @@ against it.
 
 The principal is a part like any other, with the properties set out in
 [Everything is a part](#everything-is-a-part): the orchestrator persona, the base
-as its tree, interactive, and a wide ceiling. It is scheduled, enforced and
+as its tree, and interactive. It is scheduled, enforced and
 tracked by the same machinery as the rest.
 
 ```mermaid
@@ -288,7 +286,7 @@ reasoning intact, where a resolver would have to infer two intents from diffs.
 
 **Presented as an artefact, not as a git operation.** Ensemble resets the part's
 worktree to the moved base and hands it its own previous diff. No conflict
-markers, no `--theirs`, no git tooling added to the part's ceiling — it edits
+markers, no `--theirs`, and no git tooling a part would otherwise need — it edits
 files exactly as it always does, which is the thing it is good at rather than a
 git operation it is bad at.
 
@@ -380,14 +378,14 @@ and the other is judgment.
 | Part worktrees, commits, merge into the base, revert on failure | **Ensemble** | Mechanical, must be deterministic, triggered by `accept`. Ensemble created those trees. |
 | Anything above the base — where it came from, where it goes next | **The principal** | Judgment and authored content, and the principal is already working in the base. |
 
-A part's ceiling can deny git outright, since it never needs it. A principal's
-cannot, and it should not get git through tools wrapping it either: git flows
-vary, and a principal with git and judgment adapts where one with a fixed set of
-verbs is stuck with whatever we imagined.
+A part can be denied git outright, since it never needs it. A principal cannot be,
+and it should not get git through tools wrapping it either: git flows vary, and a
+principal with git and judgment adapts where one with a fixed set of verbs is
+stuck with whatever we imagined.
 
 Where the hard boundary belongs is **outside Ensemble** — a protected ref, so it
-holds regardless of what any agent attempts. A ceiling we wrote is a weaker
-guarantee than one the remote enforces.
+holds regardless of what any agent attempts, which is a stronger guarantee than
+anything decided inside the process being bounded.
 
 Committing a part's work is Ensemble's, but the message is content, so the part
 proposes it in its result and Ensemble commits with it. Whether a message is
@@ -484,7 +482,7 @@ telling the model about a facility it still has. Whether it also bypasses a
 `pre_tool` hook is a different question and the answer matters: hooks are
 documented as firing *before* the permission prompt, which suggests policy still
 sees the call. If that turns out to be wrong, the scratchpad is a hole in every
-ceiling and needs closing rather than documenting.
+decision point and needs closing rather than documenting.
 
 ### Subagents are the agent's, not Ensemble's
 
@@ -508,7 +506,7 @@ branch at the commit is an implementation convenience, not something the design
 rests on.
 
 Everything else is the principal's, done with git directly rather than through
-tools wrapping it — and bounded by its ceiling like anything else.
+tools wrapping it, and subject to the same decisions as anything else.
 
 **What the base signifies is not Ensemble's business.** It is a ref. A project may
 use it as a feature branch, a release branch, a trunk, or whatever its workflow
@@ -568,15 +566,14 @@ classDiagram
   Part --> Result : last
 ```
 
-Persona and ceiling are absent deliberately: both are names resolved out of
-configuration, not things Ensemble holds. A part carries the persona it runs and
-gets a ceiling by lookup.
+Persona is absent deliberately: it is a name resolved out of configuration, not
+something Ensemble holds. A part carries the name it runs under.
 
 ### Tool surface
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `personas()` | no | `Persona[]` | What can be played: names, the agent behind each, and the ceiling bound to it. Read-only — personas and ceilings change by review, not by call. |
+| `personas()` | no | `Persona[]` | What can be played: names and the agent behind each. Read-only — personas change by review, not by call. |
 | `parts()` | no | `Part[]` | The calling principal's section: ids, personas, states, queued work. |
 | `start(items[])` | no | `Part[]` | `{persona, brief, priority?}`. Creates parts and queues their first turn. Does not fail for capacity or liveness. |
 | `start_sync(items[], timeout)` | yes | `Result[]` | Start and wait in a single turn — the reason it exists. |
@@ -598,8 +595,8 @@ gets a ceiling by lookup.
   is dropped.
 - **Context lives in the part, and nowhere else.** There is no cross-part memory,
   because the agents have none.
-- **A part cannot exceed its ceiling, and no call widens one.** Ceilings come from
-  reviewed configuration bound to a persona, not from whoever started the part.
+- **No call widens what a part may do.** Permissions follow from its persona and
+  are decided outside Ensemble, not supplied by whoever started it.
 - **Parts are durable.** They survive an Ensemble restart, because a part is a
   transcript on disk and a row of state, not a process.
 
@@ -700,8 +697,8 @@ is the medium and sections communicate through branches, changes and issues; or
 the human is the medium, carrying intent across by switching sessions; or Ensemble
 relays with an explicit `message(section, text)`. The first two need no mechanism
 and should be tried first. The third is buildable, but a section that can message
-another section's principal is a section that can task it, and persona ceilings
-say nothing about that.
+another section's principal is a section that can task it, and nothing in the
+permission model speaks to that.
 
 **What survives an Ensemble restart.** More than it first appears. A part is a
 transcript on disk and a row of state, so durability is close to free. What cannot
