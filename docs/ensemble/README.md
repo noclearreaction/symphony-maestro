@@ -287,14 +287,13 @@ stateDiagram-v2
 
 ### Merged or reverted
 
-A part has an outbox, and whatever it wrote there is simply there. If it also has
-a tree, that tree gets merged. Nothing else needs saying about output.
+A part's tree, if it has one, is merged into its base when the principal accepts
+the part. Outbox contents are not merged and are not part of this.
 
-So the two ends are about the tree, and both are clean. The merge is attempted
-**once**, when the principal accepts the part — not per turn. That acceptance is a
-judgment about quality and completeness; the merge is not. Partial work merges as
-readily as complete work, and whether the original problem is solved is answered
-by starting more, not here.
+The merge is attempted **once**, at accept, not per turn. Acceptance is a judgment
+about quality and completeness; the merge is not. Partial work merges as readily
+as complete work, and whether the original problem is solved is answered by
+starting more work.
 
 A merge only lands clean. A conflict is **a signal to the part that caused it** —
 it goes back through the queue with the moved base and re-applies its own change:
@@ -312,9 +311,8 @@ markers, no `--theirs`, and no git tooling a part would otherwise need — it ed
 files exactly as it always does, which is the thing it is good at rather than a
 git operation it is bad at.
 
-If it cannot re-apply, its worktree is reverted. Failure is therefore clean — nothing half-integrated, nothing
-for a human to unpick, nothing left behind. The work either landed or never
-existed.
+If it cannot re-apply, its worktree is reverted. Failure leaves nothing
+half-integrated and nothing for a human to unpick.
 
 Ordering falls out of completion order: first to merge wins, second re-applies.
 
