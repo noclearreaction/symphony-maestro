@@ -76,3 +76,10 @@ work without widening resource use. That is the test for anything added to the t
 surface — does it let a principal spend more, or only spend it in a different
 order?
 
+
+## Whether a part can re-apply its own change
+
+A conflict is handed back to the part that caused it, on the assumption it can
+re-apply its intent against a moved base. That is empirical and untested. If it
+cannot, the remedy is fewer concurrent parts, paying in wall-clock rather than in
+integration.

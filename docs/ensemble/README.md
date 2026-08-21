@@ -165,47 +165,27 @@ Exclusivity is unchanged; the handoff becomes deliberate rather than timed.
 See [Part lifecycle](diagrams/part-lifecycle.md).
 
 A transcript is never deleted. `Reverted` concerns the tree: the worktree is
-discarded, and the transcript remains for inspection.
+discarded, the transcript remains.
 
-### Merged or reverted
+`resume` is the only way work reaches an existing part, whatever the reason —
+rejection, a follow-up, new information, a conflict to re-apply. It continues the
+transcript rather than starting one, which is cheaper and keeps the context that
+produced the work.
 
-A part's tree, if it has one, is merged into its base when the principal accepts
-the part. Outbox contents are not merged.
+`Faulted` is not retried automatically.
 
-The merge is attempted once, at accept, not per turn. Acceptance is a judgment
-about quality and completeness; the merge is not. Partial work merges as readily
-as complete work, and whether the original problem is solved is answered by
-starting more work.
+### Merging
 
-A conflict goes back to the part that caused it, which re-applies its own change
-against the moved base:
+When a part is accepted:
 
-> "Your base has moved. `internal/auth/token.go` now looks like this. Re-apply
-> your change against it."
+- its worktree is merged into its base
+- if the merge conflicts, the part is handed the moved base and its own previous
+  diff, and re-applies its change — no conflict markers, no git
+- if it cannot re-apply, the worktree is reverted
+- the outbox is kept either way
 
-The part that formed the intent still holds its reasoning. A fresh part would have
-to infer two intents from diffs.
-
-Ensemble presents this as an artefact rather than a git operation: it resets the
-worktree to the moved base and attaches the part's own previous diff. The part
-edits files as it always does — no conflict markers, no git tooling it would not
-otherwise have.
-
-If it cannot re-apply, its worktree is reverted. Failure leaves nothing
-half-integrated.
-
-Ordering follows completion order: first to merge wins, second re-applies.
-
-> **Unverified.** Whether an agent reliably re-applies intent against a moved base
-> is empirical. If it does not, the remedy is fewer concurrent parts, paying in
-> wall-clock rather than in integration.
-
-`resume` covers more than rejection: a follow-up question, new information, a
-conflict to re-apply, a change of direction. There is no separate `reject` verb.
-Resuming continues the existing transcript, which is cheaper — cached input bills
-at a fraction of fresh — and keeps the context that produced the work.
-
-`Faulted` is not retried automatically. The worktree is left for a human to see.
+Acceptance is a judgment about quality, not about whether the original problem is
+solved: partial work merges. Merge order follows completion order.
 
 ### Starting is not playing
 
