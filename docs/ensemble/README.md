@@ -81,10 +81,10 @@ rather than a CLI.
 ## 2. Architecture
 
 Ensemble knows which parts exist, which session id each one is, and runs their
-turns. A principal reaches it over MCP; a human through the CLI.
+turns. A principal reaches it over MCP.
 
-Attaching is a lookup: a session is resumable by the agent's own command, so
-Ensemble supplies the session id and the CLI execs the agent against it.
+Attaching is a lookup: a session is resumable by the agent's own command, so a
+frontend gets the session id and execs the agent against it.
 
 See [Architecture](diagrams/architecture.md).
 
@@ -92,28 +92,16 @@ Ensemble owns the sections and their parts, the mapping from part to session id,
 the queue, and the routing of permission requests. Results, quality, plans and
 policy belong elsewhere.
 
-### One core, several entry points
+### Backend and frontends
 
-The core is file-backed state and the logic over it — part records, transcripts,
-worktrees, the queue — all on disk. Entry points are spawned on demand and share
-nothing but those files: an MCP server, a CLI, later a TUI and an extension.
+A backend/frontend split: the backend holds the state — part records, transcripts,
+worktrees, the queue — as files, and runs on demand rather than resident.
 
-The filesystem carries coordination. A lock bounds how many turns run at once, and
-any invocation can start queued work when a chair frees. A turn is driven by a
-process living exactly as long as the turn; that process is the ACP client, so it
-is also what answers permission requests, and it writes its result where the next
-reader finds it.
+A lock bounds concurrent turns, and any invocation starts queued work when a chair
+frees. A turn's process is the ACP client, so it answers permission requests and
+writes its result for the next reader.
 
-The MCP surface serves an agent making tool calls. A human wants different things
-from the same state: which parts exist, what they are doing, attach, logs. The
-entry points are therefore separate rather than one surface with two audiences.
-
-State stays in the core, so entry points agree by construction and are
-disposable.
-
-The core decides whether a part can be attached — it is in an attachable state and
-nobody else owns it — and supplies the session id. Getting a terminal onto that
-session belongs to the entry point.
+The backend decides whether a part can be attached and supplies the session id.
 
 ## 3. Parts
 
