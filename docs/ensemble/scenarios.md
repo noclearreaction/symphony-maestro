@@ -40,7 +40,8 @@ all backed by the same credential. Two chairs.
    Both are `Queued`, not running. The principal's turn ends here; it is free.
 
 3. **Ensemble** has two chairs, so both parts start. Each gets a worktree of its
-   own — `change/rate-limit-impl` and `change/rate-limit-tests` — and each spawns a
+   own — `part/rate-limit-impl` and `part/rate-limit-tests`, branched from
+   `change/rate-limiting` — and each spawns a
    process with `VIBE_DEFAULT_AGENT` set from its persona, and a grant minted for
    this turn.
 
@@ -67,24 +68,31 @@ all backed by the same credential. Two chairs.
    transcript** — the developer still has everything it wrote, and the correction
    lands in context rather than as a fresh briefing.
 
-8. Second turn returns. This time the principal is satisfied, and `rate-limit-tests`
-   has come back too. It calls `start([{ persona: "auditor", brief: "Review the
-   rate limiter against…" }])` — a new part, with no memory of either of the
-   others. It gets what it needs from the worktrees and the specs, not from
+8. Second turn returns, and this time the principal is satisfied. It accepts the
+   implementation part, so Ensemble commits it and merges it into
+   `change/rate-limiting`. `rate-limit-tests` has come back too and is accepted
+   the same way.
+
+9. Now the principal wants it reviewed, so it calls
+   `start([{ persona: "auditor", brief: "Review the rate limiter against…",
+   review: "change/rate-limiting" }])`. Ensemble gives that part a **read-only
+   checkout** of the branch and the diff as an inbox artefact. The auditor has no
+   memory of either earlier part and does not need one — it reads the code, not
    anyone's recollection.
 
-9. **Auditor** returns clean. **Principal** calls
-   `accept(["rate-limit-impl", "rate-limit-tests", "rate-limit-review"])`.
-   Ensemble commits each part's tree using the message the part proposed,
-   validates it, and merges. All three go clean, so all three are `Merged`.
+10. **Auditor** returns clean, and its findings go to `openspec/changes/…/audit/`
+    in its own tree — in-tree, because they belong to the change. The principal
+    accepts it and Ensemble merges.
 
-10. **Principal → you:** "Rate limiting is implemented, tested and reviewed and
-    all three branches are merged. Here's what changed and what the auditor
-    flagged as follow-up."
+11. **Principal → you:** "Rate limiting is implemented, tested and reviewed, all
+    three parts merged into `change/rate-limiting`. Here's what changed and what
+    the auditor flagged as follow-up." When you're satisfied, the principal opens
+    the PR to `main` — and merging that is yours.
 
 **What the story shows:** starting is not running; parts, not people, carry the
-work; review happens by resuming the transcript that produced the thing; and a
-part is done when its branch merges — not when someone declares satisfaction.
+work; correction happens by resuming the transcript that produced the thing;
+review reads a committed branch rather than someone's working tree; and a part is
+done when it merges, not when someone declares satisfaction.
 
 ---
 

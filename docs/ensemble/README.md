@@ -50,7 +50,7 @@ One kind of thing, carrying four properties:
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
-| **Tree** | Its own branch, the change branch, or none |
+| **Tree** | Its own branch, the change branch, a read-only checkout of a branch under review, or none |
 | **Interactive** | Whether a human is driving it, rather than a brief |
 | **Ceiling** | What it may do — from reviewed configuration, keyed by its persona |
 
@@ -502,7 +502,8 @@ needs a declared writer and declared readers.
 
 | Space | Writer | Readers | Notes |
 | --- | --- | --- | --- |
-| Part worktree | the part | Ensemble, to commit and merge; a human attached or observing | Not readable by another part |
+| Part working tree | the part | Ensemble, to commit and merge; a human attached or observing | No other part is given a route to it |
+| Part branch, once committed | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Committed and immutable — the reviewable form of the work |
 | Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
 | Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output does not pollute the change |
@@ -510,11 +511,19 @@ needs a declared writer and declared readers.
 | Change artefacts — proposal, design, the `tasks.md` ledger | the principal, in the parent worktree | parts, read-only | Parts do not coordinate through the ledger |
 | `main` | the human, by merging a PR | everyone | |
 
-**No space is writable by two parts.** The rule that follows is the useful one:
-**a part's work becomes visible to other parts only by merging.** Until then it is
-private. That makes the merge the publication point — visibility follows
-integration, and integration is reviewed. An auditor reading a developer's work
-reads the change branch, not the developer's tree.
+**Ensemble gives no space two writers, and hands each part what it needs rather
+than a route to someone else's work.** That enables isolation; it does not enforce
+it, and the difference matters — see [what this does not
+attempt](#what-this-does-not-attempt).
+
+The designed path for review is a **branch**, not a tree. A part's working tree is
+where it is mid-thought; committing turns that into something immutable and
+addressable, and Ensemble can give a review part a read-only checkout of it plus
+the diff as an inbox artefact. The reviewer reads files as usual and needs no git.
+
+That is the distinction a branch already draws — work in progress against work
+proposed — and it is why review does not need a part reaching into another part's
+tree.
 
 A human can read anything. That is not a hidden channel; it is the point.
 
