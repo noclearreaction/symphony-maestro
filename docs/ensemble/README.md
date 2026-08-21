@@ -5,17 +5,13 @@
 > has been rewritten more than once as its assumptions failed. Treat every
 > specific — names, states, the policy choice — as a proposal to argue with.
 >
-> Firmer than the rest are the [ground rules](#1-ground-rules) and anything marked
-> as measured, because those were verified against a running system rather than
+> Firmer than the rest are the [constraints](#1-constraints) and anything marked as
+> measured, because those were verified against a running system rather than
 > reasoned about.
 
 Design plan for the orchestration and policy layer that **maestro** directs: an
 **orchestration layer** that schedules work and collects results, and a **policy
 layer** that hands out privileges the work cannot exceed.
-
-The ground rules were established against Mistral Vibe, since that is what we
-run. The design is not tied to it: work is driven over ACP, which several agents
-implement — see [One protocol, many agents](#one-protocol-many-agents).
 
 [`scenarios.md`](scenarios.md) walks the same model as narrative. Read it if the
 vocabulary below feels abstract — and read Scenario B in particular, which is
@@ -70,34 +66,45 @@ ceiling is a policy, and the operator's configuration binds one to the other. Th
 separation is what stops a principal handing a part more authority than a human
 sanctioned.
 
-## 1. Ground rules
+## 1. Constraints
 
-Properties of Vibe 2.24.1 that determine the shape of everything else. Each was
-verified against the shipped binary; the published docs are silent on most.
+Ensemble drives work over **ACP**, the [Agent Client Protocol](https://agentclientprotocol.com).
+Several agents implement it — Vibe, Claude Code, Codex CLI, Copilot CLI, OpenCode,
+Gemini CLI, Cline, Goose — so this layer is a client of one protocol rather than a
+wrapper around one CLI, and the choice of agent becomes a persona property.
 
-| Property | Consequence |
+Five properties of that substrate shape everything below. They were measured, not
+assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
+[`docs/vibe/prompt/`](../vibe/prompt/).
+
+| Constraint | Consequence |
 | --- | --- |
-| **Delegation is one level deep.** A subagent's `task` tool refuses every target ([`task.py:97`](https://github.com/mistralai/mistral-vibe/blob/v2.24.1/vibe/core/tools/builtins/task.py)). | Hierarchy cannot live inside a session. Orchestration must be an external process. |
-| **ACP strips the ability to ask.** `vibe/acp/agent.py` disables `ask_user_question` and `exit_plan_mode` via `NON_INTERACTIVE_DISABLED_TOOLS`, the same pair `-p` removes. | A non-interactive part cannot ask a question, whatever its instructions say. Approval gates belong to interactive parts. |
-| **Permission requests do reach the client.** `client.request_permission()` is called for tool approvals, which is a different channel from asking a question. | Ensemble can adjudicate tool calls centrally. Untested — the spike never triggered one. |
-| **Sessions are durable, addressable and resumable.** `--resume <id>` re-enters with full context and appends. | A part *is* a session. Every follow-up is a resume. |
-| **`-p` forces a 385-char headless fragment** ending *"Override any earlier instructions that say to wait for confirmation."* Hardcoded in `_run_programmatic_mode()`; no flag disables it. | `-p` turns discovered ambiguity into a silent guess. Ruled out as the substrate. |
-| **ACP sessions are not headless.** `vibe/acp/agent.py` omits `headless=` from `SessionOptions`, so it defaults to `False` — verified live: no `# Headless Mode` section, 384 chars shorter than the same work under `-p`. | The verified way to run work programmatically without the fragment. |
-| **ACP sessions are ordinary Vibe sessions.** One created over ACP appears in `~/.vibe/logs/session/` under its `sessionId` like any other. | One session store behind both front-ends, so a human can attach with `vibe --resume <id>` whatever drove the part. |
-| **Instructions are bound when the process spawns.** ACP offers no way to pick a profile, so `VIBE_DEFAULT_AGENT` at spawn is the lever — measured in [`spikes/acp`](../../spikes/acp/). | A part's persona is fixed for a turn. A process lives for one turn, so this is not a lifetime constraint. |
+| A session is a durable transcript, addressable and resumable. | A part *is* a session. Continuing one is a resume, and durability comes free. |
+| A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing. A persona is chosen per turn rather than per lifetime. |
+| Delegation inside a session is one level deep. | Hierarchy cannot live in a session, so orchestration is an external process. |
+| A non-interactive agent cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
+| Configuration is per agent, not per protocol. | Ensemble needs a small adapter per agent kind — how a persona is applied differs even though how it is driven does not. |
+
+One thing the substrate does *not* give us, and it is why ACP rather than a CLI:
+an agent run headlessly is typically instructed to make a judgment call and press
+on rather than stop. That converts ambiguity a part discovers mid-turn into a
+silent guess, and it is not acceptable in work that gets reviewed. ACP sessions do
+not carry it.
+
+> **Not free across vendors.** A persona backed by Vibe runs on a Mistral
+> subscription; one backed by Claude is directed to API keys by Anthropic's Agent
+> SDK terms. Mixed sections are a deliberate spend, not a free upgrade.
 
 ## 2. Architecture
 
-The human runs Ensemble, not Vibe. Ensemble hosts every session — the
-principal's included — and brokers the terminal to whichever the human wants.
-It is reached as an MCP server over HTTP for the tool surface, but it does not
-sit *under* a session; it sits around all of them.
+The human runs Ensemble, not an agent directly. It hosts every session — the
+principal's included — brokers the terminal to whichever the human wants, and is
+reached as an MCP server over HTTP for the tool surface.
 
 The principal is a part like any other, with the properties set out in
 [Everything is a part](#everything-is-a-part): the orchestrator persona, the base
-as its tree, interactive, and a wide ceiling. It is scheduled,
-enforced and tracked by the same machinery as the rest — a wider ceiling is not
-an exemption from having one.
+as its tree, interactive, and a wide ceiling. It is scheduled, enforced and
+tracked by the same machinery as the rest.
 
 ```mermaid
 flowchart TB
@@ -140,84 +147,8 @@ flowchart TB
 ```
 
 Ensemble owns the sections and their parts, the mapping from part to session id,
-the terminal attachment, and routing permission requests to whatever decides
-them. It does not interpret results, judge quality, make plans, or decide policy.
-
-### Substrate
-
-The constraint that ruled the field: **the headless fragment is not acceptable**,
-because it converts ambiguity discovered mid-turn into a silent guess.
-
-| Candidate | Clears it | Standing |
-| --- | --- | --- |
-| `vibe -p` | No — hardcoded in `_run_programmatic_mode()` | Ruled out |
-| **ACP** — [Agent Client Protocol](https://agentclientprotocol.com), JSON-RPC 2.0 over stdio | Yes, verified | Front-runner |
-| `vibe/app_server` directly | Unknown — the core both Vibe front-ends sit on | Unexplored |
-
-[`spikes/acp`](../../spikes/acp/) drove ACP end to end against the installed
-`vibe-acp`: a real turn, routed through rubato, no headless fragment, and a
-system prompt of our choosing. Mistral documents none of it, but the protocol is
-not Mistral's — it is a published standard with an agent registry, so the risk is
-"Mistral's implementation drifts", not "the contract is someone's internals".
-
-Two spike findings shape what follows:
-
-- **A process lives for one turn.** A session is a transcript on disk and needs
-  nothing running; a process is required only while a turn executes. Spawn, load
-  or create, prompt, read to `stopReason`, exit. Idle parts cost nothing.
-- **`vibe-acp` does not exit cleanly when the client disconnects**, and reports to
-  Sentry. Ensemble should close the stream and let it exit rather than killing it.
-
-Still unverified: `session/load`, which every resume depends on.
-
-### One protocol, many agents
-
-ACP is **not Vibe-specific**. Claude Code, Codex CLI, Copilot CLI, OpenCode,
-Gemini CLI, Cline and Goose implement it, Claude Code through the
-[`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp)
-bridge. Both the spec and that bridge live under the neutral
-`agentclientprotocol` org, Apache-2.0 — it is not Zed's, and Mistral implements
-it independently.
-
-So a persona names not only *what* a part does but *who plays it*. A section can
-mix vendors, and Ensemble stays a client of one protocol rather than a wrapper
-around one CLI.
-
-#### Mixed sections are not free
-
-One difference between vendors is contractual rather than technical. Anthropic's
-Agent SDK — which the Claude bridge wraps — states that *"unless previously
-approved, Anthropic does not allow third party developers to offer claude.ai
-login or rate limits for their products, including agents built on the Claude
-Agent SDK"*, directing integrators to API keys.
-
-| Persona backed by | Auth | Cost |
-| --- | --- | --- |
-| Vibe | Mistral account | Included allowance first, then pay-as-you-go |
-| Claude | API key, per the terms above | Per token from the first call |
-
-Start Vibe-only. A Claude persona is a deliberate spend, not a free upgrade, and
-changing that is a conversation with Anthropic rather than an engineering task.
-
-#### The protocol standardises the conversation, not the configuration
-
-Agent-specific knobs ride in ACP's `_meta`, so how a part is configured differs
-per agent even though how it is driven does not. Ensemble needs a small adapter
-per agent kind.
-
-| | Vibe | Claude Code (via bridge) |
-| --- | --- | --- |
-| System prompt | Base replaceable; ten appended fragments, five gated | `_meta.systemPrompt: "…"` replaces outright, no residue |
-| Project instructions | `AGENTS.md`, gated with the git snapshot | `settingSources` controls CLAUDE.md loading |
-| Tool restriction | `enabled_tools` / `disabled_tools` per profile | `tools`, `disallowedTools`, `disableBuiltInTools` |
-| Policy hook | `.vibe/hooks.toml` on disk | `hooks.PreToolUse` passed by the client at session start |
-
-That last row matters for [§6](#6-enforcement). For a Claude-backed part the hook
-is supplied by Ensemble when the session opens, rather than read from a file
-inside the workspace the part can edit — closing the enforcer-in-the-blast-radius
-problem for that agent without containers. Vibe has no equivalent, so the trust
-boundary is not uniform across a mixed section, and policy has to assume the
-weakest member.
+the terminal attachment, and routing permission requests to whatever decides them.
+It does not interpret results, judge quality, make plans, or decide policy.
 
 ### Shape: one backend, several frontends
 
@@ -240,9 +171,9 @@ uniform:
 
 | Frontend | Attach means |
 | --- | --- |
-| CLI | exec `vibe --resume <id>` in the foreground — trivial |
+| CLI | exec the agent against the session in the foreground — trivial |
 | TUI | suspend itself and hand over the terminal, or embed a pty — the hard case |
-| VS Code | likely open Vibe's own extension against the session rather than reimplementing it |
+| VS Code | likely open the agent's own extension against the session rather than reimplementing it |
 
 So `attach` is a backend-blessed capability — the backend says which session and
 why — with a per-frontend mechanism.
@@ -261,9 +192,9 @@ event stream into the API, after which the TUI is a rendering problem rather tha
 an API redesign.
 
 The TUI is the eventual daily driver, since watching and reviewing beats issuing
-one-shot commands. VS Code comes last and may be smaller than it sounds: Vibe's
-own extension already provides the session UI, so Ensemble's part could be a
-section panel that launches an attach.
+one-shot commands. VS Code comes last and may be smaller than it sounds: where an
+agent ships its own extension, Ensemble's part could be a section panel that
+launches an attach rather than a session UI.
 
 ## 3. Parts
 
@@ -477,15 +408,14 @@ The snippets divide into two kinds.
 - If handed a re-apply brief, your previous change and the new base are attached.
   Re-apply the intent, do not attempt to merge.
 
-**What replacing the base prompt costs.** A persona sets `system_prompt_id`,
-which replaces Vibe's bundled base outright, so anything from it that is actually
-load-bearing has to be reintroduced deliberately — the scratchpad rules, OS and
-shell, which subagents exist. See [`docs/vibe/prompt/`](../vibe/prompt/) for what
-each fragment contains and what gating it costs.
-
 Composing rather than hand-writing matters because these are invariants. A
 persona that forgets the git snippet does not fail visibly; it just tries to
 commit, gets denied, and burns a turn learning what it should have been told.
+
+An agent's own instructions may already say some of it, and how much survives when
+a persona replaces them is agent-specific — one more thing the adapter has to know.
+For Vibe, [`docs/vibe/prompt/`](../vibe/prompt/) records exactly which fragments
+are replaced and which are appended.
 
 ### Channels: who reads and writes where
 
@@ -498,7 +428,7 @@ needs a declared writer and declared readers.
 | --- | --- | --- | --- |
 | Part working tree | the part | Ensemble, to commit and merge; a human attached or observing | No other part is given a route to it |
 | A part's commit | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Immutable, so it cannot shift under a reviewer |
-| Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
+| Part scratchpad | the part and its subagents | same | Per session, outside the worktree, so it is never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
 | Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output stays out of the work |
 | The base | Ensemble, by merging | any part branched from it; a human | The only inter-part channel |
@@ -547,10 +477,10 @@ documented as firing *before* the permission prompt, which suggests policy still
 sees the call. If that turns out to be wrong, the scratchpad is a hole in every
 ceiling and needs closing rather than documenting.
 
-### Subagents are Vibe's, not Ensemble's
+### Subagents are the agent's, not Ensemble's
 
 A part or a principal may spawn subagents, and **Ensemble neither sees nor
-controls them**. Vibe spawns them in-process at depth 1, inheriting the working
+controls them**. They are spawned in-process, inheriting the working
 directory, so a subagent is always in the same worktree as whatever spawned it.
 
 That is a useful property rather than a gap. Isolation holds for free — a part's
@@ -782,7 +712,7 @@ not there.
 
 | Stage | Delivers | Proves |
 | --- | --- | --- |
-| 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). | Done. A real turn, routed through rubato, no headless fragment, instructions ours via `VIBE_DEFAULT_AGENT`. |
+| 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). | Done. A real turn, routed through rubato, no headless instruction, and the persona ours. |
 | 1 | `session/load` on the spike. | Resume works over ACP — the assumption every review round depends on. |
 | 2 | Backend plus CLI: host a part, own-attach to it, and `tail` it. | The entrypoint, and an event stream in the control API before anything is built on it. |
 | 3 | Personas from configuration, composed from role content plus Ensemble's instruction snippets; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started, told what system it is in, and survives Ensemble dying. |
