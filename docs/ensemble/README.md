@@ -1,134 +1,112 @@
 # Ensemble
 
-> **Status: PROVISIONAL — not ratified, not agreed, nothing built.** The substrate
-> is not finally committed, the tool surface is unimplemented, and the model below
-> has been rewritten more than once as its assumptions failed. Treat every
-> specific — names, states, the policy choice — as a proposal to argue with.
->
-> Firmer than the rest are the [constraints](#1-constraints) and anything marked as
-> measured, because those were verified against a running system rather than
-> reasoned about.
+> **Status: provisional.** Nothing is built. The substrate is not finally
+> committed and the tool surface is unimplemented. Items marked *measured* were
+> verified against a running system; everything else is a proposal.
 
-Design plan for the orchestration and policy layer that **maestro** directs: an
-**orchestration layer** that schedules work and collects results, and a **policy
-layer** that hands out privileges the work cannot exceed.
+Ensemble is the orchestration and policy layer that **maestro** directs. It
+schedules work across a section of parts, collects results, and routes permission
+decisions to whatever decides them.
 
-[`scenarios.md`](scenarios.md) walks the same model as narrative. Read it if the
-vocabulary below feels abstract — and read Scenario B in particular, which is
-where an earlier version of this document was caught conflating a *persona* with
-a *part*.
+[`scenarios.md`](scenarios.md) walks the same model as narrative.
 
 ## Vocabulary
-
-Orchestral throughout, and worth stating once. You are not in this table; you sit
-outside the metaphor and own it.
 
 | Term | Is |
 | --- | --- |
 | **Maestro** | The framework. Directs the ensemble. |
-| **Ensemble** | This layer: the sections, their parts, and the chairs that play them. |
-| **Section** | A long-lived working group — a build section, a design section — with a principal. |
-| **Base** | The git ref a part's worktree is created from and merged back into. What it signifies is the project's business, not Ensemble's. |
-| **Persona** | An instruction set, and which ACP agent runs it — `developer`, `auditor`. Nothing more: not a tree, not a permission, not an individual. |
-| **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, and a lifecycle. |
+| **Ensemble** | This layer: sections, their parts, and the chairs that play them. |
+| **Section** | A long-lived working group with a principal. |
+| **Base** | The git ref a part's worktree is created from and merged into. What it signifies belongs to the project. |
+| **Persona** | An instruction set and which ACP agent runs it. Not a tree, not a permission, not an individual. |
+| **Part** | A unit of work, and the only carrier of context: a transcript, a persona, a tree or none, a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
-| **Principal** | The part a human lands in by default: orchestrator persona, working in the base. Not a separate kind of thing. |
+| **Principal** | The part a human lands in by default. Orchestrator persona, working in the base. |
 
 ### Everything is a part
 
-The agents have amnesia: nothing survives a transcript, so context lives entirely
-in the part. Two parts running the same persona are therefore indistinguishable,
-and there is no individual to name or track.
+Agents have no memory outside a transcript, so context lives in the part. Two
+parts running the same persona are indistinguishable, and there is no individual
+to name or track.
 
-One kind of thing, carrying two properties:
+A part carries two properties:
 
 | Property | Values |
 | --- | --- |
 | **Persona** | Which instruction set, and which agent runs it |
-| **Tree** | A worktree of its own, the base itself, a read-only checkout for review, or none |
+| **Tree** | A worktree of its own, the base, a read-only checkout for review, or none |
 
-Whether a human is connected is not a property but **ephemeral state** — the
-`Attached` of [§3](#lifecycle). A part is not interactive by nature; someone is
-attached to it or nobody is, and that changes while it exists.
+Whether a human is connected is ephemeral state, not a property — the `Attached`
+of [§3](#lifecycle).
 
-The principal is a combination of those rather than an exception to them, which
-keeps scheduling, enforcement and the lifecycle uniform. Running one unattended is
-not a mode either — it is a principal nobody is attached to:
+The principal is a combination of the same properties:
 
 | | Developer part | Principal |
 | --- | --- | --- |
 | Git | None | Yes |
-| Tree | A worktree from the base | The base itself |
+| Tree | A worktree from the base | The base |
 | Ends when | Its tree merges into the base | A human says so |
 
-What a part is permitted to do follows from its persona, and is decided outside
-Ensemble — see [§6](#6-tool-use-with-no-human-present). A principal names a
-persona when it starts a part; it does not supply the permissions, so it cannot
-hand out more than a human sanctioned.
+A principal nobody is attached to is running unattended. That is a state, not a
+mode.
+
+What a part may do follows from its persona and is decided outside Ensemble
+([§6](#6-tool-use-with-no-human-present)). A principal names a persona when it
+starts a part and does not supply permissions, so it cannot grant more than a
+human has sanctioned.
 
 ## 1. Constraints
 
-Ensemble drives work over **ACP**, the [Agent Client Protocol](https://agentclientprotocol.com).
-Several agents implement it — Vibe, Claude Code, Codex CLI, Copilot CLI, OpenCode,
-Gemini CLI, Cline, Goose — so this layer is a client of one protocol rather than a
-wrapper around one CLI, and a part can be run by any of them.
+Ensemble drives work over **ACP**, the
+[Agent Client Protocol](https://agentclientprotocol.com). Vibe, Claude Code, Codex
+CLI, Copilot CLI, OpenCode, Gemini CLI, Cline and Goose implement it, so a part
+can be run by any of them.
 
-Five properties of that substrate shape everything below. They were measured, not
-assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
-[`docs/vibe/prompt/`](../vibe/prompt/).
+Five properties of that substrate shape the design. *Measured* —
+[`spikes/acp`](../../spikes/acp/) and [`docs/vibe/prompt/`](../vibe/prompt/) hold
+the evidence.
 
 | Constraint | Consequence |
 | --- | --- |
-| A session is a durable transcript, addressable and resumable. | A part *is* a session. Continuing one is a resume, and durability comes free. |
-| A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing, and a part's persona is fixed for a turn rather than for its life. |
-| Delegation inside a session is one level deep. | Hierarchy cannot live in a session, so orchestration is an external process. |
-| An agent driven without a human cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
-| `session/new` carries `cwd`, `additionalDirectories`, `mcpServers` and `_meta` — and nothing about instructions. | Two of the three things a part needs are protocol-level: its tree, and the tool surface Ensemble hands it. Instructions are not. |
+| A session is a durable transcript, addressable and resumable. | A part *is* a session. Continuing one is a resume. |
+| A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing. A part's persona is fixed for a turn. |
+| Delegation inside a session is one level deep. | Orchestration must be an external process. |
+| An agent driven without a human cannot ask a question, but its tool calls raise permission requests, and those reach the client. | Ensemble answers them ([§6](#6-tool-use-with-no-human-present)). |
+| `session/new` carries `cwd`, `additionalDirectories`, `mcpServers` and `_meta`. Nothing about instructions. | A part's tree and tool surface are protocol-level. Its instructions are not. |
 
-One thing the substrate does *not* give us, and it is why ACP rather than a CLI:
-an agent run headlessly is typically instructed to make a judgment call and press
-on rather than stop. That converts ambiguity a part discovers mid-turn into a
-silent guess, and it is not acceptable in work that gets reviewed. ACP sessions do
-not carry it.
+An agent run headlessly is typically instructed to make a judgment call and
+continue rather than stop, which turns ambiguity discovered mid-turn into a silent
+guess. ACP sessions do not carry that instruction. That is the reason for ACP
+rather than a CLI.
 
-> **Not free across vendors.** Work run by Vibe draws on a Mistral subscription;
+> **Cost differs by agent.** Work run by Vibe draws on a Mistral subscription;
 > work run by Claude Code is directed to API keys by Anthropic's Agent SDK terms.
-> Mixing agents in one section is a deliberate spend, not a free upgrade.
 
 ### Unknown: how a persona reaches an agent
 
-Since the protocol carries no instructions, delivering a persona is agent-specific
-— and the mechanisms differ in kind, not just in shape. Our two cases:
+The protocol carries no instructions, so delivering a persona is agent-specific.
+The two mechanisms we know differ in kind:
 
 | Agent | Instructions arrive by |
 | --- | --- |
-| Claude Code, via its bridge | `_meta.systemPrompt` on `session/new` — over the protocol |
-| Vibe | an environment variable read at process spawn — not over the protocol at all |
+| Claude Code, via its bridge | `_meta.systemPrompt` on `session/new` |
+| Vibe | an environment variable read at process spawn |
 
-So this is not a params builder with a branch in it. Whatever does the job spans
-**launching the process** and **composing the messages**, and for Vibe all of the
-work is on the launching side.
+Whatever bridges this spans launching the process as well as composing messages.
+For Vibe the work is entirely at launch.
 
-**This is a prerequisite, not a refinement.** Without it Ensemble cannot start a
-part at all, because there is nothing in the protocol to tell an agent what it is
-supposed to be. Its shape is undecided: what the seam is called, whether it also
-owns credentials and model selection, and how much of it a second agent would
-actually share.
+This is a prerequisite: without it Ensemble cannot start a part, because nothing
+in the protocol tells an agent what it is. Undecided: what the seam is called,
+whether it also owns credentials and model selection, and how much of it a second
+agent shares.
 
 ## 2. Architecture
 
 Ensemble knows which parts exist, which session id each one is, and runs their
 turns. A principal reaches it over MCP; a human through the CLI.
 
-Attaching is a lookup rather than a feature: a session is resumable by the agent's
-own command, so Ensemble supplies the session id and the CLI execs the agent
-against it.
-
-The principal is a part like any other, with the properties set out in
-[Everything is a part](#everything-is-a-part): the orchestrator persona, and the
-base as its tree. It is the part a human lands in by default, which is a fact
-about the section rather than about the part. It is scheduled, enforced and
-tracked by the same machinery as the rest.
+Attaching is a lookup: a session is resumable by the agent's own command, so
+Ensemble supplies the session id and the CLI execs the agent against it.
 
 ```mermaid
 flowchart TB
@@ -171,89 +149,79 @@ flowchart TB
 ```
 
 Ensemble owns the sections and their parts, the mapping from part to session id,
-the queue, and routing permission requests to whatever decides them. It does not
-interpret results, judge quality, make plans, or decide policy.
+the queue, and the routing of permission requests. It does not interpret results,
+judge quality, make plans, or decide policy.
 
 ### Shape: one core, several entry points
 
-**The core is file-backed state and the logic over it** — part records,
-transcripts, worktrees, the queue — all on disk. Entry points are spawned on
-demand and share nothing but those files: an MCP server, a CLI, later a TUI and an
-extension.
+The core is file-backed state and the logic over it — part records, transcripts,
+worktrees, the queue — all on disk. Entry points are spawned on demand and share
+nothing but those files: an MCP server, a CLI, later a TUI and an extension.
 
-The filesystem carries the coordination: a lock bounds how many turns run at once,
-and any invocation can start queued work when a chair frees. A turn is driven by a
-process living exactly as long as the turn — the same process that is the ACP
-client, and therefore what answers permission requests — which writes its result
-where the next reader will find it.
+The filesystem carries coordination. A lock bounds how many turns run at once, and
+any invocation can start queued work when a chair frees. A turn is driven by a
+process living exactly as long as the turn; that process is the ACP client, so it
+is also what answers permission requests, and it writes its result where the next
+reader finds it.
 
-The MCP surface exists for an agent making tool calls. A human wants something
-different from the same state: which parts exist, what they are doing, attach,
-logs. One interface shaped for tool calls serves that badly, which is why the
-entry points are separate rather than one surface with two audiences.
+The MCP surface serves an agent making tool calls. A human wants different things
+from the same state: which parts exist, what they are doing, attach, logs. The
+entry points are therefore separate rather than one surface with two audiences.
 
-State stays in the core rather than an entry point, so the TUI and the CLI cannot
-disagree, and any of them can crash without losing anything.
+State stays in the core, so entry points cannot disagree and any of them can crash
+without loss.
 
-**Attach is where the split gets tested**, and the one place entry points cannot
-be uniform:
+Attach is the one capability entry points cannot implement uniformly:
 
-| Frontend | Attach means |
+| Entry point | Attach means |
 | --- | --- |
-| CLI | exec the agent against the session in the foreground — trivial |
-| TUI | suspend itself and hand over the terminal, or embed a pty — the hard case |
-| VS Code | likely open the agent's own extension against the session rather than reimplementing it |
+| CLI | exec the agent against the session in the foreground |
+| TUI | suspend itself and hand over the terminal, or embed a pty |
+| VS Code | open the agent's own extension against the session |
 
-The core decides whether a part can be attached at all — it is in an attachable
-state, and nobody else owns it — and hands over the session id. Getting a terminal
-onto that session is the entry point's job.
+The core decides whether a part can be attached — it is in an attachable state and
+nobody else owns it — and supplies the session id. Getting a terminal onto that
+session belongs to the entry point.
 
 #### CLI first
 
-Not because it is cheapest, though it is. Because it validates the control API
-without UI work confounding the question: if the CLI can drive the ensemble, the
-API is complete. It stays useful permanently as the scripting surface, and it
-makes owning attachment trivial to prove.
+The CLI validates the control API without UI work confounding the question: if the
+CLI can drive the ensemble, the API is complete. It remains the scripting surface
+afterwards.
 
-The trap is that a CLI naturally polls and exits, and a poll-shaped CLI bakes a
-poll-shaped API. The TUI wants a live view, which is a subscription. So the first
-CLI must include the `tail`-shaped observer — the smallest thing forcing a real
-event stream into the API, after which the TUI is a rendering problem rather than
-an API redesign.
+A CLI polls and exits, and a poll-shaped CLI produces a poll-shaped API. A TUI
+needs a live view, which is a subscription. The first CLI therefore includes the
+`tail`-shaped observer, which forces an event stream into the API early; the TUI
+then becomes a rendering problem.
 
-The TUI is the eventual daily driver, since watching and reviewing beats issuing
-one-shot commands. VS Code comes last and may be smaller than it sounds: where an
-agent ships its own extension, Ensemble's part could be a section panel that
-launches an attach rather than a session UI.
+The TUI is the eventual daily driver. VS Code comes last: where an agent ships its
+own extension, Ensemble's part is a section panel that launches an attach.
 
 ## 3. Parts
 
 ### One owner at a time
 
-**A part has exactly one owner.** Either Ensemble is driving it on scheduled work,
-or a human is driving it interactively. Never both.
+A part has exactly one owner. Either Ensemble is driving it on scheduled work, or
+a human is driving it. Never both.
 
-The reason is meaning, not concurrency safety. Two writers on one transcript break
-both: the scheduler gets back a conversation containing turns it never sent, and
-the human finds their session doing things they did not ask for. Neither can
-reason about a conversation it only partly authored.
+Two writers on one transcript leave the scheduler holding a conversation
+containing turns it never sent, and the human in a session doing things they did
+not ask for. Neither can reason about a conversation it only partly authored.
 
-**Owning attachment** is interactive — the human takes the part and drives it. A
-part is *live* when `Playing` or `Attached`, and a live part does not take work
-off the queue. Queued work is not rejected; it waits, and starts when the human
-detaches.
+**Owning attachment** gives the part to a human. A part is *live* when `Playing` or
+`Attached`, and a live part does not take work off the queue. Queued work waits and
+starts when the human detaches.
 
-**Observing** is read-only and takes nothing. It streams the same
-`session/update` notifications the driver sees, works in any state including
-mid-turn, and any number can watch at once. In the CLI it is a `tail`-shaped
-command; in the TUI it is what the section view is made of.
+**Observing** is read-only. It streams the same `session/update` notifications the
+driver sees, works in any state including mid-turn, and any number of observers can
+watch at once. In the CLI it is a `tail`-shaped command; in the TUI it is what the
+section view is made of.
 
-Keeping those separate is what lets you watch work happen without stopping it.
+Separating the two allows watching work without stopping it.
 
-Later, the wait becomes a choice: show a part's queued work in the TUI and let the
-human **pull** it into the session they are already in, rather than detaching and
-letting the scheduler start it. Same exclusivity, with the handoff deliberate
-instead of merely timed.
+Later: show a part's queued work in the TUI and let a human pull it into the
+session they are in, rather than detaching and letting the scheduler start it.
+Exclusivity is unchanged; the handoff becomes deliberate rather than timed.
 
 ### Lifecycle
 
@@ -264,7 +232,7 @@ stateDiagram-v2
   Queued --> Playing: a chair frees up
   Queued --> Reverted: cancel()
   Playing --> AwaitingReview: turn returned
-  Playing --> Faulted: error · budget exceeded
+  Playing --> Faulted: error
   Playing --> Reverted: cancel()
   AwaitingReview --> Queued: resume(message)
   AwaitingReview --> Merging: accept()
@@ -273,6 +241,7 @@ stateDiagram-v2
   Faulted --> Queued: resume(message)
   Faulted --> Reverted: give up
   Attached --> AwaitingReview: detach()
+  Attached --> Queued: detach() · work pending
   Merging --> Merged: clean
   Merging --> Queued: conflict — re-apply against the moved base
   Merging --> Reverted: cannot re-apply
@@ -280,265 +249,210 @@ stateDiagram-v2
   Reverted --> [*]
 
   note right of Attached
-    Live: a human owns the part.
-    Queued work waits, it is not refused.
+    A human owns the part.
+    Queued work waits.
   end note
 ```
+
+A transcript is never deleted. `Reverted` concerns the tree: the worktree is
+discarded, and the transcript remains for inspection.
 
 ### Merged or reverted
 
 A part's tree, if it has one, is merged into its base when the principal accepts
-the part. Outbox contents are not merged and are not part of this.
+the part. Outbox contents are not merged.
 
-The merge is attempted **once**, at accept, not per turn. Acceptance is a judgment
+The merge is attempted once, at accept, not per turn. Acceptance is a judgment
 about quality and completeness; the merge is not. Partial work merges as readily
 as complete work, and whether the original problem is solved is answered by
 starting more work.
 
-A merge only lands clean. A conflict is **a signal to the part that caused it** —
-it goes back through the queue with the moved base and re-applies its own change:
+A conflict goes back to the part that caused it, which re-applies its own change
+against the moved base:
 
 > "Your base has moved. `internal/auth/token.go` now looks like this. Re-apply
 > your change against it."
 
-That is what a developer does when a rebase turns ugly, and it beats handing the
-conflict to a fresh part: the part that formed the intent is still there with its
-reasoning intact, where a resolver would have to infer two intents from diffs.
+The part that formed the intent still holds its reasoning. A fresh part would have
+to infer two intents from diffs.
 
-**Presented as an artefact, not as a git operation.** Ensemble resets the part's
-worktree to the moved base and hands it its own previous diff. No conflict
-markers, no `--theirs`, and no git tooling a part would otherwise need — it edits
-files exactly as it always does, which is the thing it is good at rather than a
-git operation it is bad at.
+Ensemble presents this as an artefact rather than a git operation: it resets the
+worktree to the moved base and attaches the part's own previous diff. The part
+edits files as it always does — no conflict markers, no git tooling it would not
+otherwise have.
 
 If it cannot re-apply, its worktree is reverted. Failure leaves nothing
-half-integrated and nothing for a human to unpick.
+half-integrated.
 
-Ordering falls out of completion order: first to merge wins, second re-applies.
+Ordering follows completion order: first to merge wins, second re-applies.
 
-Three tiers, in cost order — avoid by sharing a worktree, re-apply, or escalate to
-a human when a part cannot re-apply its own change, since a second attempt will
-not fix that.
+> **Unverified.** Whether an agent reliably re-applies intent against a moved base
+> is empirical. If it does not, the remedy is fewer concurrent parts, paying in
+> wall-clock rather than in integration.
 
-> **Unverified.** Whether an agent reliably re-applies its intent against a moved
-> base is an empirical question. If it does not, the answer collapses to the first
-> tier: share more worktrees, run less concurrently, and pay in wall-clock rather
-> than in integration.
+`resume` covers more than rejection: a follow-up question, new information, a
+conflict to re-apply, a change of direction. There is no separate `reject` verb.
+Resuming continues the existing transcript, which is cheaper — cached input bills
+at a fraction of fresh — and keeps the context that produced the work.
 
-`resume` covers more than rejection. Rejected output is one reason; a follow-up
-question, new information, a conflict to re-apply, or a change of direction are
-others. There is no separate `reject` verb — rejection is a resume whose message
-says what was wrong. Resuming continues the existing transcript rather than
-starting a new one: cheaper, since cached input bills at a tenth of fresh, and
-correct, since the context that produced the work is still there.
-
-`Faulted` is not retried automatically. A part that ran out of budget mid-edit
-has left a worktree a human should see.
+`Faulted` is not retried automatically. The worktree is left for a human to see.
 
 ### Starting is not playing
 
 `start` puts a part on the queue. It begins playing when a chair is free and the
-part is not live — neither `Playing` nor held `Attached`. Until then it waits, and
-`start` fails for neither reason.
+part is not live. `start` fails for neither reason.
 
-**The queue only ever holds ready work.** Sequencing is the orchestrator's
-judgment, not a mechanism: it does not enqueue "write the code" and "write the
-test" together and leave a scheduler to work out the order — it enqueues the code
-once the test exists. There is no dependency graph to evaluate, and termination is
-structural rather than hoped for, because the work set is finite and nothing enters
-the queue before it can run.
+The queue holds only ready work. Sequencing is the orchestrator's judgment: it
+enqueues "write the code" once the test exists, rather than enqueueing both and
+leaving a scheduler to order them. There is no dependency graph to evaluate.
 
-**A part's worktree is created at enqueue, not at selection.** That is the moment
-the intended base state is known — the test exists, at *this* commit. Defer
-creation to selection and the part branches from whatever HEAD has since become,
-which is not what was decided.
+Dependent work therefore needs no shared tree. A part enqueued after its
+predecessor merged branches from a base that already contains that predecessor's
+output.
+
+A part's worktree is created at enqueue, not at selection. At enqueue the intended
+base state is known. Deferring creation to selection branches from whatever HEAD
+has since become.
 
 ### What bounds concurrency
 
-Three configured constraints, each traceable to a real cause, all operator
-configuration and none reachable from a tool:
+Two configured constraints, both operator configuration and neither reachable from
+a tool:
 
 | Constraint | Because |
 | --- | --- |
 | **Chairs** | Total spend and rate-limit exposure |
-| **Per-credential concurrency** | The provider actually limits this — per account, not per persona |
-| **Section reservation, then share** | One section must not stall another; reserve a minimum, share the surplus so idle sections do not waste chairs |
+| **Per-credential concurrency** | The provider limits this, per account |
 
-Nothing is capped per persona: a headcount says nothing about why, where a
-credential's rate limit is the constraint that actually exists.
+Nothing is capped per persona. Two parts running one persona are identical
+configuration, and the limit that exists is the credential's.
 
-Chairs have no relationship to parts. Ten parts and one chair is ordinary, and so
-is the reverse. The bound exists for tokens, spend and provider rate limits — not
-CPU, since a chair spends nearly all its time waiting on a model API. Sizing it
-like a CPU-bound pool would be a category error.
+Chairs have no relationship to parts: ten parts and one chair is ordinary, and so
+is the reverse. The bound exists for tokens, spend and rate limits rather than CPU,
+since a chair spends most of its time waiting on a model API.
 
-Beyond configuration, work can also be excluded by contention: parts needing the
-same **mutex** cannot play at once. Mutexes are acquired atomically at dispatch —
-a part gets its whole set or waits holding nothing — so there is no hold-and-wait
-and therefore no deadlock. A mutex is held for the life of the part, not the turn,
-because a worktree that shifts between turns leaves a part re-entering a checkout
-its own transcript no longer matches.
+#### Later: the queue need not be FIFO
 
-The commonest mutex is a worktree, and there it is a correctness requirement
-rather than a preference: **dependent work shares a worktree because it needs its
-predecessor's output.** "Write the code" must see the test. Serialisation is what
-"this builds on that" means, not a scheduling choice — and the scheduling
-consequence follows from the logical structure of the work rather than driving it.
+Work can carry a priority and an estimated cost, and the queue can schedule on
+them. The contract should not foreclose it.
 
-Independent work gets separate worktrees, runs concurrently, and pays at merge if
-it turns out to overlap.
+Priority pays only when partial results are actionable. Where a principal needs
+all five outputs before proceeding, ordering gains nothing — completion is set by
+the slowest item. It pays when finishing one item unblocks someone while the rest
+run on.
+
+The signal worth scheduling on is whether finishing an item unblocks anyone, which
+the principal knows and the scheduler cannot infer.
+
+Priority is safe to expose to a principal where chair count is not: it reorders
+work without widening resource use. That is the test for anything added to the tool
+surface — does it let a principal spend more, or only spend it in a different
+order?
 
 ### Who owns git
 
-Not one answer — the two levels have different owners, because one is mechanical
-and the other is judgment.
-
-| Level | Owner | Why |
+| Level | Owner | Because |
 | --- | --- | --- |
-| Part worktrees, commits, merge into the base, revert on failure | **Ensemble** | Mechanical, must be deterministic, triggered by `accept`. Ensemble created those trees. |
-| Anything above the base — where it came from, where it goes next | **The principal** | Judgment and authored content, and the principal is already working in the base. |
+| Part worktrees, commits, merge into the base, revert | **Ensemble** | Mechanical and deterministic, triggered by `accept`, on trees Ensemble created |
+| Anything above the base | **The principal** | Judgment and authored content, and it already works in the base |
 
-A part can be denied git outright, since it never needs it. A principal cannot be,
-and it should not get git through tools wrapping it either: git flows vary, and a
-principal with git and judgment adapts where one with a fixed set of verbs is
-stuck with whatever we imagined.
+A part can be denied git outright, since it never needs it. A principal cannot,
+and should not receive git through tools wrapping it: git flows vary, and a fixed
+set of verbs constrains it to whatever we anticipated.
 
-Where the hard boundary belongs is **outside Ensemble** — a protected ref, so it
-holds regardless of what any agent attempts, which is a stronger guarantee than
-anything decided inside the process being bounded.
+The hard boundary belongs outside Ensemble. A protected ref holds regardless of
+what any agent attempts.
 
-Committing a part's work is Ensemble's, but the message is content, so the part
+Committing a part's work is Ensemble's, but the message is content: the part
 proposes it in its result and Ensemble commits with it. Whether a message is
-checked against a project's conventions is that project's business, and a
-rejection comes back the same way a conflict does.
+checked against a project's conventions belongs to that project, and a rejection
+returns the same way a conflict does.
 
-### Instruction snippets are part of the deliverable
+### Subagents belong to the agent
 
-Every constraint in this document is something an agent has to be **told**, or it
-will do the obvious wrong thing: try to commit, guess rather than report, work
-outside its tree. Ensemble therefore ships a library of composable instruction
-snippets, and a persona prompt is *role-specific content plus Ensemble's
-contract* rather than something hand-written each time.
+A part or a principal may spawn subagents, and Ensemble neither sees nor controls
+them. They run in-process, inheriting the working directory, so a subagent is
+always in the same tree as whatever spawned it.
 
-The snippets divide into two kinds.
+That bounds them usefully: a part's subagents cannot leave its worktree. It also
+gives narrow-instruction work — commit-message drafting, for instance — a home
+that costs Ensemble nothing.
 
-**Ensemble's contract** — what the agent must know about the system it is inside:
+### Instruction snippets
+
+Every constraint here is something an agent must be told, or it will attempt to
+commit, guess rather than report, or work outside its tree. Ensemble ships
+composable snippets, and a persona prompt is role content plus Ensemble's
+contract.
+
+Ensemble's contract:
 
 - Git is not yours. You edit files in your worktree; Ensemble commits and merges.
   Propose a commit message with your result.
 - Your worktree is the only tree you touch.
-- Output that belongs to the work goes in-tree and is reviewed. Output that is
-  evidence *about* the work — measurements, logs, a large report — goes to your
-  outbox and is referenced, not committed.
+- Output belonging to the work goes in-tree and is reviewed. Evidence *about* the
+  work — measurements, logs, a report — goes to your outbox and is referenced.
 - End your turn with an outcome. Partial progress is a legitimate result; say what
   you did and what you did not.
 - If handed a re-apply brief, your previous change and the new base are attached.
-  Re-apply the intent, do not attempt to merge.
+  Re-apply the intent; do not attempt to merge.
 
-Composing rather than hand-writing matters because these are invariants. A
-persona that forgets the git snippet does not fail visibly; it just tries to
-commit, gets denied, and burns a turn learning what it should have been told.
+These are invariants, which is why they are composed rather than hand-written. A
+persona missing the git snippet fails invisibly: it attempts a commit, is denied,
+and spends a turn learning what it should have been told.
 
-An agent's own instructions may already say some of it, and how much survives when
-a persona replaces them is agent-specific — one more thing the adapter has to know.
-For Vibe, [`docs/vibe/prompt/`](../vibe/prompt/) records exactly which fragments
-are replaced and which are appended.
+How much of an agent's own instructions survive a persona replacing them is
+agent-specific. For Vibe, [`docs/vibe/prompt/`](../vibe/prompt/) records which
+fragments are replaced and which are appended.
 
 ### Channels: who reads and writes where
 
-Context isolation is a design property, not a side effect — a developer part must
-not see an auditor's reasoning, and personas are only interchangeable because
-nothing leaks between parts. Artefacts are how that gets broken, so every space
-needs a declared writer and declared readers.
+A developer part must not see an auditor's reasoning, and personas are
+interchangeable only because nothing passes between parts. Every space therefore
+has a declared writer and declared readers.
 
 | Space | Writer | Readers | Notes |
 | --- | --- | --- | --- |
 | Part working tree | the part | Ensemble, to commit and merge; a human attached or observing | No other part is given a route to it |
 | A part's commit | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Immutable, so it cannot shift under a reviewer |
-| Part scratchpad | the part and its subagents | same | Per session, outside the worktree, so it is never committed |
+| Part scratchpad | the part and its subagents | same | Per session, outside the worktree, never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
-| Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output stays out of the work |
+| Part outbox — summary, proposed commit message, files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree |
 | The base | Ensemble, by merging | any part branched from it; a human | The only inter-part channel |
 | Whatever the principal writes in the base | the principal | parts, read-only | Parts do not coordinate through it |
 
-**Ensemble gives no space two writers, and hands each part what it needs rather
-than a route to someone else's work.** That enables isolation; it does not enforce
-it, and the difference matters — see [what this does not
-attempt](#what-this-does-not-attempt).
+Ensemble gives no space two writers, and hands each part what it needs rather than
+a route to someone else's work. That enables isolation without enforcing it — see
+[what this does not attempt](#what-this-does-not-attempt).
 
-The designed path for review is a **commit**, not a tree. A working tree is where
-a part is mid-thought and can change under anyone reading it; a commit cannot.
-Ensemble gives a review part a read-only checkout of that commit plus the diff as
-an inbox artefact, so the reviewer reads files as usual, needs no git, and does not
-need a route into anyone's tree.
+Review reads a commit, not a tree. A working tree changes under anyone reading it;
+a commit does not. Ensemble gives a review part a read-only checkout of the commit
+plus the diff as an inbox artefact, so the reviewer reads files as usual and needs
+no git.
 
 A human can read anything.
 
-**Not everything a part produces is a code change.** Measurements, logs, a large
-output, a decision writeup — those go to the outbox and are referenced from the
-result rather than committed. Other output belongs in the work and should be
-in-tree and reviewed, a written review being the obvious case. Which applies is a
-judgment a part has to be told how to make, so it is one more instruction snippet:
-*in-tree because it belongs to the work, outbox because it is evidence about it.*
+Output that belongs to the work goes in-tree and is reviewed; evidence about the
+work goes to the outbox and is referenced from the result. Which applies is a
+judgment a part is told how to make, and is one of the snippets above.
 
 #### What this does not attempt
 
-A part with `bash` can write anywhere its process can reach — the devcontainer
-filesystem included. That is a property of running an agent on a machine, not
-something Ensemble introduced, and no amount of channel design closes it.
+A part with `bash` can write anywhere its process can reach, the devcontainer
+filesystem included. That is a property of running an agent on a machine, and
+channel design does not close it.
 
-What Ensemble owes is **not creating leaks of its own**: no space writable by two
-parts, no artefact arriving without a declared writer, no visibility that skips
-the merge. Closing ambient filesystem access is the [trust
-boundary's](#design-considerations) business — hook, hook denying its own paths,
-or container per turn — and treating careful channel design as a substitute for it
-would be the worse error, because it would look like a guarantee while being a
-convention.
-
-**One thing to verify.** Scratchpad writes skip the permission prompt, and
-[`docs/vibe/prompt/08-scratchpad.md`](../vibe/prompt/08-scratchpad.md) records
-that the exemption survives disabling the fragment — suppressing it only stops
-telling the model about a facility it still has. Whether it also bypasses a
-`pre_tool` hook is a different question and the answer matters: hooks are
-documented as firing *before* the permission prompt, which suggests policy still
-sees the call. If that turns out to be wrong, the scratchpad is a hole in every
-decision point and needs closing rather than documenting.
-
-### Subagents are the agent's, not Ensemble's
-
-A part or a principal may spawn subagents, and **Ensemble neither sees nor
-controls them**. They are spawned in-process, inheriting the working
-directory, so a subagent is always in the same worktree as whatever spawned it.
-
-That is a useful property rather than a gap. Isolation holds for free — a part's
-subagents cannot escape its worktree — and it gives the `git-operator` of
-[`tdd-orchestration-intent.md`](../design/tdd-orchestration-intent.md) §6 a better
-home than it had. Not an Ensemble concept, just a subagent the principal spawns
-when it wants a narrow instruction set for some piece of git or drafting work. It
-costs Ensemble nothing, because the agent handles all of it.
-
-### Ensemble's git surface
-
-Two mechanical operations: **create a worktree from a base, and merge the work
-back into it.** A part gets a worktree, publishes by committing, and Ensemble
-merges that commit into the base it came from. Whether Ensemble also points a
-branch at the commit is an implementation convenience, not something the design
-rests on.
-
-Everything else is the principal's, done with git directly rather than through
-tools wrapping it, and subject to the same decisions as anything else.
-
-**What the base signifies is not Ensemble's business.** It is a ref. A project may
-use it as a feature branch, a release branch, a trunk, or whatever its workflow
-requires; Ensemble creates worktrees from it and merges into it either way.
-Encoding one git flow here is how a design acquires a rule someone has to fight
-later.
+What Ensemble owes is not creating leaks of its own: no space writable by two
+parts, no artefact without a declared writer, no visibility that skips the merge.
+Closing ambient filesystem access belongs to the
+[trust boundary](#design-considerations). Channel hygiene is not a substitute for
+it, and treating it as one would present a convention as a guarantee.
 
 ## 4. Functional contract
 
-The MCP tool surface. Every call is batch-shaped: each tool boundary is a
-potential turn, and every turn re-sends the whole context, so instructing five
-parts must cost one turn rather than five.
+The MCP tool surface. Calls are batch-shaped: each tool boundary is a potential
+turn, and every turn re-sends the whole context, so instructing five parts costs
+one turn.
 
 ```mermaid
 classDiagram
@@ -557,8 +471,6 @@ classDiagram
   class Work {
     +string part
     +string message
-    +int priority
-    +Budget budget
   }
   class Status {
     +State state
@@ -585,49 +497,45 @@ classDiagram
   Part --> Result : last
 ```
 
-Persona is absent deliberately: it is a name resolved out of configuration, not
-something Ensemble holds. A part carries the name it runs under.
+Persona is absent: it is a name resolved out of configuration, not something
+Ensemble holds. A part carries the name it runs under.
 
 ### Tool surface
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `personas()` | no | `Persona[]` | What can be played: names and the agent behind each. Read-only — personas change by review, not by call. |
+| `personas()` | no | `Persona[]` | What can be played: names and the agent behind each. Read-only. |
 | `parts()` | no | `Part[]` | The calling principal's section: ids, personas, states, queued work. |
-| `start(items[])` | no | `Part[]` | `{persona, brief, priority?}`. Creates parts and queues their first turn. Does not fail for capacity or liveness. |
-| `start_sync(items[], timeout)` | yes | `Result[]` | Start and wait in a single turn — the reason it exists. |
+| `start(items[])` | no | `Part[]` | `{persona, brief}`. Creates parts and queues their first turn. Does not fail for capacity or liveness. |
 | `resume(items[])` | no | `Part[]` | `{part, message}`. Queues another turn on an existing transcript. |
-| `wait(parts?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps the timeout and returns `pending` rather than hanging. |
+| `wait(parts?, until, timeout)` | yes | `WaitResult` | `until` is `any` or `all`. Server caps the timeout and returns `pending`. |
 | `status(parts?)` | no | `Status[]` | Cheap poll. Omit `parts` for the whole section. |
 | `result(part, full?)` | no | `Result` | Summary by default; `full` returns the diff. |
-| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble merges the tree if there is one: clean means `Merged`, a conflict sends the part back to re-apply. |
-| `cancel(parts[])` | no | `void` | Drops queued work, or stops a playing turn and keeps the transcript for inspection. |
+| `accept(parts[])` | no | `Part[]` | Done with the work. Ensemble merges the tree if there is one: clean gives `Merged`, a conflict returns the part to re-apply. |
+| `cancel(parts[])` | no | `void` | Drops queued work, or stops a playing turn. The worktree is reverted; the transcript remains. |
 
 ### Invariants
 
-- **No call hangs.** Blocking tools take a server-side cap — 60s working default —
-  and return `{status: "pending"}` so the model can call again. MCP requests time
-  out at both ends, and a hung call also freezes the principal against its human.
-- **Results are summaries.** Full diffs only on request. Five parts reporting must
-  not paste five diffs into the principal's context. Ensemble builds a `Result`
-  from what the substrate returns — the final message is the summary, reasoning
-  is dropped.
-- **Context lives in the part, and nowhere else.** There is no cross-part memory,
-  because the agents have none.
+- **No call hangs.** Blocking tools take a server-side cap and return
+  `{status: "pending"}` so the model can call again. A hung call also freezes the
+  principal against its human.
+- **Results are summaries.** Full diffs only on request. Ensemble builds a
+  `Result` from what the substrate returns: the final message is the summary,
+  reasoning is dropped.
+- **Context lives in the part.** There is no cross-part memory.
 - **No call widens what a part may do.** Permissions follow from its persona and
-  are decided outside Ensemble, not supplied by whoever started it.
-- **Parts are durable.** They survive an Ensemble restart, because a part is a
-  transcript on disk and a row of state, not a process.
+  are decided outside Ensemble.
+- **Parts are durable.** A part is a transcript on disk and a record of state, not
+  a process.
 
 ### How results reach the principal
 
-Through `wait`, and only through `wait`. While a human is attached to a principal
-it is a live session, and a live session cannot be driven from outside — so there is no
-callback path and no delivery queue. The principal asks; Ensemble answers when it
-has something.
+Through `wait`. While a human is attached to a principal it is a live session, and
+a live session cannot be driven from outside, so there is no callback path and no
+delivery queue. The principal asks; Ensemble answers when it has something.
 
-Ensemble owns the terminal, so it *could* type into a live session. It does not,
-for the same reason a part has one owner.
+Ensemble could type into a live session and does not, for the same reason a part
+has one owner.
 
 ## 5. Dispatch flows
 
@@ -639,7 +547,7 @@ sequenceDiagram
   participant C as chair
   O->>E: start([{developer, "auth refactor"}, {tester, "rate limit tests"}])
   E-->>O: [Queued, Queued]
-  Note over O: turn ends — principal free
+  Note over O: turn ends
   E->>C: a chair frees up, plays auth-refactor
   C-->>E: returned
   O->>E: wait(until=any, timeout=60)
@@ -659,7 +567,7 @@ sequenceDiagram
   H->>E: observe(auth-refactor)
   activate E
   E-->>H: session/update stream
-  Note over P: still playing — observing takes nothing
+  Note over P: still playing
   deactivate E
   H->>E: attach(auth-refactor)
   Note over E: only from AwaitingReview or Faulted
@@ -669,108 +577,92 @@ sequenceDiagram
 
 ## 6. Tool use with no human present
 
-**The problem is narrow: a part with nobody attached cannot ask, but its tool
-calls still need answering.** ACP raises them as `session/request_permission`, which
-arrives at the **client** — Ensemble. Something has to reply, and no human is
-there to.
+A part with nobody attached cannot ask, but its tool calls still need answering.
+ACP raises them as `session/request_permission`, which arrives at the client —
+Ensemble. Nothing else is there to reply.
 
-Ensemble is already sitting in the protocol.s own decision point, in a process the
-part cannot reach.
+Ensemble is already in the protocol's decision point, in a process the part cannot
+reach.
 
-Ensemble routes each request to a **pluggable decision point** and applies the
-answer. It does not decide and does not define policy — keeping that separate is
-what stops this layer acquiring one. Two things it owes the plug:
+It routes each request to a **pluggable decision point** and applies the answer. It
+does not decide and does not define policy. Two things it owes the plug:
 
-- **Fail closed.** A decision point that breaks must refuse, not permit.
+- **Fail closed.** A decision point that breaks refuses rather than permits.
 - **Pass a denial back with its reason**, so the model adapts or reports rather
-  than silently working around it.
+  than working around it.
 
-How complete the coverage is depends on how much the agent asks about, which is a
-dial on the persona rather than a limit of the mechanism: instructions and tool
-settings that ask for everything produce a request for every call.
+Coverage depends on how much the agent asks about, which is a dial on the persona:
+instructions and tool settings that ask for everything produce a request per call.
 
-Untested. The spike never triggered a permission request, so this path has been
-read and not run — and agent-specific escapes exist, such as Vibe auto-allowing
-its scratchpad before permission resolution.
+> **Untested.** The spike never triggered a permission request. Agent-specific
+> escapes also exist, such as Vibe auto-allowing its scratchpad before permission
+> resolution.
 
 ### Design considerations
 
 **Where the trust boundary sits.** Adjudicating over ACP puts the decision in a
-process the part cannot reach, which is a real boundary rather than a convention —
-a part cannot rewrite a decision point it has no access to.
+process the part cannot reach. What it does not bound is what a part does with
+permission once granted, or with the ambient filesystem.
 
-What it does not bound is what the part does with permission once granted, or with
-the ambient filesystem. Two positions remain:
-
-| Position | Strength | Cost |
+| Position | Bounds | Cost |
 | --- | --- | --- |
-| Adjudicate over ACP | The decision is out of reach. A granted call is still granted, and `bash` still reaches the machine. | None — Ensemble is already the client. |
-| Container per turn | The boundary is the kernel's. What a part can reach at all is bounded, not just what it is allowed to ask for. | Worktrees become mounts and Ensemble supervises containers — but a container lives for one turn, so nothing idles. |
+| Adjudicate over ACP | Permission. A granted call is granted, and `bash` reaches the machine. | None — Ensemble is already the client. |
+| Container per turn | Reach. What a part can touch at all. | Worktrees become mounts and Ensemble supervises containers. A container lives for one turn. |
 
-The second is the only one that bounds reach rather than permission, and it
-changes the deployment model rather than the configuration — which is why it is
-worth deciding rather than drifting into.
+The second changes the deployment model rather than the configuration.
 
-**How sections reach each other.** Open, and worth leaving open. Either the repo
-is the medium and sections communicate through branches, changes and issues; or
-the human is the medium, carrying intent across by switching sessions; or Ensemble
-relays with an explicit `message(section, text)`. The first two need no mechanism
-and should be tried first. The third is buildable, but a section that can message
-another section's principal is a section that can task it, and nothing in the
-permission model speaks to that.
+**How sections reach each other.** Open. Either the repo is the medium and
+sections communicate through refs and issues; or a human carries intent across by
+switching sessions; or Ensemble relays with an explicit `message(section, text)`.
+The first two need no mechanism. The third is buildable, but a section that can
+message another section's principal can task it, and nothing in the permission
+model speaks to that.
 
-**What survives an Ensemble restart.** More than it first appears. A part is a
-transcript on disk and a row of state, so durability is close to free. What cannot
-survive is a turn in flight, since the process running it dies with its parent.
-The choice is whether Ensemble supervises those or lets them come back `Faulted`
-with worktrees intact. The second is cheaper, and should be a decision rather than a consequence.
+**What survives an Ensemble restart.** A part is a transcript on disk and a record
+of state, so durability is close to free. A turn in flight does not survive, since
+the process running it dies with its parent. Either Ensemble supervises those or
+they return `Faulted` with worktrees intact. The second is cheaper and should be a
+decision rather than a consequence.
 
-**Whether a turn is at-most-once.** Work that edited files and then lost its
-result channel has still done the work. Since the worktree persists and the
-transcript is resumable, recovery is inspection rather than replay — an argument
-for worktrees arriving early.
+**Whether a turn is at-most-once.** Work that edited files and lost its result
+channel has still done the work. The worktree persists and the transcript is
+resumable, so recovery is inspection rather than replay.
 
 ## 7. Choices for the first build
 
-The design above is deliberately unspecific about agents, plugs and entry points.
-The first build is not — it has to pick something. These are **picks, not
-commitments**: each is the cheapest thing that exercises the design, and each is
-expected to be replaced.
+The design above is unspecific about agents, plugs and entry points. The first
+build has to pick. These are picks, not commitments — each is the cheapest thing
+that exercises the design.
 
-| Concern | First build | Why this one |
+| Concern | First build | Because |
 | --- | --- | --- |
-| ACP agent | **Vibe**, via `vibe-acp` | Already installed, already routed through rubato, and funded by a subscription we hold rather than per-token. Verified end to end in [`spikes/acp`](../../spikes/acp/). |
-| Policy plug | **Something trivial** — a static allow/deny list from configuration | Proves the decision point is wired without deciding anything about policy. An engine can replace it behind the same interface. |
-| Frontend | **CLI**, including the `tail`-shaped observer | Validates the control API without UI work confounding it, and forces an event stream in early. |
-| Language | **TypeScript on Deno** | The ACP SDK is first-class there, and it matches what the repository already runs. |
-| Sections | **One** | A second section is what proves the boundary, and proving it is not the first thing worth knowing. |
+| ACP agent | **Vibe**, via `vibe-acp` | Installed, routed through rubato, funded by a subscription we hold. Verified in [`spikes/acp`](../../spikes/acp/). |
+| Policy plug | a static allow/deny list from configuration | Proves the decision point is wired without deciding anything about policy. |
+| Entry point | **CLI**, including the `tail`-shaped observer | Validates the control API, and forces an event stream in early. |
+| Language | **TypeScript on Deno** | The ACP SDK is first-class there, and it matches the repository. |
+| Sections | **One** | A second section proves the boundary, which is not the first thing worth knowing. |
 
 ### Not in the first build
 
-Listed because leaving them out is a decision, not an oversight:
-
-- **Containers per turn.** The trust boundary stays where ACP puts it, which
-  bounds permission but not reach. Acceptable while the parts are ours.
+- **Containers per turn.** The trust boundary stays where ACP puts it, bounding
+  permission but not reach.
 - **Priority, budgets, section reservation.** The queue is FIFO over ready work
-  with a chair count. Everything else is scheduling we have no evidence we need.
-- **Mutexes.** Nothing declares one yet, and the case for them rests on sharing a
-  worktree, which the channel rules do not permit.
-- **TUI and VS Code.** The CLI has to prove the API first.
-- **Anything about a second agent vendor.** The adapter seam is in the design so
-  that adding one is not a rewrite, not so that we add one now.
+  with a chair count.
+- **TUI and VS Code.** The CLI proves the API first.
+- **A second agent vendor.** The adapter seam exists so adding one is not a
+  rewrite.
 
 ## 8. Build order
 
-Each stage is independently useful, and each is a place to stop if the value is
-not there.
+Each stage is independently useful, and each is a place to stop.
 
 | Stage | Delivers | Proves |
 | --- | --- | --- |
-| 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). | Done. A real turn, routed through rubato, no headless instruction, and the persona ours. |
+| 0 ✅ | **ACP spike** — [`spikes/acp`](../../spikes/acp/). | Done. A real turn, routed through rubato, no headless instruction, the persona ours. |
 | 1 | `session/load` on the spike. | Resume works over ACP — the assumption every review round depends on. |
-| 2 | Backend plus CLI: host a part, own-attach to it, and `tail` it. | The entrypoint, and an event stream in the control API before anything is built on it. |
-| 3 | Personas from configuration, composed from role content plus Ensemble's instruction snippets; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started, told what system it is in, and survives Ensemble dying. |
-| 4 | `wait`, `result`, the queue, chairs, and a worktree per part. | Work comes back, bounded by chairs rather than by how much was started. |
-| 5 | `resume`, `accept`, the merge and re-apply on conflict, plus owning attach in `AwaitingReview`. | The review loop, and that a part either merges or reverts cleanly. |
+| 2 | Core plus CLI: start a part, attach to it, `tail` it. | The entry point, and an event stream in the control API. |
+| 3 | Personas from configuration; `personas`, `parts`, `start`, `status`. | Work can be started and survives a restart. |
+| 4 | `wait`, `result`, the queue, chairs, a worktree per part. | Work returns, bounded by chairs. |
+| 5 | `resume`, `accept`, merge and re-apply on conflict, attach in `AwaitingReview`. | The review loop, and that a part merges or reverts cleanly. |
 | 6 | Route permission requests to a decision point, with one plug behind it. | A part can use tools with no human present. |
 | 7 | A second section. | Sections are a first-class boundary. |
