@@ -503,7 +503,7 @@ needs a declared writer and declared readers.
 | Space | Writer | Readers | Notes |
 | --- | --- | --- | --- |
 | Part working tree | the part | Ensemble, to commit and merge; a human attached or observing | No other part is given a route to it |
-| Part branch, once committed | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Committed and immutable — the reviewable form of the work |
+| A part's commit | Ensemble, on the part's behalf | Ensemble; a review part, via a checkout Ensemble prepares | Immutable, so it cannot shift under a reviewer |
 | Part scratchpad | the part and its subagents | same | `/tmp/vibe-scratchpad-<prefix>-<random>`, per session, outside the worktree so it is never committed |
 | Part inbox — brief, previous diff, conflict material | Ensemble | the part | One-way, in |
 | Part outbox — summary, proposed commit message, and files | the part | Ensemble, then the principal | One-way, out. Durable and outside the worktree, so out-of-tree output does not pollute the change |
@@ -516,14 +516,11 @@ than a route to someone else's work.** That enables isolation; it does not enfor
 it, and the difference matters — see [what this does not
 attempt](#what-this-does-not-attempt).
 
-The designed path for review is a **branch**, not a tree. A part's working tree is
-where it is mid-thought; committing turns that into something immutable and
-addressable, and Ensemble can give a review part a read-only checkout of it plus
-the diff as an inbox artefact. The reviewer reads files as usual and needs no git.
-
-That is the distinction a branch already draws — work in progress against work
-proposed — and it is why review does not need a part reaching into another part's
-tree.
+The designed path for review is a **commit**, not a tree. A working tree is where
+a part is mid-thought and can change under anyone reading it; a commit cannot.
+Ensemble gives a review part a read-only checkout of that commit plus the diff as
+an inbox artefact, so the reviewer reads files as usual, needs no git, and does not
+need a route into anyone's tree.
 
 A human can read anything. That is not a hidden channel; it is the point.
 
@@ -574,28 +571,22 @@ narrow instructions. It costs Ensemble nothing, because Vibe handles all of it.
 
 ### Two levels of git
 
-Part branches do not merge into `main`. They merge into a **change** branch, and
-the change is what becomes a pull request.
+**One branch matters: the change branch.** It is the tree the principal works in,
+what parts branch from, what their work merges back into, and what becomes a pull
+request. It is not a new concept — it is the `change/<name>` branch this repository
+already uses, for the OpenSpec change already named in `openspec/changes/<name>/`.
 
-```
-main
- └── change/rate-limiting            integration branch for one change
-      ├── part/rate-limit-impl       part branches merge here
-      ├── part/rate-limit-tests
-      └── part/rate-limit-review
-```
+Below that there are worktrees and commits, not branches anybody addresses. A part
+gets a worktree; it publishes by committing; Ensemble merges that commit into the
+change branch. Whether Ensemble also points a branch at the commit is an
+implementation convenience — useful when a human wants to poke at it — and nothing
+here depends on it.
 
-The change is not a new concept — it is **the OpenSpec change already named in
-`openspec/changes/<name>/`**, on the `change/<name>` branch this repository
-already uses. One identity, three manifestations: a folder of artefacts, a branch,
-and the parts working it.
-
-The principal works in the **parent worktree** — the change branch itself — which
-is why change-level git is its own rather than Ensemble's. Ensemble creates part
-worktrees *from* that branch and merges back into it. Neither merges the PR: that
-is the human's, and it is where
-[`governance/constitution.md`](../../governance/constitution.md) §1 puts the gate —
-agents propose and execute, the human decides what reaches `main`.
+That leaves Ensemble with exactly two mechanical git operations: **create a
+worktree, and merge the work back.** Everything else at the change level is the
+principal's, done with git directly rather than through tools wrapping it. Neither
+merges the PR: that is the human's, which is where
+[`governance/constitution.md`](../../governance/constitution.md) puts the gate.
 
 A section is long-lived and works through many changes over time. It **should**
 work them sequentially, one change in flight at a time, because concurrent changes

@@ -40,8 +40,7 @@ all backed by the same credential. Two chairs.
    Both are `Queued`, not running. The principal's turn ends here; it is free.
 
 3. **Ensemble** has two chairs, so both parts start. Each gets a worktree of its
-   own — `part/rate-limit-impl` and `part/rate-limit-tests`, branched from
-   `change/rate-limiting` — and each spawns a
+   own, branched from `change/rate-limiting` — and each spawns a
    process with `VIBE_DEFAULT_AGENT` set from its persona, and a grant minted for
    this turn.
 
