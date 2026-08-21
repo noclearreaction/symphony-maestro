@@ -5,8 +5,7 @@
 > shape, not a specification.
 >
 > They exist because a story catches confusion a diagram hides. Scenario B is the
-> one that exposed a conflation of *persona* with *part*, and it is written out
-> here so the same mistake cannot be made twice.
+> one that exposed a conflation of *persona* with *part*.
 
 Throughout: **you** are outside the metaphor. A **part** is a unit of work and the
 only thing carrying context. A **persona** is a named configuration that can play
@@ -155,7 +154,7 @@ wall clock does.
 
 **What the story shows:** chairs bound spend and rate-limit exposure, not
 correctness. The principal expresses *what should happen*; the operator decides
-*how much happens at once*. Neither can overrule the other, which is the point.
+*how much happens at once*. Neither can overrule the other.
 
 ---
 

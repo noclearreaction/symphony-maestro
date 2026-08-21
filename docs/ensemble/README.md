@@ -68,7 +68,7 @@ principal unattended overnight"* a flag rather than a new concept:
 The last row is the same shape one level up, with the human's gate on it — where
 [`governance/constitution.md`](../../governance/constitution.md) puts it.
 
-**The ceiling is deliberately not part of the persona.** A persona is a prompt, a
+**The ceiling is not part of the persona.** A persona is a prompt, a
 ceiling is a policy, and the operator's configuration binds one to the other. That
 separation is what stops a principal handing a part more authority than a human
 sanctioned.
@@ -370,7 +370,7 @@ not fix that.
 > tier: share more worktrees, run less concurrently, and pay in wall-clock rather
 > than in integration.
 
-`resume` is deliberately general. Rejected output is one reason; a follow-up
+`resume` covers more than rejection. Rejected output is one reason; a follow-up
 question, new information, a conflict to re-apply, or a change of direction are
 others. There is no separate `reject` verb — rejection is a resume whose message
 says what was wrong. Resuming continues the existing transcript rather than
@@ -521,7 +521,7 @@ Ensemble gives a review part a read-only checkout of that commit plus the diff a
 an inbox artefact, so the reviewer reads files as usual, needs no git, and does not
 need a route into anyone's tree.
 
-A human can read anything. That is not a hidden channel; it is the point.
+A human can read anything.
 
 **Not everything a part produces is a code change.** Measurements, logs, a large
 output, a decision writeup — those go to the outbox, and Ensemble references them
@@ -748,8 +748,8 @@ still need answering.** ACP raises them as `session/request_permission`, which
 arrives at the **client** — Ensemble. Something has to reply, and no human is
 there to.
 
-That is the protocol's own decision point, which is the right place for this:
-Ensemble is already sitting in it, and it is a process the part cannot reach.
+Ensemble is already sitting in the protocol.s own decision point, in a process the
+part cannot reach.
 
 Ensemble routes each request to a **pluggable decision point** and applies the
 answer. It does not decide and does not define policy — keeping that separate is
@@ -797,8 +797,7 @@ say nothing about that.
 transcript on disk and a row of state, so durability is close to free. What cannot
 survive is a turn in flight, since the process running it dies with its parent.
 The choice is whether Ensemble supervises those or lets them come back `Faulted`
-with worktrees intact. The second is cheaper and honest, and should be a decision
-rather than a consequence.
+with worktrees intact. The second is cheaper, and should be a decision rather than a consequence.
 
 **Whether a turn is at-most-once.** Work that edited files and then lost its
 result channel has still done the work. Since the worktree persists and the
