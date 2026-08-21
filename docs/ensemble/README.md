@@ -71,7 +71,7 @@ sanctioned.
 Ensemble drives work over **ACP**, the [Agent Client Protocol](https://agentclientprotocol.com).
 Several agents implement it — Vibe, Claude Code, Codex CLI, Copilot CLI, OpenCode,
 Gemini CLI, Cline, Goose — so this layer is a client of one protocol rather than a
-wrapper around one CLI, and the choice of agent becomes a persona property.
+wrapper around one CLI, and a part can be run by any of them.
 
 Five properties of that substrate shape everything below. They were measured, not
 assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
@@ -80,10 +80,10 @@ assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
 | Constraint | Consequence |
 | --- | --- |
 | A session is a durable transcript, addressable and resumable. | A part *is* a session. Continuing one is a resume, and durability comes free. |
-| A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing. A persona is chosen per turn rather than per lifetime. |
+| A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing, and a part's persona is fixed for a turn rather than for its life. |
 | Delegation inside a session is one level deep. | Hierarchy cannot live in a session, so orchestration is an external process. |
 | A non-interactive agent cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
-| Configuration is per agent, not per protocol. | Ensemble needs a small adapter per agent kind — how a persona is applied differs even though how it is driven does not. |
+| Configuration is per agent, not per protocol. | Ensemble needs a small adapter per agent kind — applying instructions differs between them even though driving a session does not. |
 
 One thing the substrate does *not* give us, and it is why ACP rather than a CLI:
 an agent run headlessly is typically instructed to make a judgment call and press
@@ -91,9 +91,9 @@ on rather than stop. That converts ambiguity a part discovers mid-turn into a
 silent guess, and it is not acceptable in work that gets reviewed. ACP sessions do
 not carry it.
 
-> **Not free across vendors.** A persona backed by Vibe runs on a Mistral
-> subscription; one backed by Claude is directed to API keys by Anthropic's Agent
-> SDK terms. Mixed sections are a deliberate spend, not a free upgrade.
+> **Not free across vendors.** Work run by Vibe draws on a Mistral subscription;
+> work run by Claude Code is directed to API keys by Anthropic's Agent SDK terms.
+> Mixing agents in one section is a deliberate spend, not a free upgrade.
 
 ## 2. Architecture
 
