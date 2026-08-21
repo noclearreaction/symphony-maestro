@@ -105,7 +105,7 @@ an exemption from having one.
 ```mermaid
 flowchart TB
   H["human"]
-  ENS["<b>Ensemble</b><br/>session host · terminal broker · grant issuer"]
+  ENS["<b>Ensemble</b><br/>session host · terminal broker · decision router"]
 
   subgraph S1["Section · build"]
     P1["principal<br/>interactive"]
@@ -120,8 +120,8 @@ flowchart TB
   end
 
   CH["chairs<br/>N execution slots"]
-  HOOK["pre_tool hook<br/>policy enforcement"]
-  POL[("policies")]
+  DEC["decision point<br/>pluggable"]
+  POL[("policy — whatever plugs in")]
   RUB["rubato"]
   API[("model API")]
 
@@ -134,18 +134,17 @@ flowchart TB
   CH -->|"plays"| A1
   CH -->|"plays"| A2
   P1 -->|"MCP / http"| ENS
-  P1 --> HOOK
-  A1 --> HOOK
-  HOOK --> POL
+  P1 --> DEC
+  A1 --> DEC
+  DEC --> POL
   A1 --> RUB
   P1 --> RUB
   RUB --> API
 ```
 
-Ensemble owns four things and nothing else: the sections and their parts, the
-mapping from part to session id, the terminal attachment, and the minting of
-grants. It does not interpret results, judge quality, or make plans — those stay
-with a principal, the only party that can ask the human.
+Ensemble owns the sections and their parts, the mapping from part to session id,
+the terminal attachment, and routing permission requests to whatever decides
+them. It does not interpret results, judge quality, make plans, or decide policy.
 
 ### Substrate
 
@@ -630,12 +629,6 @@ classDiagram
     +int priority
     +Budget budget
   }
-  class Grant {
-    +string id
-    +Scope scope
-    +time expires_at
-    +bytes signature
-  }
   class Status {
     +State state
     +int turns
@@ -664,9 +657,7 @@ classDiagram
   Change "1" --> "0..n" Part
   Persona "1" --> "0..n" Part : played as
   Part "1" --> "0..1" Work : queued
-  Work --> Grant : minted per turn
   Persona "1" --> "1" Ceiling : bound by configuration
-  Grant --> Ceiling : bounded by
   Part --> Status
   Part --> Result : last
 ```
@@ -697,9 +688,8 @@ classDiagram
   is dropped.
 - **Context lives in the part, and nowhere else.** There is no cross-part memory,
   because the agents have none.
-- **Scope is per turn, bounded by persona.** The grant is minted when work is
-  queued and is always at or below the persona's ceiling. No call widens a
-  persona.
+- **A part cannot exceed its ceiling, and no call widens one.** Ceilings come from
+  reviewed configuration bound to a persona, not from whoever started the part.
 - **Parts are durable.** They survive an Ensemble restart, because a part is a
   transcript on disk and a row of state, not a process.
 
@@ -751,33 +741,31 @@ sequenceDiagram
   Note over E: queued work waits until detach
 ```
 
-## 6. Enforcement
+## 6. Tool use with no human present
 
-The enforcement point is a `pre_tool` hook, which fires before the permission
-prompt and can deny with a reason returned to the model as the tool error: verify
-the grant's signature, evaluate the call, allow or deny.
+**The problem is narrow: a non-interactive part cannot ask.** ACP strips
+`ask_user_question`, and there is nobody at the other end anyway. But its tool
+calls still raise permission requests, and those arrive at the **client** —
+Ensemble — via `client.request_permission()`. Something has to answer, and the
+absent human is not available to.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant O as Principal
-  participant E as Ensemble
-  participant P as part
-  participant H as pre_tool hook
-  O->>E: start({developer, brief})
-  E->>E: mint grant · Ed25519 · TTL 15m
-  E->>P: spawn with ENSEMBLE_GRANT
-  P->>H: bash "git push origin main"
-  H->>H: verify signature · decide
-  H-->>P: deny "grant excludes git push"
-  Note over P: model sees the reason,<br/>adapts or reports back
-```
+Ensemble routes those requests to a **pluggable decision point** and applies the
+answer. It does not decide, and it does not define policy — that is a separate
+concern with its own design, and keeping it separate is what stops this layer
+acquiring one.
 
-Two things from our own [`.vibe/hooks.toml`](../../.vibe/hooks.toml) matter here.
-Hooks **fail open** — *"anything else / non-zero → fails OPEN with a UI warning"* —
-so `strict = true` is mandatory on the policy hook, not optional. And the hook
-runs in the part's own process tree, so a part that can write `.vibe/hooks.toml`,
-replace the hook binary, or re-sign its grant has disarmed the policy.
+Two things Ensemble owes it:
+
+- **Fail closed.** Vibe's own hooks fail *open* —
+  [`.vibe/hooks.toml`](../../.vibe/hooks.toml) records *"anything else / non-zero
+  → fails OPEN with a UI warning"* — so a decision point that breaks must refuse,
+  not permit.
+- **Pass a denial back as a tool error with its reason**, so the model adapts or
+  reports rather than silently working around it.
+
+Where the plug sits is worth knowing but is its choice, not ours: the ACP
+permission channel is free and sees only what Vibe asks about, while a `pre_tool`
+hook sees every call and runs inside the part it polices.
 
 ### Design considerations
 
@@ -813,47 +801,7 @@ result channel has still done the work. Since the worktree persists and the
 transcript is resumable, recovery is inspection rather than replay — an argument
 for worktrees arriving early.
 
-## 7. Policy options
-
-The PAM analogy covers two separable problems, and conflating them is what leads
-to building something bespoke.
-
-- **Delegation** — how a grant reaches a part, narrowed on the way.
-- **Decision** — whether *this* tool call, with these arguments, is permitted.
-
-Ensemble is TypeScript on Deno, so the question is what runs there rather than
-what has a Go binding.
-
-| Candidate | Kind | Deno support | Standing |
-| --- | --- | --- | --- |
-| **[Cedar](https://www.cedarpolicy.com/)** | decision engine | `@cedar-policy/cedar-wasm` 4.12.0, official — loads under Deno, verified | **live option** |
-| **[Biscuit](https://www.biscuitsec.org/)** | capability token **and** Datalog policy | `@biscuit-auth/biscuit-wasm` 0.6.0, official — npm last published 2025-09-26, repo pushed 2026-07-13 | **live option** |
-| **[OPA / Rego](https://www.openpolicyagent.org/)** | decision engine | `@open-policy-agent/opa-wasm` | alt — more expressive, heavier, another language |
-| **Macaroons** | capability token | bindings only | no — weaker expression, HMAC wants a shared secret |
-| **[UCAN](https://github.com/ucan-wg/spec)** | capability token | — | no — DIDs and token bloat for no benefit here |
-| **Casbin** | policy library | — | no — awkward for rich per-call attributes |
-
-Cedar is fast, analyzable and exposes `isAuthorized` directly, but has no
-delegation semantics and needs a companion grant format. Biscuit would collapse
-both into one mechanism, since the token carries its own checks — at the cost of
-learning Datalog, and with an npm publishing gap that wants explaining.
-
-**The choice is deliberately deferred.** What will separate them is writing one
-real policy — deny `git push` for a persona scoped to a worktree — and seeing
-which reads better.
-
-### The load-bearing observation
-
-Offline attenuation exists because the delegating party **cannot reach the
-issuer**. Here Ensemble *is* the issuer, and the principal is talking to it over
-MCP at the moment work is queued. So Ensemble can mint a narrowed, short-lived
-grant per turn and no attenuation format is strictly needed.
-
-That weakens the case for Biscuit's headline feature without settling the choice:
-attenuation is one thing Biscuit does, carrying policy inside the token is the
-other.
-
-## 8. Build order
+## 7. Build order
 
 Each stage is independently useful, and each is a place to stop if the value is
 not there.
@@ -866,5 +814,5 @@ not there.
 | 3 | Personas from configuration, composed from role content plus Ensemble's instruction snippets; `personas`, `parts`, `start`, `status`. Durable across restart. | Work can be started, told what system it is in, and survives Ensemble dying. |
 | 4 | `wait`, `result`, the queue, chairs, and a worktree per part. | Work comes back, bounded by chairs rather than by how much was started. |
 | 5 | `resume`, `accept`, the merge and re-apply on conflict, plus owning attach in `AwaitingReview`. | The review loop, and that a part either merges or reverts cleanly. |
-| 6 | Grants and the policy hook. | A part is provably unable to exceed its persona's ceiling. |
+| 6 | Route permission requests to a decision point, with one plug behind it. | A part can use tools with no human present. |
 | 7 | A second section. | Sections are a first-class boundary. |

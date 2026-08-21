@@ -40,9 +40,8 @@ all backed by the same credential. Two chairs.
    Both are `Queued`, not running. The principal's turn ends here; it is free.
 
 3. **Ensemble** has two chairs, so both parts start. Each gets a worktree of its
-   own, branched from `change/rate-limiting` — and each spawns a
-   process with `VIBE_DEFAULT_AGENT` set from its persona, and a grant minted for
-   this turn.
+   own, branched from `change/rate-limiting`, and each spawns a process with
+   `VIBE_DEFAULT_AGENT` set from its persona.
 
 4. **You**, curious, run `ensemble tail rate-limit-impl` and watch it work. This
    takes nothing from anyone: observing is read-only, the part keeps playing, and
@@ -234,9 +233,9 @@ run two changes at once is visible as work, not hidden as a chore.
 
 2. It calls `bash "git push origin change/auth-refactor"`.
 
-3. The **`pre_tool` hook** fires before any permission prompt. It verifies the
-   grant Ensemble minted for this turn, evaluates the call against the
-   `developer` persona's ceiling, and denies: *"grant excludes git push"*.
+3. There is no human to ask, so the request reaches **Ensemble**, which routes it
+   to the decision point. Whatever is plugged in there refuses — the `developer`
+   ceiling has no git in it — and the denial comes back with its reason.
 
 4. The model **sees the denial as a tool error with a reason**, so it does not
    silently retry or work around it. It notes in its summary that it would have
