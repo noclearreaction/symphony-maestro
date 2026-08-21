@@ -97,9 +97,12 @@ not carry it.
 
 ## 2. Architecture
 
-The human runs Ensemble, not an agent directly. It hosts every session — the
-principal's included — brokers the terminal to whichever the human wants, and is
-reached as an MCP server over HTTP for the tool surface.
+Ensemble knows which parts exist, which session id each one is, and runs their
+turns. A principal reaches it over MCP; a human through the CLI.
+
+Attaching is a lookup rather than a feature: a session is resumable by the agent's
+own command, so Ensemble supplies the session id and the CLI execs the agent
+against it.
 
 The principal is a part like any other, with the properties set out in
 [Everything is a part](#everything-is-a-part): the orchestrator persona, the base
@@ -109,7 +112,7 @@ tracked by the same machinery as the rest.
 ```mermaid
 flowchart TB
   H["human"]
-  ENS["<b>Ensemble</b><br/>session host · terminal broker · decision router"]
+  ENS["<b>Ensemble</b><br/>runs turns · routes decisions"]
 
   subgraph S1["Section · build"]
     P1["principal<br/>interactive"]
@@ -147,27 +150,32 @@ flowchart TB
 ```
 
 Ensemble owns the sections and their parts, the mapping from part to session id,
-the terminal attachment, and routing permission requests to whatever decides them.
-It does not interpret results, judge quality, make plans, or decide policy.
+the queue, and routing permission requests to whatever decides them. It does not
+interpret results, judge quality, make plans, or decide policy.
 
-### Shape: one backend, several frontends
+### Shape: one core, several entry points
 
-A backend daemon with thin, replaceable frontends: CLI, TUI, later a VS Code
-extension. Four things make that more than a preference.
+**The core is file-backed state and the logic over it** — part records,
+transcripts, worktrees, the queue — all on disk. Entry points are spawned on
+demand and share nothing but those files: an MCP server, a CLI, later a TUI and an
+extension.
 
-**There are two consumer classes.** Principals consume the orchestration tool
-surface over MCP; humans consume section views, attach, approvals and logs. Those
-want different APIs, and collapsing them is how a tool-shaped API ends up
-rendering tables for people.
+The filesystem carries the coordination: a lock bounds how many turns run at once,
+and any invocation can start queued work when a chair frees. A turn is driven by a
+process living exactly as long as the turn — the same process that is the ACP
+client, and therefore what answers permission requests — which writes its result
+where the next reader will find it.
 
-**The backend is already a server.** It must serve MCP over HTTP regardless, so a
-control API for frontends is an increment rather than a new tier.
+The MCP surface exists for an agent making tool calls. A human wants something
+different from the same state: which parts exist, what they are doing, attach,
+logs. One interface shaped for tool calls serves that badly, which is why the
+entry points are separate rather than one surface with two audiences.
 
-**State must not live in a frontend**, or the TUI and the CLI become two products
-that disagree. A frontend should be able to crash without losing anything.
+State stays in the core rather than an entry point, so the TUI and the CLI cannot
+disagree, and any of them can crash without losing anything.
 
-**Attach is where the split gets tested**, and the one place frontends cannot be
-uniform:
+**Attach is where the split gets tested**, and the one place entry points cannot
+be uniform:
 
 | Frontend | Attach means |
 | --- | --- |
@@ -175,8 +183,8 @@ uniform:
 | TUI | suspend itself and hand over the terminal, or embed a pty — the hard case |
 | VS Code | likely open the agent's own extension against the session rather than reimplementing it |
 
-So `attach` is a backend-blessed capability — the backend says which session and
-why — with a per-frontend mechanism.
+So the core says which session may be attached and why; how the terminal gets
+there is each entry point's own problem.
 
 #### CLI first
 
@@ -707,7 +715,7 @@ for worktrees arriving early.
 
 ## 7. Choices for the first build
 
-The design above is deliberately unspecific about agents, plugs and frontends.
+The design above is deliberately unspecific about agents, plugs and entry points.
 The first build is not — it has to pick something. These are **picks, not
 commitments**: each is the cheapest thing that exercises the design, and each is
 expected to be replaced.
