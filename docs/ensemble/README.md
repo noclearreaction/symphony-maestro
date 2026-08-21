@@ -33,10 +33,11 @@ outside the metaphor and own it.
 | **Ensemble** | This layer: the sections, their parts, and the chairs that play them. |
 | **Section** | A long-lived working group — a build section, a design section — with a principal. Works through changes over time. |
 | **Change** | The unit that becomes a pull request: an OpenSpec change, its `change/<name>` branch, and the parts working it. |
-| **Persona** | A named configuration: which ACP agent, which profile, what authority ceiling, how many may sound at once. `developer`, or `Paul`. |
-| **Part** | A unit of work, and the only thing that carries context: a transcript, a worktree, a lifecycle, a completion. |
+| **Persona** | An instruction set, and which ACP agent runs it. `developer`, or `Paul`. Nothing more — not a tree, not a permission. |
+| **Ceiling** | What a persona's parts may do. Reviewed configuration, bound to a persona by the operator rather than carried by it. |
+| **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, an interactive flag, and a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
-| **Principal** | The part you land in, playing the orchestrator persona. |
+| **Principal** | A part whose properties are: orchestrator persona, works in the change branch, interactive, wide ceiling. Not a separate kind of thing. |
 
 ### Why a part, and not a person
 
@@ -44,20 +45,57 @@ The agents have amnesia. Nothing survives a transcript, so context lives entirel
 in the part — feature X is one part, feature Y another, and work on X later means
 loading X's transcript again.
 
-That makes personas interchangeable. If `Paul` and `Mary` are the same
-configuration, either can play any developer part, because neither carries
-anything into it. So there is no roster of individuals to hire and no reason to
-care which chair takes a part. A persona is a **named configuration that can
-sound several times at once**, not a colleague with a memory.
+That makes personas interchangeable. If `Paul` and `Mary` are the same instruction
+set, either can play any developer part, because neither carries anything into it.
+So there is no roster of individuals to hire and no reason to care which chair
+takes a part. A persona is **a prompt that can be running in several parts at
+once**, not a colleague with a memory.
 
 Every job a named colleague seemed to do is done better by something else:
 
 | Wanted | Provided by |
 | --- | --- |
-| Bounded team size | Per-persona concurrency cap |
+| Bounded concurrency | Chairs, and the credential's own rate limit |
 | Accumulated context | The part — where it always was |
-| Authority scope | The persona |
+| Authority scope | A ceiling in reviewed configuration, bound to a persona |
 | Something to address | The part, and *"the auth-refactor part"* beats *"Paul"* |
+
+### Everything is a part
+
+There is one kind of thing, and it carries four properties:
+
+| Property | Values |
+| --- | --- |
+| **Persona** | Which instruction set, and which agent runs it |
+| **Tree** | Its own branch, the change branch, or none |
+| **Interactive** | Whether a human is driving it, rather than a brief |
+| **Ceiling** | What it may do — from reviewed configuration, keyed by its persona |
+
+The principal is a part with a particular combination of those, not an exception
+to them. That matters because it keeps the machinery uniform: scheduling,
+enforcement and the lifecycle apply to every part, and a change like *"run a
+principal unattended overnight"* is a flag rather than a new concept.
+
+An earlier draft wrote rules about parts that were actually rules about ceilings —
+"a part never touches git" is not a fact about parts, it is a fact about the
+developer ceiling. Stated correctly, no exceptions are needed:
+
+| | Developer part | Principal |
+| --- | --- | --- |
+| Git | None | Branch and PR operations |
+| Tree | Its own part branch | The change branch |
+| Interactive | No | Yes |
+| Ends when | Its branch merges into the change branch | Its change branch merges into `main` |
+
+That last row is the same shape one level up, and the gate on it is the human's —
+which is where [`governance/constitution.md`](../../governance/constitution.md)
+puts it.
+
+**Why the ceiling is not part of the persona.** A persona is a prompt; a ceiling
+is a policy. Keeping them separate is what stops a principal handing a part more
+authority than a human sanctioned: the operator's configuration binds a ceiling to
+a persona, so starting a part with the `developer` persona gets the developer
+ceiling whether the principal likes it or not.
 
 ## 1. Ground rules
 
@@ -67,7 +105,8 @@ verified against the shipped binary; the published docs are silent on most.
 | Property | Consequence |
 | --- | --- |
 | **Delegation is one level deep.** A subagent's `task` tool refuses every target ([`task.py:97`](https://github.com/mistralai/mistral-vibe/blob/v2.24.1/vibe/core/tools/builtins/task.py)). | Hierarchy cannot live inside a session. Orchestration must be an external process. |
-| **Only user-facing agents can ask questions.** Subagents return text and cannot prompt. | Approval gates sit with the human. A part never holds one. |
+| **ACP strips the ability to ask.** `vibe/acp/agent.py` disables `ask_user_question` and `exit_plan_mode` via `NON_INTERACTIVE_DISABLED_TOOLS`, the same pair `-p` removes. | A non-interactive part cannot ask a question, whatever its instructions say. Approval gates belong to interactive parts. |
+| **Permission requests do reach the client.** `client.request_permission()` is called for tool approvals, which is a different channel from asking a question. | Ensemble can adjudicate tool calls centrally. Untested — the spike never triggered one. |
 | **Sessions are durable, addressable and resumable.** `--resume <id>` re-enters with full context and appends. | A part *is* a session. Every follow-up is a resume. |
 | **`-p` forces a 385-char headless fragment** ending *"Override any earlier instructions that say to wait for confirmation."* Hardcoded in `_run_programmatic_mode()`; no flag disables it. | `-p` turns discovered ambiguity into a silent guess. Ruled out as the substrate. |
 | **ACP sessions are not headless.** `vibe/acp/agent.py` omits `headless=` from `SessionOptions`, so it defaults to `False` — verified live: no `# Headless Mode` section, 384 chars shorter than the same work under `-p`. | The verified way to run work programmatically without the fragment. |
@@ -81,9 +120,11 @@ principal's included — and brokers the terminal to whichever the human wants.
 It is reached as an MCP server over HTTP for the tool surface, but it does not
 sit *under* a session; it sits around all of them.
 
-The principal is not privileged infrastructure. It is the part you land in,
-distinguished only by playing the orchestrator persona and holding the
-orchestration tools.
+The principal is a part like any other, with the properties set out in
+[Everything is a part](#everything-is-a-part): the orchestrator persona, the
+change branch as its tree, interactive, and a wide ceiling. It is scheduled,
+enforced and tracked by the same machinery as the rest — a wider ceiling is not
+an exemption from having one.
 
 ```mermaid
 flowchart TB
@@ -117,6 +158,7 @@ flowchart TB
   CH -->|"plays"| A1
   CH -->|"plays"| A2
   P1 -->|"MCP / http"| ENS
+  P1 --> HOOK
   A1 --> HOOK
   HOOK --> POL
   A1 --> RUB
@@ -592,17 +634,20 @@ classDiagram
   class Persona {
     +string name
     +string acp_agent
-    +string profile
+    +string instructions
     +string credential
-    +bool worktree
-    +Scope ceiling
+  }
+  class Ceiling {
+    +string persona
+    +Scope scope
   }
   class Part {
     +string id
     +string persona
-    +string section
+    +string change
     +string session_id
-    +string worktree
+    +string tree
+    +bool interactive
     +State state
   }
   class Work {
@@ -646,7 +691,8 @@ classDiagram
   Persona "1" --> "0..n" Part : played as
   Part "1" --> "0..1" Work : queued
   Work --> Grant : minted per turn
-  Grant --> Persona : bounded by ceiling
+  Persona "1" --> "1" Ceiling : bound by configuration
+  Grant --> Ceiling : bounded by
   Part --> Status
   Part --> Result : last
 ```
@@ -655,7 +701,7 @@ classDiagram
 
 | Tool | Blocks | Returns | Semantics |
 | --- | --- | --- | --- |
-| `personas()` | no | `Persona[]` | What can be played: names, caps, current concurrency. Read-only — personas change by review, not by call. |
+| `personas()` | no | `Persona[]` | What can be played: names, the agent behind each, and the ceiling bound to it. Read-only — personas and ceilings change by review, not by call. |
 | `parts()` | no | `Part[]` | The calling principal's section: ids, personas, states, queued work. |
 | `start(items[])` | no | `Part[]` | `{persona, brief, priority?}`. Creates parts and queues their first turn. Does not fail for capacity or liveness. |
 | `start_sync(items[], timeout)` | yes | `Result[]` | Start and wait in a single turn — the reason it exists. |
