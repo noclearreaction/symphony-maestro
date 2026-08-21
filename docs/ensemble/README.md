@@ -83,7 +83,7 @@ assumed; the evidence is in [`spikes/acp`](../../spikes/acp/) and
 | A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing, and a part's persona is fixed for a turn rather than for its life. |
 | Delegation inside a session is one level deep. | Hierarchy cannot live in a session, so orchestration is an external process. |
 | An agent driven without a human cannot ask a question, but its tool calls still raise permission requests — and those reach the client. | Ensemble must answer them. See [§6](#6-tool-use-with-no-human-present). |
-| Configuration is per agent, not per protocol. | Ensemble needs a small adapter per agent kind — applying instructions differs between them even though driving a session does not. |
+| `session/new` carries `cwd`, `additionalDirectories`, `mcpServers` and `_meta` — and nothing about instructions. | Two of the three things a part needs are protocol-level: its tree, and the tool surface Ensemble hands it. Instructions are not. |
 
 One thing the substrate does *not* give us, and it is why ACP rather than a CLI:
 an agent run headlessly is typically instructed to make a judgment call and press
@@ -94,6 +94,26 @@ not carry it.
 > **Not free across vendors.** Work run by Vibe draws on a Mistral subscription;
 > work run by Claude Code is directed to API keys by Anthropic's Agent SDK terms.
 > Mixing agents in one section is a deliberate spend, not a free upgrade.
+
+### Unknown: how a persona reaches an agent
+
+Since the protocol carries no instructions, delivering a persona is agent-specific
+— and the mechanisms differ in kind, not just in shape. Our two cases:
+
+| Agent | Instructions arrive by |
+| --- | --- |
+| Claude Code, via its bridge | `_meta.systemPrompt` on `session/new` — over the protocol |
+| Vibe | an environment variable read at process spawn — not over the protocol at all |
+
+So this is not a params builder with a branch in it. Whatever does the job spans
+**launching the process** and **composing the messages**, and for Vibe all of the
+work is on the launching side.
+
+**This is a prerequisite, not a refinement.** Without it Ensemble cannot start a
+part at all, because there is nothing in the protocol to tell an agent what it is
+supposed to be. Its shape is undecided: what the seam is called, whether it also
+owns credentials and model selection, and how much of it a second agent would
+actually share.
 
 ## 2. Architecture
 
