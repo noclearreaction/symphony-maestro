@@ -33,36 +33,19 @@ outside the metaphor and own it.
 | **Ensemble** | This layer: the sections, their parts, and the chairs that play them. |
 | **Section** | A long-lived working group — a build section, a design section — with a principal. Works through changes over time. |
 | **Change** | The unit that becomes a pull request: an OpenSpec change, its `change/<name>` branch, and the parts working it. |
-| **Persona** | An instruction set, and which ACP agent runs it. `developer`, or `Paul`. Nothing more — not a tree, not a permission. |
+| **Persona** | An instruction set, and which ACP agent runs it — `developer`, `auditor`. Nothing more: not a tree, not a permission, not an individual. |
 | **Ceiling** | What a persona's parts may do. Reviewed configuration, bound to a persona by the operator rather than carried by it. |
 | **Part** | A unit of work, and the only thing that carries context. Has a transcript, a persona, a tree or none, an interactive flag, and a lifecycle. |
 | **Chair** | An execution slot. Plays one part at a time. |
 | **Principal** | A part whose properties are: orchestrator persona, works in the change branch, interactive, wide ceiling. Not a separate kind of thing. |
 
-### Why a part, and not a person
-
-The agents have amnesia. Nothing survives a transcript, so context lives entirely
-in the part — feature X is one part, feature Y another, and work on X later means
-loading X's transcript again.
-
-That makes personas interchangeable. If `Paul` and `Mary` are the same instruction
-set, either can play any developer part, because neither carries anything into it.
-So there is no roster of individuals to hire and no reason to care which chair
-takes a part. A persona is **a prompt that can be running in several parts at
-once**, not a colleague with a memory.
-
-Every job a named colleague seemed to do is done better by something else:
-
-| Wanted | Provided by |
-| --- | --- |
-| Bounded concurrency | Chairs, and the credential's own rate limit |
-| Accumulated context | The part — where it always was |
-| Authority scope | A ceiling in reviewed configuration, bound to a persona |
-| Something to address | The part, and *"the auth-refactor part"* beats *"Paul"* |
-
 ### Everything is a part
 
-There is one kind of thing, and it carries four properties:
+The agents have amnesia: nothing survives a transcript, so context lives entirely
+in the part. Two parts running the same persona are therefore indistinguishable,
+and there is no individual to name or track.
+
+One kind of thing, carrying four properties:
 
 | Property | Values |
 | --- | --- |
@@ -71,14 +54,9 @@ There is one kind of thing, and it carries four properties:
 | **Interactive** | Whether a human is driving it, rather than a brief |
 | **Ceiling** | What it may do — from reviewed configuration, keyed by its persona |
 
-The principal is a part with a particular combination of those, not an exception
-to them. That matters because it keeps the machinery uniform: scheduling,
-enforcement and the lifecycle apply to every part, and a change like *"run a
-principal unattended overnight"* is a flag rather than a new concept.
-
-An earlier draft wrote rules about parts that were actually rules about ceilings —
-"a part never touches git" is not a fact about parts, it is a fact about the
-developer ceiling. Stated correctly, no exceptions are needed:
+The principal is a combination of those rather than an exception to them, which
+keeps scheduling, enforcement and the lifecycle uniform and makes *"run a
+principal unattended overnight"* a flag rather than a new concept:
 
 | | Developer part | Principal |
 | --- | --- | --- |
@@ -87,15 +65,13 @@ developer ceiling. Stated correctly, no exceptions are needed:
 | Interactive | No | Yes |
 | Ends when | Its branch merges into the change branch | Its change branch merges into `main` |
 
-That last row is the same shape one level up, and the gate on it is the human's —
-which is where [`governance/constitution.md`](../../governance/constitution.md)
-puts it.
+The last row is the same shape one level up, with the human's gate on it — where
+[`governance/constitution.md`](../../governance/constitution.md) puts it.
 
-**Why the ceiling is not part of the persona.** A persona is a prompt; a ceiling
-is a policy. Keeping them separate is what stops a principal handing a part more
-authority than a human sanctioned: the operator's configuration binds a ceiling to
-a persona, so starting a part with the `developer` persona gets the developer
-ceiling whether the principal likes it or not.
+**The ceiling is deliberately not part of the persona.** A persona is a prompt, a
+ceiling is a policy, and the operator's configuration binds one to the other. That
+separation is what stops a principal handing a part more authority than a human
+sanctioned.
 
 ## 1. Ground rules
 
@@ -434,10 +410,8 @@ configuration and none reachable from a tool:
 | **Per-credential concurrency** | The provider actually limits this — per account, not per persona |
 | **Section reservation, then share** | One section must not stall another; reserve a minimum, share the surplus so idle sections do not waste chairs |
 
-There is deliberately **no per-persona cap**. Two parts playing the same persona
-are identical configuration, so a headcount limit says nothing about why. What it
-would be standing in for is a credential's rate limit, which is where the
-constraint belongs.
+Nothing is capped per persona: a headcount says nothing about why, where a
+credential's rate limit is the constraint that actually exists.
 
 Chairs have no relationship to parts. Ten parts and one chair is ordinary, and so
 is the reverse. The bound exists for tokens, spend and provider rate limits — not

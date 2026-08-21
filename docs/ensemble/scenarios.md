@@ -116,16 +116,16 @@ with a session and accumulated context. That model cannot tell this story. Ask i
 is *two, alternately, remembering only one at a time* — which is not a person, it
 is a **chair playing whichever part it is handed**.
 
-And if the chair holds nothing between parts, there is no reason a second
-developer could not have played feature Y. `Paul` and `Mary` are the same
-configuration, so they are the same thing wearing two labels. What is scarce is
-chairs; what is distinct is parts; what is named is personas.
+And if the chair holds nothing between parts, nothing distinguishes one developer
+from a second one. What is scarce is chairs; what is distinct is parts; what is
+named is personas.
 
-**Corollary — you attach to a part, not to a person.** "Talk to Paul" is not a
-well-formed request: Paul is a configuration, and there may be three of him
-sounding at once. "Open feature Y" is well formed, because a part is a specific
-conversation with a specific history. If you are in feature X's part, nothing
-stops another chair playing feature Y at the same time — exclusivity is per part.
+**Corollary — you attach to a part, not to a worker.** "Talk to the developer" is
+not a well-formed request: there may be three developer parts running at once, and
+the instruction set they share knows nothing. "Open feature Y" is well formed,
+because a part is a specific conversation with a specific history. If you are in
+feature X's part, nothing stops another chair playing feature Y at the same time —
+exclusivity is per part.
 
 ---
 
