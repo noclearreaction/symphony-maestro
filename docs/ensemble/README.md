@@ -108,45 +108,7 @@ turns. A principal reaches it over MCP; a human through the CLI.
 Attaching is a lookup: a session is resumable by the agent's own command, so
 Ensemble supplies the session id and the CLI execs the agent against it.
 
-```mermaid
-flowchart TB
-  H["human"]
-  ENS["<b>Ensemble</b><br/>runs turns · routes decisions"]
-
-  subgraph S1["Section · build"]
-    P1["principal"]
-    A1["part: auth-refactor<br/>persona developer · worktree"]
-    A2["part: rate-limit-tests<br/>persona tester · worktree"]
-    A3["part: review-auth<br/>persona auditor"]
-  end
-
-  subgraph S2["Section · design"]
-    P2["principal"]
-    D1["part: queue-model<br/>persona designer"]
-  end
-
-  CH["chairs<br/>N execution slots"]
-  DEC["decision point<br/>pluggable"]
-  POL[("policy — whatever plugs in")]
-  RUB["rubato"]
-  API[("model API")]
-
-  H <-->|"terminal"| ENS
-  ENS -.->|"attach · observe"| P1
-  ENS -.->|"observe"| A1
-  ENS --> S1
-  ENS --> S2
-  ENS --> CH
-  CH -->|"plays"| A1
-  CH -->|"plays"| A2
-  P1 -->|"MCP / http"| ENS
-  P1 --> DEC
-  A1 --> DEC
-  DEC --> POL
-  A1 --> RUB
-  P1 --> RUB
-  RUB --> API
-```
+See [Architecture](diagrams/architecture.md).
 
 Ensemble owns the sections and their parts, the mapping from part to session id,
 the queue, and the routing of permission requests. It does not interpret results,
@@ -225,34 +187,7 @@ Exclusivity is unchanged; the handoff becomes deliberate rather than timed.
 
 ### Lifecycle
 
-```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> Queued: start(persona, brief)
-  Queued --> Playing: a chair frees up
-  Queued --> Reverted: cancel()
-  Playing --> AwaitingReview: turn returned
-  Playing --> Faulted: error
-  Playing --> Reverted: cancel()
-  AwaitingReview --> Queued: resume(message)
-  AwaitingReview --> Merging: accept()
-  AwaitingReview --> Attached: attach()
-  Faulted --> Attached: attach()
-  Faulted --> Queued: resume(message)
-  Faulted --> Reverted: give up
-  Attached --> AwaitingReview: detach()
-  Attached --> Queued: detach() · work pending
-  Merging --> Merged: clean
-  Merging --> Queued: conflict — re-apply against the moved base
-  Merging --> Reverted: cannot re-apply
-  Merged --> [*]
-  Reverted --> [*]
-
-  note right of Attached
-    A human owns the part.
-    Queued work waits.
-  end note
-```
+See [Part lifecycle](diagrams/part-lifecycle.md).
 
 A transcript is never deleted. `Reverted` concerns the tree: the worktree is
 discarded, and the transcript remains for inspection.
@@ -454,48 +389,7 @@ The MCP tool surface. Calls are batch-shaped: each tool boundary is a potential
 turn, and every turn re-sends the whole context, so instructing five parts costs
 one turn.
 
-```mermaid
-classDiagram
-  direction LR
-  class Part {
-    +string id
-    +string persona
-    +string base
-    +string session_id
-    +string tree
-    +State state
-  }
-  class Chair {
-    +bool occupied
-  }
-  class Work {
-    +string part
-    +string message
-  }
-  class Status {
-    +State state
-    +int turns
-    +float cost_usd
-    +time since
-    +string last_event
-  }
-  class Result {
-    +string part
-    +string summary
-    +Artifact[] artifacts
-    +DiffStat diff
-    +float cost_usd
-  }
-  class Section {
-    +string name
-    +string principal
-  }
-  Section "1" --> "0..n" Part
-  Part "1" --> "0..1" Work : queued
-  Part "0..1" --> "0..1" Chair : occupies while Playing
-  Part --> Status
-  Part --> Result : last
-```
+See [Contract types](diagrams/contract-types.md).
 
 Persona is absent: it is a name resolved out of configuration, not something
 Ensemble holds. A part carries the name it runs under.
@@ -537,43 +431,12 @@ delivery queue. The principal asks; Ensemble answers when it has something.
 Ensemble could type into a live session and does not, for the same reason a part
 has one owner.
 
-## 5. Dispatch flows
+## 5. Flows
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant O as Principal
-  participant E as Ensemble
-  participant C as chair
-  O->>E: start([{developer, "auth refactor"}, {tester, "rate limit tests"}])
-  E-->>O: [Queued, Queued]
-  Note over O: turn ends
-  E->>C: a chair frees up, plays auth-refactor
-  C-->>E: returned
-  O->>E: wait(until=any, timeout=60)
-  E-->>O: {done: [auth-refactor]}
-  O->>E: result(auth-refactor)
-  E-->>O: summary + artifacts
-  O->>E: resume([{auth-refactor, "missing table test"}])
-  E->>C: session/load, prompt
-```
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant H as human
-  participant E as Ensemble
-  participant P as part
-  H->>E: observe(auth-refactor)
-  activate E
-  E-->>H: session/update stream
-  Note over P: still playing
-  deactivate E
-  H->>E: attach(auth-refactor)
-  Note over E: only from AwaitingReview or Faulted
-  E-->>H: terminal handed over
-  Note over E: queued work waits until detach
-```
+- [Dispatch](diagrams/dispatch.md) — starting work, collecting a result, resuming
+  a part.
+- [Observing and attaching](diagrams/observe-attach.md) — observing takes nothing
+  from a running part; attaching takes ownership.
 
 ## 6. Tool use with no human present
 
