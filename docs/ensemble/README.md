@@ -743,43 +743,47 @@ sequenceDiagram
 
 ## 6. Tool use with no human present
 
-**The problem is narrow: a non-interactive part cannot ask.** ACP strips
-`ask_user_question`, and there is nobody at the other end anyway. But its tool
-calls still raise permission requests, and those arrive at the **client** —
-Ensemble — via `client.request_permission()`. Something has to answer, and the
-absent human is not available to.
+**The problem is narrow: a non-interactive part cannot ask, but its tool calls
+still need answering.** ACP raises them as `session/request_permission`, which
+arrives at the **client** — Ensemble. Something has to reply, and no human is
+there to.
 
-Ensemble routes those requests to a **pluggable decision point** and applies the
-answer. It does not decide, and it does not define policy — that is a separate
-concern with its own design, and keeping it separate is what stops this layer
-acquiring one.
+That is the protocol's own decision point, which is the right place for this:
+Ensemble is already sitting in it, and it is a process the part cannot reach.
 
-Two things Ensemble owes it:
+Ensemble routes each request to a **pluggable decision point** and applies the
+answer. It does not decide and does not define policy — keeping that separate is
+what stops this layer acquiring one. Two things it owes the plug:
 
-- **Fail closed.** Vibe's own hooks fail *open* —
-  [`.vibe/hooks.toml`](../../.vibe/hooks.toml) records *"anything else / non-zero
-  → fails OPEN with a UI warning"* — so a decision point that breaks must refuse,
-  not permit.
-- **Pass a denial back as a tool error with its reason**, so the model adapts or
-  reports rather than silently working around it.
+- **Fail closed.** A decision point that breaks must refuse, not permit.
+- **Pass a denial back with its reason**, so the model adapts or reports rather
+  than silently working around it.
 
-Where the plug sits is worth knowing but is its choice, not ours: the ACP
-permission channel is free and sees only what Vibe asks about, while a `pre_tool`
-hook sees every call and runs inside the part it polices.
+How complete the coverage is depends on how much the agent asks about, which is a
+dial on the persona rather than a limit of the mechanism: instructions and tool
+settings that ask for everything produce a request for every call.
+
+Untested. The spike never triggered a permission request, so this path has been
+read and not run — and agent-specific escapes exist, such as Vibe auto-allowing
+its scratchpad before permission resolution.
 
 ### Design considerations
 
-**Where the trust boundary sits.** The hook runs inside what it polices, so it is
-only as strong as that part's inability to edit it.
+**Where the trust boundary sits.** Adjudicating over ACP puts the decision in a
+process the part cannot reach, which is a real boundary rather than a convention —
+a part cannot rewrite a decision point it has no access to.
+
+What it does not bound is what the part does with permission once granted, or with
+the ambient filesystem. Two positions remain:
 
 | Position | Strength | Cost |
 | --- | --- | --- |
-| Hook alone | Advisory. Adequate while parts are fallible rather than adversarial. | None beyond the hook. |
-| Hook, denying its own paths | Closes the obvious route. Still one policy bug from disarmed. | Policy must protect itself from version one. |
-| Container per turn | Boundary is the kernel's. The hook becomes defence in depth. | Worktrees become mounts and Ensemble supervises containers — but a container lives for one turn, so nothing idles. |
+| Adjudicate over ACP | The decision is out of reach. A granted call is still granted, and `bash` still reaches the machine. | None — Ensemble is already the client. |
+| Container per turn | The boundary is the kernel's. What a part can reach at all is bounded, not just what it is allowed to ask for. | Worktrees become mounts and Ensemble supervises containers — but a container lives for one turn, so nothing idles. |
 
-Worth settling before policy is written, because the third changes the deployment
-model rather than the configuration.
+The second is the only one that bounds reach rather than permission, and it
+changes the deployment model rather than the configuration — which is why it is
+worth deciding rather than drifting into.
 
 **How sections reach each other.** Open, and worth leaving open. Either the repo
 is the medium and sections communicate through branches, changes and issues; or
