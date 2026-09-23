@@ -68,7 +68,7 @@ the evidence.
 | A process serves one turn, and instructions are bound when it starts. | Idle parts cost nothing. A part's persona is fixed for a turn. |
 | Delegation inside a session is one level deep. | Orchestration must be an external process. |
 | An agent driven without a human cannot ask a question, but its tool calls raise permission requests, and those reach the client. | Ensemble answers them ([§5](#5-tool-use-with-no-human-present)). |
-| `session/new` carries `cwd`, `additionalDirectories`, `mcpServers` and `_meta`. Nothing about instructions. | A part's tree and tool surface are protocol-level. Its instructions are not. |
+| `session/new` carries `cwd`, `additionalDirectories`, `mcpServers` and `_meta`. | A part's tree and tool surface are set when its session is created. |
 
 An agent run headlessly is typically instructed to make a judgment call and
 continue rather than stop, which turns ambiguity discovered mid-turn into a silent

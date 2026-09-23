@@ -2,25 +2,6 @@
 
 Undecided, and what would settle each. Companion to [README](README.md).
 
-## How a persona reaches an agent
-
-The protocol carries no instructions, so delivering a persona is agent-specific.
-The two mechanisms we know differ in kind:
-
-| Agent | Instructions arrive by |
-| --- | --- |
-| Claude Code, via its bridge | `_meta.systemPrompt` on `session/new` |
-| Vibe | an environment variable read at process spawn |
-
-Whatever bridges this spans launching the process as well as composing messages.
-For Vibe the work is entirely at launch.
-
-This is a prerequisite: without it Ensemble cannot start a part, because nothing
-in the protocol tells an agent what it is. Undecided: what the seam is called,
-whether it also owns credentials and model selection, and how much of it a second
-agent shares.
-
-
 ## Where the trust boundary sits
 
 Adjudicating over ACP puts the decision in a
