@@ -17,6 +17,17 @@ that exercises the design.
 | Language | **TypeScript on Deno** | The ACP SDK is first-class there, and it matches the repository. |
 | Sections | **One** | A second section proves the boundary, which is not the first thing worth knowing. |
 
+### Persona delivery is a per-agent shim
+
+ACP carries no system prompt, and the RFD proposing one is open with its reference
+PR closed unmerged. Each agent exposes its own mechanism, so the seam that
+delivers a persona is written per agent and spans process launch as well as
+message composition.
+
+For Vibe the persona is markdown in `~/.vibe/prompts/`, selected by
+`system_prompt_id` in `config.toml`. See [prior art](prior-art.md) for the other
+agents' mechanisms, and for why this does not resolve at the protocol level.
+
 ### Not in the first build
 
 - **Containers per turn.** The trust boundary stays where ACP puts it, bounding

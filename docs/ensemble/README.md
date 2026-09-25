@@ -18,6 +18,7 @@ beside it:
 | [`snippets.md`](snippets.md) | What a persona is told about the system it is inside |
 | [`first-build.md`](first-build.md) | What the first build picks, its entry points, and the order |
 | [`open-questions.md`](open-questions.md) | Undecided, and what would settle each |
+| [`prior-art.md`](prior-art.md) | What exists, what the substrate supplies, what is left to build |
 | [`diagrams/`](diagrams/) | Architecture, lifecycle, contract types, flows |
 
 ## Vocabulary
